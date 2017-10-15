@@ -76,7 +76,7 @@ register_ns(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_ns *ns)
 		return;
 	}
 
-	entry = malloc(sizeof(struct ns_entry));
+	entry = reinterpret_cast<ns_entry*>(malloc(sizeof(struct ns_entry)));
 	if (entry == NULL) {
 		perror("ns_entry malloc");
 		exit(1);
@@ -100,7 +100,7 @@ struct hello_world_sequence {
 static void
 read_complete(void *arg, const struct spdk_nvme_cpl *completion)
 {
-	struct hello_world_sequence *sequence = arg;
+	struct hello_world_sequence *sequence = reinterpret_cast<hello_world_sequence*>(arg);
 
 	/*
 	 * The read I/O has completed.  Print the contents of the
@@ -116,7 +116,7 @@ read_complete(void *arg, const struct spdk_nvme_cpl *completion)
 static void
 write_complete(void *arg, const struct spdk_nvme_cpl *completion)
 {
-	struct hello_world_sequence	*sequence = arg;
+	struct hello_world_sequence	*sequence = reinterpret_cast<hello_world_sequence*>(arg);
 	struct ns_entry			*ns_entry = sequence->ns_entry;
 	int				rc;
 
@@ -126,7 +126,7 @@ write_complete(void *arg, const struct spdk_nvme_cpl *completion)
 	 *  the data back from the NVMe namespace.
 	 */
 	spdk_dma_free(sequence->buf);
-	sequence->buf = spdk_dma_zmalloc(0x1000, 0x1000, NULL);
+	sequence->buf = reinterpret_cast<char*>(spdk_dma_zmalloc(0x1000, 0x1000, NULL));
 
 	rc = spdk_nvme_ns_cmd_read(ns_entry->ns, ns_entry->qpair, sequence->buf,
 				   0, /* LBA start */
@@ -170,7 +170,7 @@ hello_world(void)
 		 * will be pinned, which is required for data buffers used for SPDK NVMe
 		 * I/O operations.
 		 */
-		sequence.buf = spdk_dma_zmalloc(0x1000, 0x1000, NULL);
+		sequence.buf = (char*)spdk_dma_zmalloc(0x1000, 0x1000, NULL);
 		sequence.is_completed = 0;
 		sequence.ns_entry = ns_entry;
 
@@ -250,7 +250,7 @@ attach_cb(void *cb_ctx, const struct spdk_nvme_transport_id *trid,
 	struct spdk_nvme_ns *ns;
 	const struct spdk_nvme_ctrlr_data *cdata = spdk_nvme_ctrlr_get_data(ctrlr);
 
-	entry = malloc(sizeof(struct ctrlr_entry));
+	entry = reinterpret_cast<ctrlr_entry*>(malloc(sizeof(struct ctrlr_entry)));
 	if (entry == NULL) {
 		perror("ctrlr_entry malloc");
 		exit(1);
