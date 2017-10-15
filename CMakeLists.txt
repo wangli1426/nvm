@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive")
+SET(CMAKE_CXX_FLAGS "-O2 -fpermissive")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
