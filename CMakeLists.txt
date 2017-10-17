@@ -35,16 +35,26 @@ include_directories("${source_dir}/googletest/include"
         "${source_dir}/googlemock/include")
 
 # Used to generate lib when there are some cpp files.
-set(SOURCE_FILES
-        src/main.cc)
-add_library(source ${SOURCE_FILES})
+
+add_library(source src/main.cc)
 
 
-# Generate b_tree executable
-add_executable(nvm src/main.cc)
-target_link_libraries(nvm source
+# Generate main executable
+add_executable(main src/main.cc)
+target_link_libraries(main source
 	${spdk/lib/libspdk.a}
 	${spdk/lib/librte.a}
 	-L${CMAKE_SOURCE_DIR}/spdk/lib
   -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+
+#add_library(perf src/perf.cpp)
+add_executable(perf src/perf.cpp)
+target_link_libraries(perf
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+
+
+
 

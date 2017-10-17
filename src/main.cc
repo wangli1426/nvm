@@ -129,12 +129,12 @@ write_complete(void *arg, const struct spdk_nvme_cpl *completion)
 //	spdk_dma_free(sequence->buf);
 //	sequence->buf = reinterpret_cast<char*>(spdk_dma_zmalloc(0x1000, 0x1000, NULL));
 
-//    sequence->is_completed = 1;
-
-	rc = spdk_nvme_ns_cmd_read(ns_entry->ns, ns_entry->qpair, sequence->buf,
-                               (uint64_t)sequence->offset, /* LBA start */
-                               1, /* number of LBAs */
-                               read_complete, (void *)sequence, 0);
+    sequence->is_completed = 1;
+//
+//	rc = spdk_nvme_ns_cmd_read(ns_entry->ns, ns_entry->qpair, sequence->buf,
+//                               (uint64_t)sequence->offset, /* LBA start */
+//                               1, /* number of LBAs */
+//                               read_complete, (void *)sequence, 0);
 	if (rc != 0) {
 		fprintf(stderr, "starting read I/O failed\n");
 		exit(1);
@@ -173,9 +173,12 @@ hello_world(void)
          * will be pinned, which is required for data buffers used for SPDK NVMe
          * I/O operations.
          */
-        sequence.buf = (char*)spdk_dma_zmalloc(0x1000, 0x1000, NULL);
+        sequence.buf = (char*)spdk_dma_zmalloc(512 * 10, 0x1000, NULL);
         sequence.is_completed = 0;
         sequence.ns_entry = ns_entry;
+
+		int sector_size = spdk_nvme_ns_get_sector_size(ns_entry->ns);
+		printf("sector size: %d\n", sector_size);
 
         /*
          * Print "Hello world!" to sequence.buf.  We will write this data to LBA
@@ -200,7 +203,7 @@ hello_world(void)
          */
         uint64_t start = ticks();
         for (int  i = 0; i < 100; i++) {
-            sequence.offset = i;
+            sequence.offset = rand() % 100000;
             sequence.is_completed = 0;
             rc = spdk_nvme_ns_cmd_write(ns_entry->ns, ns_entry->qpair, sequence.buf,
                                         (uint64_t)i, /* LBA start */
