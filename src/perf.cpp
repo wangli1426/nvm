@@ -17,7 +17,7 @@ int main() {
     } else {
         cout << "namespace is initialized." << endl;
     }
-    QPair *qpair = allocateQPair(1000);
+    QPair *qpair = allocateQPair(8);
 
     int number_of_sectors = 1;
     int number_of_writes = 100000;

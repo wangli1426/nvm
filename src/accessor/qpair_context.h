@@ -35,7 +35,13 @@ namespace nvm {
         int asynchronous_write(void* content, uint32_t size, uint64_t start_lba, bool *is_complete) {
             assert(size > 0 && size % sector_size_ == 0);
             cb_parameters* cba = new cb_parameters(this, is_complete);
-            semaphore_.wait();
+            bool permission = false;
+            while (!permission) {
+                if (semaphore_.try_wait())
+                    permission = true;
+                else
+                    process_completions();
+            }
             spdk_nvme_ns_cmd_write(ns_,
                                    qpair_,
                                    content,
@@ -49,7 +55,13 @@ namespace nvm {
         int asynchronous_read(void* buffer, uint32_t size, uint64_t start_lba, bool *is_complete) {
             assert(size > 0 && size % sector_size_ == 0);
             cb_parameters* cba = new cb_parameters(this, is_complete);
-            semaphore_.wait();
+            bool permission = false;
+            while (!permission) {
+                if (semaphore_.try_wait())
+                    permission = true;
+                else
+                    process_completions();
+            }
             spdk_nvme_ns_cmd_read(ns_,
                                   qpair_,
                                   buffer,
