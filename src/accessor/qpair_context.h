@@ -10,8 +10,8 @@
 #include "ns_entry.h"
 #include "../utils/sync.h"
 
+
 namespace nvm {
-    struct ns_entry;
     class QPair {
         struct cb_parameters {
             cb_parameters(QPair* qp, bool* _is_complete) {
@@ -22,17 +22,22 @@ namespace nvm {
             bool* is_complete;
         };
     public:
-        QPair(struct ns_entry * entry, int queue_length = 8): entry_(entry) {
-            sector_size_ = spdk_nvme_ns_get_sector_size(entry->ns);
+        QPair(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
+              int queue_length = 8): ctrlr_(ctrlr), ns_(ns), qpair_(qpair) {
+            sector_size_ = spdk_nvme_ns_get_sector_size(ns);
             semaphore_ = Semaphore(queue_length);
+        }
+
+        uint32_t get_sector_size() const {
+            return sector_size_;
         }
 
         int asynchronous_write(void* content, uint32_t size, uint64_t start_lba, bool *is_complete) {
             assert(size > 0 && size % sector_size_ == 0);
             cb_parameters* cba = new cb_parameters(this, is_complete);
             semaphore_.wait();
-            spdk_nvme_ns_cmd_write(entry_->ns,
-                                   entry_->qpair,
+            spdk_nvme_ns_cmd_write(ns_,
+                                   qpair_,
                                    content,
                                    start_lba,
                                    size / sector_size_,
@@ -45,14 +50,22 @@ namespace nvm {
             assert(size > 0 && size % sector_size_ == 0);
             cb_parameters* cba = new cb_parameters(this, is_complete);
             semaphore_.wait();
-            spdk_nvme_ns_cmd_read(entry_->ns,
-                                  entry_->qpair,
+            spdk_nvme_ns_cmd_read(ns_,
+                                  qpair_,
                                   buffer,
                                   start_lba,
                                   size / sector_size_,
                                   QPair::cb_function,
                                   cba,
                                   0);
+        }
+
+        int process_completions() {
+            spdk_nvme_qpair_process_completions(qpair_, 0);
+        }
+
+        void detach() {
+            spdk_nvme_detach(ctrlr_);
         }
 
         static void cb_function(void * pars, const struct spdk_nvme_cpl *) {
@@ -64,7 +77,9 @@ namespace nvm {
         }
 
     private:
-        ns_entry* entry_;
+        struct spdk_nvme_ctrlr	*ctrlr_;
+        struct spdk_nvme_ns	*ns_;
+        struct spdk_nvme_qpair *qpair_;
         Semaphore semaphore_;
         uint32_t sector_size_;
     };

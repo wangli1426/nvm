@@ -6,13 +6,16 @@
 #define NVM_NS_ENTRY_H
 
 #include <spdk/nvme.h>
+#include <iostream>
 #include "qpair_context.h"
+
+struct ctrlr_entry;
 
 namespace nvm {
 
     class QPair;
 
-    struct ns_entry {
+    struct queue_pair {
         struct spdk_nvme_ctrlr	*ctrlr;
         struct spdk_nvme_ns	*ns;
         struct spdk_nvme_qpair	*qpair;
@@ -44,19 +47,13 @@ namespace nvm {
         struct spdk_nvme_ns *ns;
         const struct spdk_nvme_ctrlr_data *cdata = spdk_nvme_ctrlr_get_data(ctrlr);
 
-        entry = reinterpret_cast<ctrlr_entry*>(malloc(sizeof(struct ctrlr_entry)));
-        if (entry == NULL) {
-            perror("ctrlr_entry malloc");
-            exit(1);
-        }
-
         printf("Attached to %s\n", trid->traddr);
 
-        snprintf(entry->name, sizeof(entry->name), "%-20.20s (%-20.20s)", cdata->mn, cdata->sn);
+//        snprintf(entry->name, sizeof(entry->name), "%-20.20s (%-20.20s)", cdata->mn, cdata->sn);
 
-        entry->ctrlr = ctrlr;
-        entry->next = g_controllers;
-        g_controllers = entry;
+        g_ctrlr = ctrlr;
+//        next = g_controllers;
+//        g_controllers = entry;
 
         /*
          * Each controller has one or more namespaces.  An NVMe namespace is basically
@@ -67,9 +64,10 @@ namespace nvm {
          * Note that in NVMe, namespace IDs start at 1, not 0.
          */
         num_ns = spdk_nvme_ctrlr_get_num_ns(ctrlr);
-        printf("Using controller %s with %d namespaces.\n", entry->name, num_ns);
-        ns = spdk_nvme_ctrlr_get_ns(ctrlr, nsid);
+//        printf("Using controller %s with %d namespaces.\n", entry->name, num_ns);
+        ns = spdk_nvme_ctrlr_get_ns(ctrlr, 1);
         if (ns == NULL) {
+            std::cout << "fail to get namespace" << std::endl;
             return;
         }
         g_ctrlr = ctrlr;
@@ -77,17 +75,19 @@ namespace nvm {
     }
 
 
-    static void initialize_namespace() {
-        rc = spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
+    static int initialize_namespace() {
+        struct spdk_env_opts opts;
+        spdk_env_opts_init(&opts);
+        opts.name = "nvm access interface";
+        opts.shm_id = 0;
+        spdk_env_init(&opts);
+        printf("Initializing NVMe Controllers\n");
+        return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
     }
 
-    static QPair allocateQPair(int length = 0) {
-        spdk_nvme_qpair qpair = spdk_nvme_ctrlr_alloc_io_qpair(g_namespaces->ctrlr, NULL, 0);
-        struct ns_entry ns_en;
-        ns_en.ctrlr = g_ctrlr;
-        ns_en.ns = g_ns;
-        ns_en.qpair = qpair;
-        return QPair(ns_en, length);
+    static QPair* allocateQPair(int length = 0) {
+        spdk_nvme_qpair* qpair = spdk_nvme_ctrlr_alloc_io_qpair(g_ctrlr, NULL, 0);
+        return new QPair(g_ctrlr, g_ns, qpair, length);
     }
 
 }

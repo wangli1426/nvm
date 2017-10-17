@@ -135,10 +135,10 @@ write_complete(void *arg, const struct spdk_nvme_cpl *completion)
 //                               (uint64_t)sequence->offset, /* LBA start */
 //                               1, /* number of LBAs */
 //                               read_complete, (void *)sequence, 0);
-	if (rc != 0) {
-		fprintf(stderr, "starting read I/O failed\n");
-		exit(1);
-	}
+//	if (rc != 0) {
+//		fprintf(stderr, "starting read I/O failed\n");
+//		exit(1);
+//	}
 }
 
 static void
@@ -173,7 +173,7 @@ hello_world(void)
          * will be pinned, which is required for data buffers used for SPDK NVMe
          * I/O operations.
          */
-        sequence.buf = (char*)spdk_dma_zmalloc(512 * 10, 0x1000, NULL);
+        sequence.buf = (char*)spdk_dma_zmalloc(0x1000, 0x1000, NULL);
         sequence.is_completed = 0;
         sequence.ns_entry = ns_entry;
 
@@ -203,10 +203,10 @@ hello_world(void)
          */
         uint64_t start = ticks();
         for (int  i = 0; i < 100; i++) {
-            sequence.offset = rand() % 100000;
+            sequence.offset = i;
             sequence.is_completed = 0;
             rc = spdk_nvme_ns_cmd_write(ns_entry->ns, ns_entry->qpair, sequence.buf,
-                                        (uint64_t)i, /* LBA start */
+                                        (uint64_t)sequence.offset, /* LBA start */
                                         1, /* number of LBAs */
                                         write_complete, &sequence, 0);
             if (rc != 0) {
@@ -326,7 +326,6 @@ int main(int argc, char **argv)
 	int rc;
 	struct spdk_env_opts opts;
 
-    printf("Li modified!");
 
 	/*
 	 * SPDK relies on an abstraction around the local environment
