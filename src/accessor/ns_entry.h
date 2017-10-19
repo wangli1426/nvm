@@ -85,7 +85,7 @@ namespace nvm {
         return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
     }
 
-    static QPair* allocateQPair(int length = 0) {
+    static QPair* allocateQPair(int length = 8) {
         spdk_nvme_qpair* qpair = spdk_nvme_ctrlr_alloc_io_qpair(g_ctrlr, NULL, 0);
         return new QPair(g_ctrlr, g_ns, qpair, length);
     }
