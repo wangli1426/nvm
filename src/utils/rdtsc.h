@@ -13,12 +13,12 @@ inline uint64_t ticks() {
     return ((uint64_t)hi << 32) | lo;
 }
 
-inline uint64_t cycles_to_nanoseconds(uint64_t cycles) {
+inline double cycles_to_nanoseconds(uint64_t cycles) {
     return (uint64_t)((double) cycles / CPU_FREQUENCY * 1000);
 }
 
-inline uint64_t cycles_to_microseconds(uint64_t cycles) {
-    return (uint64_t )(cycles_to_nanoseconds(cycles) / 1000);
+inline double cycles_to_microseconds(uint64_t cycles) {
+    return cycles_to_nanoseconds(cycles) / 1000;
 }
 
 #endif //NVM_RDTSC_H
