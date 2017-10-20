@@ -18,7 +18,7 @@ namespace nvm {
 
     class QPair {
         struct cb_parameters {
-            cb_parameters(QPair* qp, bool* _is_complete): cb_parameters(qp, _is_complete, 0){};
+            cb_parameters(QPair* qp, bool* _is_complete): qPair(qp), is_complete(_is_complete), start(0){};
             cb_parameters(QPair* qp, bool* _is_complete, uint64_t start_ticks) {
                 qPair = qp;
                 is_complete = _is_complete;
@@ -33,7 +33,7 @@ namespace nvm {
               int queue_length = 8): ctrlr_(ctrlr), ns_(ns), qpair_(qpair), free_slots_(queue_length),
                                      queue_length_(queue_length) {
             sector_size_ = spdk_nvme_ns_get_sector_size(ns);
-            completion_batch_size_ = queue_length / 8;
+            completion_batch_size_ = queue_length / 1;
         }
 
         uint32_t get_sector_size() const {
