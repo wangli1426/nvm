@@ -19,6 +19,7 @@ int main() {
         cout << "Errors in initialization of namespace." << endl;
     } else {
         cout << "namespace is initialized." << endl;
+        exit(1);
     }
 
     const int number_of_accesses = 100000;
