@@ -5,10 +5,8 @@
 #ifndef NVM_IO_TASK_H
 #define NVM_IO_TASK_H
 #include "../accessor/ns_entry.h"
+#include "access_pattern.h"
 namespace nvm {
-    enum access_pattern {
-        seq, random
-    };
 
     enum io_mode {
         synch, asynch
@@ -18,7 +16,7 @@ namespace nvm {
         read_load, write_load
     };
 
-    void run_task(int number_of_accesses, int io_block_size, workload load, access_pattern pattern, io_mode mode, QPair* qpair) {
+    void run_task(int number_of_accesses, int io_block_size, workload load, access_pattern* pattern, io_mode mode, QPair* qpair) {
 
         int number_of_sectors = io_block_size / nvm_utility::get_sector_size();
         const uint64_t sector_number = nvm_utility::get_sector_number();
@@ -29,30 +27,24 @@ namespace nvm {
         bool is_complete = false;
         uint64_t start = ticks();
         for (int i = 0; i < number_of_accesses; i++) {
-            uint64_t offset;
-            if (pattern == seq)
-                offset = i;
-            else {
-                offset = rand() % sector_number;
-            }
 
             if (mode == asynch) {
                 if (i == number_of_accesses - 1) {
                     if (load == read_load)
-                        qpair->asynchronous_read(buffer, buffer_size, rand() % sector_number, &is_complete);
+                        qpair->asynchronous_read(buffer, buffer_size, pattern->next_access(), &is_complete);
                     else
-                        qpair->asynchronous_write(buffer, buffer_size, rand() % sector_number, &is_complete);
+                        qpair->asynchronous_write(buffer, buffer_size, pattern->next_access(), &is_complete);
                 } else {
                     if (load == read_load)
-                        qpair->asynchronous_read(buffer, buffer_size, rand() % sector_number, 0);
+                        qpair->asynchronous_read(buffer, buffer_size, pattern->next_access(), 0);
                     else
-                        qpair->asynchronous_write(buffer, buffer_size, rand() % sector_number, 0);
+                        qpair->asynchronous_write(buffer, buffer_size, pattern->next_access(), 0);
                 }
             } else {
                 if (load == read_load)
-                    qpair->synchronous_read(buffer, buffer_size, rand() % sector_number);
+                    qpair->synchronous_read(buffer, buffer_size, pattern->next_access());
                 else
-                    qpair->synchronous_write(buffer, buffer_size, rand() % sector_number);
+                    qpair->synchronous_write(buffer, buffer_size, pattern->next_access());
             }
         }
 
