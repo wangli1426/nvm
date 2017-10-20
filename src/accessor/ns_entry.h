@@ -98,6 +98,9 @@ namespace nvm {
             return spdk_nvme_ns_get_num_sectors(g_ns);
         }
 
+        static void detach() {
+            spdk_nvme_detach(g_ctrlr);
+        }
 
     };
 }

@@ -100,10 +100,6 @@ namespace nvm {
             spdk_nvme_qpair_process_completions(qpair_, max_completions);
         }
 
-        void detach() {
-            spdk_nvme_detach(ctrlr_);
-        }
-
         int get_number_of_free_slots() const {
             return free_slots_;
         }

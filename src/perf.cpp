@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <thread>
 #include "accessor/ns_entry.h"
 #include "perf/io_task.h"
 #include "accessor/qpair_context.h"
@@ -21,14 +22,27 @@ int main() {
     }
 
     const int number_of_accesses = 100000;
-    const int queue_length = 16;
-    QPair* qpair = nvm_utility::allocateQPair(queue_length);
+    const int queue_length = 8;
+    const int number_of_threads = 2;
+    QPair* qpairs[number_of_threads];
+    std::thread threads[number_of_threads];
+
+    for (int i = 0; i < number_of_threads; i++) {
+        qpairs[i] = nvm_utility::allocateQPair(queue_length);
+    }
 
     uint64_t start = ticks();
-    run_task(number_of_accesses, 512, read_load, seq, asynch, qpair);
+    for (int i = 0; i < number_of_threads; i++) {
+        threads[i] = std::thread(run_task, number_of_accesses, 512, read_load, seq, asynch, qpairs[i]);
+    }
+
+    for (int i = 0; i < number_of_threads; i++) {
+        threads[i].join();
+    }
     uint64_t cycles = ticks() - start;
 
-    qpair->detach();
+    nvm_utility::detach();
+
     printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS.\n",
            cycles,
            cycles_to_microseconds(cycles / number_of_accesses),
