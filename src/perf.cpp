@@ -17,9 +17,9 @@ int main() {
     int status = nvm::nvm_utility::initialize_namespace();
     if (status != 0) {
         cout << "Errors in initialization of namespace." << endl;
+        exit(1);
     } else {
         cout << "namespace is initialized." << endl;
-        exit(1);
     }
 
     const int number_of_accesses = 100000;
@@ -34,7 +34,7 @@ int main() {
 
     uint64_t start = ticks();
     for (int i = 0; i < number_of_threads; i++) {
-        threads[i] = std::thread(run_task, number_of_accesses, 512, read_load, seq, asynch, qpairs[i]);
+        threads[i] = std::thread(run_task, number_of_accesses, 512, read_load, seq, synch, qpairs[i]);
     }
 
     for (int i = 0; i < number_of_threads; i++) {
