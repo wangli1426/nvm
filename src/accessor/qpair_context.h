@@ -36,14 +36,6 @@ namespace nvm {
             completion_batch_size_ = queue_length / 1;
         }
 
-        uint32_t get_sector_size() const {
-            return sector_size_;
-        }
-
-        uint64_t get_sector_number() const {
-            return spdk_nvme_ns_get_num_sectors(ns_);
-        }
-
         void synchronous_write(void* content, uint32_t size, uint64_t start_lba) {
 
             bool is_complete = false;
