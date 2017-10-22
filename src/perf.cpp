@@ -10,5 +10,5 @@
 using namespace std;
 using namespace nvm;
 int main() {
-    run_multiple_threads_benchmark(1, 100000, 8, seq_access, read_load, asynch);
+    run_multiple_threads_benchmark(1, 100000, 40960, 8, seq_access, read_load, asynch);
 }

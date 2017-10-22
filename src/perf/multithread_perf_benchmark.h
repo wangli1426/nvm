@@ -22,6 +22,7 @@ using namespace std;
 namespace nvm {
 
     void run_multiple_threads_benchmark(const int number_of_threads, const int number_of_accesses,
+                                        const int bytes_per_access,
                                         const int queue_length, access_mode access, workload load, io_mode mode) {
         total_cycles = 0;
         cout << "perf test" << endl;
@@ -49,7 +50,8 @@ namespace nvm {
 
         uint64_t start = ticks();
         for (int i = 0; i < number_of_threads; i++) {
-            threads[i] = std::thread(run_task, number_of_accesses, 512, load, patterns[i], mode, qpairs[i]);
+            threads[i] = std::thread(run_task, number_of_accesses, bytes_per_access, load, patterns[i], mode,
+                                     qpairs[i]);
         }
 
         for (int i = 0; i < number_of_threads; i++) {
