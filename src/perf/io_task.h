@@ -8,13 +8,6 @@
 #include "access_pattern.h"
 namespace nvm {
 
-    enum io_mode {
-        synch, asynch
-    };
-
-    enum workload {
-        read_load, write_load
-    };
 
     void run_task(int number_of_accesses, int io_block_size, workload load, access_pattern* pattern, io_mode mode, QPair* qpair) {
 
