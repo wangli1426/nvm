@@ -100,6 +100,7 @@ namespace nvm {
 
         static void detach() {
             spdk_nvme_detach(g_ctrlr);
+            g_ctrlr = 0;
         }
 
     };

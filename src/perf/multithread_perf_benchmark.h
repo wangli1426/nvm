@@ -26,13 +26,6 @@ namespace nvm {
                                         const int queue_length, access_mode access, workload load, io_mode mode) {
         total_cycles = 0;
         cout << "perf test" << endl;
-        int status = nvm::nvm_utility::initialize_namespace();
-        if (status != 0) {
-            cout << "Errors in initialization of namespace." << endl;
-            exit(1);
-        } else {
-            cout << "namespace is initialized." << endl;
-        }
 
         const uint64_t number_of_sectors = nvm_utility::get_sector_number();
         const uint64_t sectors_per_thread = number_of_sectors / number_of_threads;
@@ -61,9 +54,11 @@ namespace nvm {
 
         for (int i = 0; i < number_of_threads; i++) {
             delete patterns[i];
+            delete qpairs[i];
         }
 
-        nvm_utility::detach();
+//        nvm_utility::detach();
+
 
         printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS.\n",
                cycles,

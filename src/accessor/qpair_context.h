@@ -36,6 +36,10 @@ namespace nvm {
             completion_batch_size_ = queue_length / 1;
         }
 
+        ~QPair() {
+            free_qpair();
+        }
+
         void synchronous_write(void* content, uint32_t size, uint64_t start_lba) {
 
             bool is_complete = false;
@@ -112,6 +116,13 @@ namespace nvm {
             }
             total_cycles += ticks() - para->start;
             delete para;
+        }
+
+        int free_qpair() {
+            if (qpair_) {
+                spdk_nvme_ctrlr_free_io_qpair(qpair_);
+                qpair_ = 0;
+            }
         }
 
     private:
