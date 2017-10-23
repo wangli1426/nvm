@@ -40,7 +40,7 @@ namespace nvm {
         uint64_t cycles;
         run_task_with_timing(number_of_accesses, bytes_per_access, load, pattern, mode, qpair, cycles);
         delete qpair;
-        printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS.\n",
+        printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS, ",
                cycles,
                cycles_to_microseconds(cycles / number_of_accesses),
                1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses));

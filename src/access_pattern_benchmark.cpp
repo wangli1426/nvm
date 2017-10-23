@@ -25,9 +25,12 @@ int main() {
     run_multiple_threads_benchmark(1, 100000, 512, 8, seq_access, write_load, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
 
+    sleep(1);
+
     cout << "=========== Sequential Access ==========" << endl;
 
     cout << "[read:]" << endl;
+
     run_single_thread_benchmark(100, 512, 64, seq_access, read_load, asynch);
     run_single_thread_benchmark(100, 512, 8, seq_access, read_load, asynch);
     run_single_thread_benchmark(100, 512, 4, seq_access, read_load, asynch);
