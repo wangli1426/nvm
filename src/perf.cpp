@@ -21,9 +21,18 @@ int main() {
     }
 
 
-    run_single_thread_benchmark(8, 512, 4, seq_access, read_load, synch);
-    run_single_thread_benchmark(8, 512, 4, seq_access, read_load, synch);
-    run_single_thread_benchmark(8, 512, 4, seq_access, read_load, asynch);
-    run_multiple_threads_benchmark(1, 100000, 512, 8, seq_access, read_load, asynch);
+    run_single_thread_benchmark(100, 512, 64, seq_access, read_load, asynch);
+    run_single_thread_benchmark(100, 512, 8, seq_access, read_load, asynch);
+    run_single_thread_benchmark(100, 512, 4, seq_access, read_load, asynch);
+    run_single_thread_benchmark(100, 512, 1, seq_access, read_load, synch);
+
+
+    cout << "write:" << endl;
+
+    run_single_thread_benchmark(100, 512, 64, seq_access, write_load, asynch);
+    run_single_thread_benchmark(100, 512, 8, seq_access, write_load, asynch);
+    run_single_thread_benchmark(100, 512, 4, seq_access, write_load, asynch);
+    run_single_thread_benchmark(100, 512, 1, seq_access, write_load, synch);
+//    run_multiple_threads_benchmark(1, 100000, 512, 8, seq_access, read_load, asynch);
 
 }
