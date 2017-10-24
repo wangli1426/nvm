@@ -13,6 +13,13 @@ int main() {
 	while(it->next(key, value)) {
 		printf("key: %d, value: %d\n", key, value);
 	}
+
+	key = 2;
+	bool found = t->search(key, value);
+	if (found) {
+		printf("found: %d", value);
+	}
+
 	
 
 }

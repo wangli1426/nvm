@@ -22,15 +22,10 @@ namespace tree {
 
     public:
         InnerNode() : size_(0) {
-#ifdef VIRTUAL_FUNCTION_OPTIMIZATION
-            this->is_leaf_ = false;
-#endif
         };
 
         InnerNode(Node<K, V> *left, Node<K, V> *right) {
-#ifdef VIRTUAL_FUNCTION_OPTIMIZATION
-            this->is_leaf_ = false;
-#endif
+
             size_ = 2;
             key_[0] = left->get_leftmost_key();
             child_[0] = left;
@@ -201,29 +196,10 @@ namespace tree {
             // Insert into the target leaf node.
             bool is_split;
             if (exceed_left_boundary) {
-#ifdef VIRTUAL_FUNCTION_OPTIMIZATION
-                if (child_[0]->is_leaf_)
-                    is_split = static_cast<leaf_node<K, V, CAPACITY> *>(child_[0])->insert_with_split_support(key, val,
-                                                                                                             local_split);
-                else
-                    is_split = static_cast<InnerNode<K, V, CAPACITY> *>(child_[0])->insert_with_split_support(key, val,
-                                                                                                              local_split);
-#else
                 is_split = child_[0]->insert_with_split_support(key, val, local_split);
-#endif
                 key_[0] = key;
             } else {
-#ifdef VIRTUAL_FUNCTION_OPTIMIZATION
-                if (child_[target_node_index]->is_leaf_)
-                    is_split = static_cast<leaf_node<K, V, CAPACITY> *>(child_[target_node_index])->insert_with_split_support(
-                            key, val, local_split);
-                else
-                    is_split = static_cast<InnerNode<K, V, CAPACITY> *>(child_[target_node_index])->insert_with_split_support(
-                            key, val, local_split);
-#else
                 is_split = child_[target_node_index]->insert_with_split_support(key, val, local_split);
-#endif
-
             }
 
             // The tuple was inserted without causing leaf node split.

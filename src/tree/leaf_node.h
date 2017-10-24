@@ -37,9 +37,6 @@ namespace tree {
     public:
 
         LeafNode() : size_(0), right_sibling_(0) {
-#ifdef VIRTUAL_FUNCTION_OPTIMIZATION
-            this->is_leaf_ = true;
-#endif
         };
 
         bool insert(const K &key, const V &val) {

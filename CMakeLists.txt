@@ -63,6 +63,12 @@ target_link_libraries(access_pattern_benchmark
 		-L${CMAKE_SOURCE_DIR}/spdk/lib
 		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
+set(TEST_FILES
+		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc )
+
+add_executable(unittest ${TEST_FILES})
+target_link_libraries(unittest libgtest)
+
 
 
 
