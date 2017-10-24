@@ -298,12 +298,8 @@ namespace tree {
     protected:
         // Locate the node that might contain the particular key.
         int locate_child_index(K key) const {
-#ifdef BINARY_SEARCH
             if (size_ == 0)
                 return -1;
-#ifdef NODEPREFETCH
-            __builtin_prefetch(key_, 0, 0);
-#endif
             int l = 0, r = size_ - 1;
             int m;
             bool found = false;
@@ -324,17 +320,6 @@ namespace tree {
             } else {
                 return l -  1;
             }
-#else
-            // linear scan TODO: test the performance gap between binary search and linear scan.
-            if (key < key_[0])
-                return -1;
-#ifdef NODEPREFETCH
-            __builtin_prefetch(key_, 0, 0);
-#endif
-            int i = 1;
-            while (i < size_ && !(key < key_[i])) ++i;
-            return i - 1;
-#endif
         }
 
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.

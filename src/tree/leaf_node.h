@@ -282,10 +282,7 @@ namespace tree {
     private:
 
         bool search_key_position(const K &key, int &position) const {
-#ifdef BINARY_SEARCH
-#ifdef NODEPREFETCH
-            __builtin_prefetch(entries_, 0, 0);
-#endif
+
             int l = 0, r = size_ - 1;
             int m = 0;
             bool found = false;
@@ -302,20 +299,6 @@ namespace tree {
             }
             position = l;
             return false;
-#else
-#ifdef NODEPREFETCH
-            __builtin_prefetch(entries_, 0, 0);
-#endif
-            int i = 0;
-            while (i < size_ && entries_[i].key < key) ++i;
-            if (i == size_) {
-                position = i;
-                return false;
-            } else {
-                position = i;
-                return key == entries_[i].key;
-            }
-#endif
         }
 
         /**
