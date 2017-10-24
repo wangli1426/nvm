@@ -36,38 +36,41 @@ include_directories("${source_dir}/googletest/include"
 
 # Used to generate lib when there are some cpp files.
 
-add_library(source src/main.cc)
+#add_library(source src/main.cc)
 
 
 # Generate main executable
-add_executable(main src/main.cc)
-target_link_libraries(main source
-	${spdk/lib/libspdk.a}
-	${spdk/lib/librte.a}
-	-L${CMAKE_SOURCE_DIR}/spdk/lib
-  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+#add_executable(main src/main.cc)
+#target_link_libraries(main source
+#	${spdk/lib/libspdk.a}
+#	${spdk/lib/librte.a}
+#	-L${CMAKE_SOURCE_DIR}/spdk/lib
+#  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
 #add_library(perf src/perf.cpp)
-add_executable(perf src/perf.cpp)
-target_link_libraries(perf
-		${spdk/lib/libspdk.a}
-		${spdk/lib/librte.a}
-		-L${CMAKE_SOURCE_DIR}/spdk/lib
-		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+#add_executable(perf src/perf.cpp)
+#target_link_libraries(perf
+#		${spdk/lib/libspdk.a}
+#		${spdk/lib/librte.a}
+#		-L${CMAKE_SOURCE_DIR}/spdk/lib
+#		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
 #add_library(perf src/access_pattern_benchmark.cpp)
-add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
-target_link_libraries(access_pattern_benchmark
-		${spdk/lib/libspdk.a}
-		${spdk/lib/librte.a}
-		-L${CMAKE_SOURCE_DIR}/spdk/lib
-		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+#add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
+#target_link_libraries(access_pattern_benchmark
+#		${spdk/lib/libspdk.a}
+#		${spdk/lib/librte.a}
+#		-L${CMAKE_SOURCE_DIR}/spdk/lib
+#		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+
+add_library(libblk src/blk/file_blk_accessor.cpp)
 
 set(TEST_FILES
-		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc src/blk/file_blk_accessor.cpp src/blk/file_blk_accessor.h)
+		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc)
 
 add_executable(unittest ${TEST_FILES})
-target_link_libraries(unittest libgtest)
+target_link_libraries(unittest libgtest libblk)
+
 
 
 
