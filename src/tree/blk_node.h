@@ -4,20 +4,29 @@
 
 #ifndef NVM_BLK_NODE_H
 #define NVM_BLK_NODE_H
-
-
-
 #include <assert.h>
 #include "../blk/blk.h"
 #include "blk_leaf_node.h"
+#include "blk_inner_node.h"
 #include "node.h"
 namespace tree{
+
+    template<typename K, typename V>
+    struct Blk_Split {
+        blk_address left;
+        blk_address right;
+        K boundary;
+    };
+
     template <typename K, typename V, int CAPACITY>
     class BlkLeafNode;
     template <typename K, typename V, int CAPACITY>
     class BlkNode {
     public:
+
+
         BlkNode(blk_address address, blk_accessor* accessor): blk_address_(address), blk_accessor_(accessor){};
+        BlkNode(blk_address address, blk_accessor* accessor, Node<K, V> * node): blk_address_(address), blk_accessor_(accessor), node_(node) {};
         ~BlkNode() {
             delete node_;
         }
@@ -40,7 +49,8 @@ namespace tree{
                 case LEAF_NODE: node = new BlkLeafNode<K, V, CAPACITY>(address, accessor);
                     node->node_->deserialize(read_buffer);
                     break;
-                case INNER_NODE:
+                case INNER_NODE: node = new BlkInnerNode<K, V, CAPACITY>(address, accessor);
+                    node->node_->deserialize(read_buffer);
                     break;
                 default:
                     assert(false); // unexpected point of execution.
@@ -56,6 +66,8 @@ namespace tree{
         blk_address get_blk_address() {
             return blk_address_;
         }
+
+        virtual bool insert_with_split_support(const K& key, const V& value, Blk_Split<K, V>& split) = 0;
 
         Node<K, V> *node_;
     protected:

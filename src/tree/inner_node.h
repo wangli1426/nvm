@@ -297,6 +297,24 @@ namespace tree {
             return os;
         }
 
+        void serialize(void* buffer) {
+            *(static_cast<uint32_t*>(buffer)) = InnerNode;
+
+            // write size
+            *(static_cast<uint32_t*>(buffer) + 1) = size_;
+
+            // copy entries
+            memcpy((char*)buffer + sizeof(uint32_t) * 2, &entries_, CAPACITY * sizeof(K));
+        }
+
+        void deserialize(void* buffer) {
+            // restore size
+            size_ = *(static_cast<uint32_t*>(buffer) + 1);
+
+            // restore keys
+            memcpy(&entries_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
+        }
+
     protected:
         // Locate the node that might contain the particular key.
         int locate_child_index(K key) const {

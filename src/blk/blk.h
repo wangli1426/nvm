@@ -14,7 +14,7 @@
 //    uint32_t id;
 //};
 
-typedef uint32_t blk_address;
+typedef uint64_t blk_address;
 
 class blk_accessor {
 
