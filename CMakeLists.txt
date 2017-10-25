@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O2 -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
@@ -64,6 +64,10 @@ include_directories("${source_dir}/googletest/include"
 #		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
 add_library(libblk src/blk/file_blk_accessor.cpp)
+
+add_executable(blk_tree src/tree/blk_tree_main.cpp)
+target_link_libraries(blk_tree libblk)
+
 
 set(TEST_FILES
 		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc)

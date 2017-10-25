@@ -5,7 +5,7 @@
 #include <sys/errno.h>
 #include "file_blk_accessor.h"
 
-file_blk_accessor::file_blk_accessor(const char *path, const uint32_t block_size) : path_(path), block_size_(block_size),
+file_blk_accessor::file_blk_accessor(const char *path, const uint32_t block_size) : path_(path), blk_accessor(block_size),
                                                                                cursor_(0) {
 }
 
@@ -16,7 +16,7 @@ int file_blk_accessor::open() {
 
 blk_address file_blk_accessor::allocate() {
     if (!freed_blk_addresses_.empty()) {
-        unordered_set<blk_address>::iterator it = freed_blk_addresses_.begin();
+        auto it = freed_blk_addresses_.begin();
         blk_address blk_addr = *it;
         freed_blk_addresses_.erase(it);
         return blk_addr;
@@ -36,17 +36,17 @@ void file_blk_accessor::deallocate(const blk_address& address) {
 int file_blk_accessor::read(const blk_address& address, void *buffer) {
     if (!is_address_valid(address))
         return 0;
-    if (fseek(file_, address * block_size_, SEEK_SET) != 0)
+    if (fseek(file_, address * block_size, SEEK_SET) != 0)
         return 0;
-    return (int)fread(buffer, 1, block_size_, file_);
+    return (int)fread(buffer, 1, block_size, file_);
 }
 
 int file_blk_accessor::write(const blk_address& address, void *buffer) {
     if (!is_address_valid(address))
         return 0;
-    if (fseek(file_, address * block_size_, SEEK_SET) != 0)
+    if (fseek(file_, address * block_size, SEEK_SET) != 0)
         return 0;
-    int status = (int)fwrite(buffer, 1, block_size_, file_);
+    int status = (int)fwrite(buffer, 1, block_size, file_);
     fflush(file_);
     return status;
 }

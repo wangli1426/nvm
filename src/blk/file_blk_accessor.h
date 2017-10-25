@@ -9,7 +9,7 @@
 #include "blk.h"
 
 using namespace std;
-class file_blk_accessor: public blk_accessor_abstract {
+class file_blk_accessor: public blk_accessor {
 public:
     explicit file_blk_accessor(const char* path, const uint32_t block_size);
     int open() override;
@@ -29,7 +29,6 @@ private:
 private:
     const char* path_;
     FILE* file_;
-    uint32_t block_size_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
 };

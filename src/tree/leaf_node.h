@@ -19,6 +19,7 @@ namespace tree {
     class LeafNode : public Node<K, V> {
         friend class VanillaBPlusTree<K, V, CAPACITY>;
 
+    public:
         struct Entry {
             K key;
             V val;
@@ -261,6 +262,24 @@ namespace tree {
             return size_;
         }
 
+        void serialize(void* buffer) {
+            *(static_cast<uint32_t*>(buffer)) = LEAF_NODE;
+
+            // write size
+            *(static_cast<uint32_t*>(buffer) + 1) = size_;
+
+            // copy entries
+            memcpy((char*)buffer + sizeof(uint32_t) * 2, &entries_, CAPACITY * sizeof(Entry));
+        }
+
+        void deserialize(void* buffer) {
+            // restore size
+            size_ = *(static_cast<uint32_t*>(buffer) + 1);
+
+            // restore entries
+            memcpy(&entries_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(Entry));
+        }
+
         friend std::ostream &operator<<(std::ostream &os, LeafNode<K, V, CAPACITY> const &m) {
             for (int i = 0; i < m.size_; i++) {
                 os << "(" << m.entries_[i].key << "," << m.entries_[i].val << ")";
@@ -301,6 +320,7 @@ namespace tree {
             return false;
         }
 
+    protected:
         /**
          * TODO: store the keys and the values separately, to improve data access locality.
          */

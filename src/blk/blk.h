@@ -16,8 +16,11 @@
 
 typedef uint32_t blk_address;
 
-class blk_accessor_abstract {
+class blk_accessor {
 
+public:
+    blk_accessor(const uint32_t size): block_size(size){
+    }
     virtual int open() = 0;
     virtual blk_address allocate() = 0;
     virtual void deallocate(const blk_address& address) = 0;
@@ -25,6 +28,7 @@ class blk_accessor_abstract {
     virtual int read(const blk_address &, void* buffer) = 0;
     virtual int write(const blk_address &, void* buffer) = 0;
 
+    const uint32_t block_size;
 };
 
 #endif //NVM_BLK_H
