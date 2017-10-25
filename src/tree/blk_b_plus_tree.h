@@ -17,8 +17,15 @@ namespace tree {
     public:
         bool insert(const K &key, const V& value) {
             BlkNode<K, V, CAPACITY> *blk_node = BlkNode<K, V, CAPACITY>::restore(blk_accessor_, root_);
-            bool ret = ((Node<K, V>*)(blk_node))->insert(key, value);
+            bool ret = blk_node->node_->insert(key, value);
             blk_node->flush();
+            delete blk_node;
+            return ret;
+        }
+
+        bool search(const K& key, V& value) {
+            BlkNode<K, V, CAPACITY> *blk_node = BlkNode<K, V, CAPACITY>::restore(blk_accessor_, root_);
+            bool ret  = blk_node->node_->search(key, value);
             delete blk_node;
             return ret;
         }

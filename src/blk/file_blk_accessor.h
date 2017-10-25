@@ -11,7 +11,7 @@
 using namespace std;
 class file_blk_accessor: public blk_accessor {
 public:
-    explicit file_blk_accessor(const char* path, const uint32_t block_size);
+    explicit file_blk_accessor(const char* path, const uint32_t& block_size);
     int open() override;
 
     blk_address allocate() override;

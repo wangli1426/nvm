@@ -5,7 +5,7 @@
 #include <sys/errno.h>
 #include "file_blk_accessor.h"
 
-file_blk_accessor::file_blk_accessor(const char *path, const uint32_t block_size) : path_(path), blk_accessor(block_size),
+file_blk_accessor::file_blk_accessor(const char *path, const uint32_t& block_size) : path_(path), blk_accessor(block_size),
                                                                                cursor_(0) {
 }
 

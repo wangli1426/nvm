@@ -18,8 +18,9 @@ namespace tree{
     class BlkNode {
     public:
         BlkNode(blk_address address, blk_accessor* accessor): blk_address_(address), blk_accessor_(accessor){};
-        virtual void serialize(void* buffer) = 0;
-        virtual void deserialize(void * buffer) = 0;
+        ~BlkNode() {
+            delete node_;
+        }
         void flush() {
             void* buffer = malloc(blk_accessor_->block_size);
             node_->serialize(buffer);
@@ -29,7 +30,7 @@ namespace tree{
 
         static BlkNode* restore(blk_accessor* accessor, const blk_address& address) {
             void* read_buffer = malloc(accessor->block_size);
-            if(accessor->read(address, read_buffer) != 0)
+            if(accessor->read(address, read_buffer) <= 0)
                 return nullptr;
 
             uint32_t node_type = *static_cast<uint32_t*>(read_buffer);
@@ -56,10 +57,10 @@ namespace tree{
             return blk_address_;
         }
 
+        Node<K, V> *node_;
     protected:
         blk_address blk_address_;
         blk_accessor* blk_accessor_;
-        Node<K, V> *node_;
     };
 }
 #endif //NVM_BLK_NODE_H
