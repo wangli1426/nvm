@@ -65,7 +65,7 @@ include_directories("${source_dir}/googletest/include"
 
 add_library(libblk src/blk/file_blk_accessor.cpp)
 
-add_executable(blk_tree src/tree/blk_tree_main.cpp)
+add_executable(blk_tree src/tree/blk_tree_main.cpp src/tree/blk_inner.h)
 target_link_libraries(blk_tree libblk)
 
 

@@ -10,6 +10,7 @@
 #include <string>
 #include "node.h"
 #include "leaf_node.h"
+#include "in_memory_node_reference.h"
 
 namespace tree {
 
@@ -28,27 +29,31 @@ namespace tree {
 
             size_ = 2;
             key_[0] = left->get_leftmost_key();
-            child_[0] = left;
+            child_[0] = in_memory_node_ref<K, V>(left);
             key_[1] = right->get_leftmost_key();
-            child_[1] = right;
+            child_[1] = in_memory_node_ref<K, V>(right);
         }
 
         ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
-                delete child_[i];
+                delete child_[i].get();
             }
         }
 
         bool insert(const K &key, const V &val) {
-            Node<K, V> *targetNode = child_[locate_child_index(key)];
-            return targetNode->insert(key, val);
+            Node<K, V> *targetNode = child_[locate_child_index(key)].get();
+            bool ret = targetNode->insert(key, val);
+            child_[locate_child_index(key)].close();
+            return ret;
         }
 
         bool search(const K &k, V &v) {
             const int index = locate_child_index(k);
             if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index];
-            return targeNode->search(k, v);
+            Node<K, V> *targeNode = child_[index].get();
+            bool ret = targeNode->search(k, v);
+            child_[index].close();
+            return ret;
         }
 
 
@@ -56,7 +61,9 @@ namespace tree {
             index = locate_child_index(k);
             if (index < 0) return false;
             Node<K, V> *targeNode = child_[index];
-            return targeNode->locate_key(k, child, index);
+            bool ret = targeNode->locate_key(k, child, index);
+            child_[index].close();
+            return ret;
         }
 
         bool update(const K &k, const V &v) {
@@ -72,14 +79,17 @@ namespace tree {
             if (child_index < 0)
                 return false;
 
-            Node<K, V> *child = child_[child_index];
+            Node<K, V> *child = child_[child_index].get();
             bool deleted = child->delete_key(k, underflow);
-            if (!deleted)
+            if (!deleted) {
+                child_[child_index].close();
                 return false;
+            }
 
-            if (!underflow || size_ < 2)
+            if (!underflow || size_ < 2) {
+                child_[child_index].close();
                 return true;
-
+            }
 
             Node<K, V> *left_child, *right_child;
             int left_child_index, right_child_index;
@@ -92,8 +102,8 @@ namespace tree {
                 left_child_index = child_index;
                 right_child_index = child_index + 1;
             }
-            left_child = child_[left_child_index];
-            right_child = child_[right_child_index];
+            left_child = child_[left_child_index].get();
+            right_child = child_[right_child_index].get();
 
 
             // try to borrow an entry from the left. If no additional entry is available in the left, the two nodes will
@@ -104,6 +114,8 @@ namespace tree {
                 // if borrowed (not merged), update the boundary
                 key_[right_child_index] = boundary;
                 underflow = false;
+                child_[left_child_index].close();
+                child_[right_child_index].close();
                 return true;
             }
 
@@ -117,6 +129,9 @@ namespace tree {
             --this->size_;
 
             underflow = this->size_ < UNDERFLOW_BOUND(CAPACITY);
+
+            child_[left_child_index].close();
+            child_[right_child_index].remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             return true;
         }
 
@@ -170,7 +185,7 @@ namespace tree {
             }
             this->size_ += right->size_;
             right->size_ = 0;
-            delete right;
+//            delete right;
             return true;
         }
 
@@ -183,7 +198,7 @@ namespace tree {
             }
 
             key_[insert_position] = boundary_key;
-            child_[insert_position] = innerNode;
+            child_[insert_position] = in_memory_node_ref<K, V> (innerNode);
 
             ++size_;
         }
@@ -193,27 +208,32 @@ namespace tree {
             const bool exceed_left_boundary = target_node_index < 0;
             Split<K, V> local_split;
 
+            node_reference<K, V>* node_ref;
             // Insert into the target leaf node.
             bool is_split;
             if (exceed_left_boundary) {
-                is_split = child_[0]->insert_with_split_support(key, val, local_split);
+                node_ref = &child_[0];
+                is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
             } else {
-                is_split = child_[target_node_index]->insert_with_split_support(key, val, local_split);
+                node_ref = &child_[target_node_index];
+                is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
             }
 
             // The tuple was inserted without causing leaf node split.
-            if (!is_split)
+            if (!is_split) {
+                node_ref->close();
                 return false;
+            }
 
-            // The leaf node was split.
+            // The child node was split, but the current node has free slot.
             if (size_ < CAPACITY) {
                 insert_inner_node(local_split.right, local_split.boundary_key,
                                   target_node_index + 1 + exceed_left_boundary);
                 return false;
             }
 
-            // leaf node was split but the current node is full. So we split the current node.
+            // child node was split but the current node is full. So we split the current node.
             bool insert_to_first_half = target_node_index < CAPACITY / 2;
 
             //
@@ -238,14 +258,16 @@ namespace tree {
                                              inner_node_insert_position + 1);
 
             // write the remaining content in the split data structure.
-            split.left = left;
-            split.right = right;
+            split.left = (left);
+            split.right = (right);
             split.boundary_key = right->get_leftmost_key();
             return true;
         }
 
         Node<K, V> *get_leftmost_leaf_node() {
-            return child_[0]->get_leftmost_leaf_node();
+            Node<K, V> * ret = child_[0].get()->get_leftmost_leaf_node();
+            child_[0].close();
+            return ret;
         }
 
 
@@ -268,7 +290,8 @@ namespace tree {
         std::string nodes_to_string() const {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
-                ss << "[" << child_[i]->toString() << "]";
+                ss << "[" << child_[i].get()->toString() << "]";
+                child_[i].close();
                 if (i != size_ - 1) {
                     ss << " ";
                 }
@@ -276,8 +299,10 @@ namespace tree {
             return ss.str();
         }
 
-        const K get_leftmost_key() const {
-            return child_[0]->get_leftmost_key();
+        const K get_leftmost_key() {
+            K ret = child_[0].get()->get_leftmost_key();
+            child_[0].close();
+            return ret;
         }
 
         NodeType type() const {
@@ -291,6 +316,7 @@ namespace tree {
         friend std::ostream &operator<<(std::ostream &os, InnerNode<K, V, CAPACITY> const &m) {
             for (int i = 0; i < m.size_; ++i) {
                 os << "[" << m.child_[i]->toString() << "]";
+                m.child_[i].close();
                 if (i != m.size_ - 1)
                     os << " ";
             }
@@ -298,13 +324,13 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
-            *(static_cast<uint32_t*>(buffer)) = InnerNode;
+            *(static_cast<uint32_t*>(buffer)) = INNER_NODE;
 
             // write size
             *(static_cast<uint32_t*>(buffer) + 1) = size_;
 
             // copy entries
-            memcpy((char*)buffer + sizeof(uint32_t) * 2, &entries_, CAPACITY * sizeof(K));
+            memcpy((char*)buffer + sizeof(uint32_t) * 2, &key_, CAPACITY * sizeof(K));
         }
 
         void deserialize(void* buffer) {
@@ -312,7 +338,7 @@ namespace tree {
             size_ = *(static_cast<uint32_t*>(buffer) + 1);
 
             // restore keys
-            memcpy(&entries_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
+            memcpy(&key_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
         }
 
     protected:
@@ -343,7 +369,8 @@ namespace tree {
         }
 
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
-        Node<K, V> *child_[CAPACITY];
+//        Node<K, V> *child_[CAPACITY];
+        node_reference<K, V> child_[CAPACITY];
         int size_;
     };
 }

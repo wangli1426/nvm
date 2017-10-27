@@ -5,7 +5,9 @@
 #ifndef NVM_BLK_B_PLUS_TREE_H
 #define NVM_BLK_B_PLUS_TREE_H
 #include "../blk/blk.h"
+#include "blk_node.h"
 #include "blk_leaf_node.h"
+#include "blk_tree_utility.h"
 namespace tree {
     template <typename K, typename V, int CAPACITY>
     class BlkBPlusTree {
@@ -16,7 +18,10 @@ namespace tree {
 
     public:
         bool insert(const K &key, const V& value) {
-            BlkNode<K, V, CAPACITY> *blk_node = BlkNode<K, V, CAPACITY>::restore(blk_accessor_, root_);
+            BlkNode<K, V, CAPACITY> *blk_node = restore<K, V, CAPACITY>(blk_accessor_, root_);
+            Blk_Split<K, V> blk_split;
+            bool is_split = blk_node->insert_with_split_support(key, value, blk_split);
+
             bool ret = blk_node->node_->insert(key, value);
             blk_node->flush();
             delete blk_node;
@@ -24,7 +29,7 @@ namespace tree {
         }
 
         bool search(const K& key, V& value) {
-            BlkNode<K, V, CAPACITY> *blk_node = BlkNode<K, V, CAPACITY>::restore(blk_accessor_, root_);
+            BlkNode<K, V, CAPACITY> *blk_node = restore<K, V, CAPACITY>(blk_accessor_, root_);
             bool ret  = blk_node->node_->search(key, value);
             delete blk_node;
             return ret;

@@ -55,7 +55,7 @@ namespace tree {
         virtual bool delete_key(const K &k, bool &underflow) = 0;
 
         // Return the smallest key of the node
-        virtual const K get_leftmost_key() const = 0;
+        virtual const K get_leftmost_key() = 0;
 
         // This function is called when either this node or its right sibling node overflows. The underflow is solved by
         // borrowing one entry from one node to the other, if the any node has more entries than the underflow bound, or

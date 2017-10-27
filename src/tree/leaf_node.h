@@ -186,7 +186,7 @@ namespace tree {
             return ss.str();
         }
 
-        const K get_leftmost_key() const {
+        const K get_leftmost_key() {
             return entries_[0].key;
         }
 
