@@ -12,15 +12,15 @@ namespace tree{
         in_memory_node_ref(Node<K, V>* ref): ref_(ref) {
 
         }
-        Node<K, V>* get() {
+        Node<K, V>* get() const override {
             return ref_;
         }
 
-        void close() {
+        void close() const override{
 
         }
 
-        void remove() {
+        void remove() override {
 
         }
     private:

@@ -5,22 +5,31 @@
 
 using namespace tree;
 int main() {
-	BTree<int, int>* t = new VanillaBPlusTree<int, int, 64>();
+	VanillaBPlusTree<int, int, 4> tree;
+	tree.insert(1, 1);
+	tree.insert(2, 2);
+	tree.insert(3, 3);
+	tree.insert(4, 4);
+	tree.insert(5, 5);
+	tree.insert(6, 6);
+	tree.insert(7, 7);
+	tree.insert(8, 8);
 
-	t->insert(1, 1);
-	t->insert(2, 2);
-	t->insert(-1, -1);
-	BTree<int, int>::Iterator *it = t->range_search(-100, 1000);
-	int key, value;
-	while(it->next(key, value)) {
-		printf("key: %d, value: %d\n", key, value);
-	}
+	tree.delete_key(4);
 
-	key = 2;
-	bool found = t->search(key, value);
-	if (found) {
-		printf("found: %d", value);
-	}
+	printf("%s\n", tree.toString().c_str());
+
+	tree.delete_key(4);
+	tree.delete_key(0);
+	tree.delete_key(1);
+	tree.delete_key(3);
+	printf("%s\n", tree.toString().c_str());
+
+	tree.delete_key(5);
+	printf("%s\n", tree.toString().c_str());
+
+    tree.delete_key(6);
+    printf("%s\n", tree.toString().c_str());
 
 	
 

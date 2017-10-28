@@ -40,8 +40,8 @@ include_directories("${source_dir}/googletest/include"
 
 
 # Generate main executable
-#add_executable(main src/main.cc)
-#target_link_libraries(main source
+add_executable(main src/main.cc)
+target_link_libraries(main libblk)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib

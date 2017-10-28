@@ -10,6 +10,7 @@
 #include "b_tree.h"
 #include "inner_node.h"
 #include "node.h"
+#include "in_memory_node_reference.h"
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -20,10 +21,14 @@ namespace tree {
         }
 
         ~VanillaBPlusTree() {
+            root_->close();
+            delete root_->get();
             delete root_;
         }
 
         void clear() {
+            root_->close();
+            delete root_->get();
             delete root_;
             init();
         }
@@ -33,10 +38,10 @@ namespace tree {
             Split<K, V> split;
             bool is_split;
 
-            is_split = root_->insert_with_split_support(k, v, split);
+            is_split = root_->get()->insert_with_split_support(k, v, split);
             if (is_split) {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right);
-                root_ = new_inner_node;
+                root_ = new in_memory_node_ref<K, V>(new_inner_node);
                 ++depth_;
             }
 
@@ -45,12 +50,16 @@ namespace tree {
         // Delete the entry from the tree. Return true if the key exists.
         bool delete_key(const K &k) {
             bool underflow;
-            bool ret = root_->delete_key(k, underflow);
-            if (underflow && root_->type() == INNER && root_->size() == 1) {
-                InnerNode<K, V, CAPACITY> *widow_inner_node = static_cast<InnerNode<K, V, CAPACITY> *>(root_);
-                root_ = widow_inner_node->child_[0];
+            Node<K, V>* root_node = root_->get();
+            bool ret = root_node->delete_key(k, underflow);
+            if (underflow && root_node->type() == INNER && root_node->size() == 1) {
+                InnerNode<K, V, CAPACITY> *widow_inner_node = static_cast<InnerNode<K, V, CAPACITY> *>(root_node);
+                root_node = widow_inner_node->child_[0]->get();
                 widow_inner_node->size_ = 0;
+
                 delete widow_inner_node;
+                root_->remove();
+                root_ = new in_memory_node_ref<K, V>(root_node);
                 --depth_;
             }
             return ret;
@@ -59,12 +68,14 @@ namespace tree {
         // Search for the value associated with the given key. If the key was found, return true and the value is stored
         // in v.
         bool search(const K &k, V &v) {
-            return root_->search(k, v);
+            bool ret = root_->get()->search(k, v);
+            root_->close();
+            return ret;
         }
 
         // Return the string representation of the tree.
         std::string toString() const {
-            return root_->toString();
+            return root_->get()->toString();
         }
 
         friend std::ostream &operator<<(std::ostream &os, VanillaBPlusTree<K, V, CAPACITY> const &m) {
@@ -73,14 +84,15 @@ namespace tree {
 
         typename BTree<K, V>::Iterator *get_iterator() {
             LeafNode<K, V, CAPACITY> *leftmost_leaf_node =
-                    dynamic_cast<LeafNode<K, V, CAPACITY> *>(root_->get_leftmost_leaf_node());
+                    dynamic_cast<LeafNode<K, V, CAPACITY> *>(root_->get()->get_leftmost_leaf_node());
+
             return new Iterator(leftmost_leaf_node, 0);
         }
 
         typename BTree<K, V>::Iterator *range_search(const K &key_low, const K &key_high) {
             Node<K, V> *leaf_node;
             int offset;
-            root_->locate_key(key_low, leaf_node, offset);
+            root_->get()->locate_key(key_low, leaf_node, offset);
             return new Iterator(dynamic_cast<LeafNode<K, V, CAPACITY> *>(leaf_node), offset, key_high);
         };
 
@@ -118,12 +130,13 @@ namespace tree {
 
     private:
         void init() {
-            root_ = new LeafNode<K, V, CAPACITY>();
+            Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>();
+            root_ = new in_memory_node_ref<K, V>(leaf_node);
             depth_ = 1;
         }
 
     protected:
-        Node<K, V> *root_;
+        node_reference<K, V>* root_;
         int depth_;
     };
 }

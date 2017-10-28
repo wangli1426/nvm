@@ -29,30 +29,33 @@ namespace tree {
 
             size_ = 2;
             key_[0] = left->get_leftmost_key();
-            child_[0] = in_memory_node_ref<K, V>(left);
+            child_[0] = new in_memory_node_ref<K, V>(left);
             key_[1] = right->get_leftmost_key();
-            child_[1] = in_memory_node_ref<K, V>(right);
+            child_[1] = new in_memory_node_ref<K, V>(right);
         }
 
         ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
-                delete child_[i].get();
+                delete child_[i]->get();
+                child_[i]->remove();
+                delete child_[i];
             }
         }
 
         bool insert(const K &key, const V &val) {
-            Node<K, V> *targetNode = child_[locate_child_index(key)].get();
+            const int insert_position = locate_child_index(key);
+            Node<K, V> *targetNode = child_[insert_position]->get();
             bool ret = targetNode->insert(key, val);
-            child_[locate_child_index(key)].close();
+            child_[locate_child_index(key)]->close();
             return ret;
         }
 
         bool search(const K &k, V &v) {
             const int index = locate_child_index(k);
             if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index].get();
+            Node<K, V> *targeNode = child_[index]->get();
             bool ret = targeNode->search(k, v);
-            child_[index].close();
+            child_[index]->close();
             return ret;
         }
 
@@ -60,9 +63,9 @@ namespace tree {
         bool locate_key(const K &k, Node<K, V> *&child, int &index) {
             index = locate_child_index(k);
             if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index];
+            Node<K, V> *targeNode = child_[index]->get();
             bool ret = targeNode->locate_key(k, child, index);
-            child_[index].close();
+            child_[index]->close();
             return ret;
         }
 
@@ -79,15 +82,15 @@ namespace tree {
             if (child_index < 0)
                 return false;
 
-            Node<K, V> *child = child_[child_index].get();
+            Node<K, V> *child = child_[child_index]->get();
             bool deleted = child->delete_key(k, underflow);
             if (!deleted) {
-                child_[child_index].close();
+                child_[child_index]->close();
                 return false;
             }
 
             if (!underflow || size_ < 2) {
-                child_[child_index].close();
+                child_[child_index]->close();
                 return true;
             }
 
@@ -102,8 +105,8 @@ namespace tree {
                 left_child_index = child_index;
                 right_child_index = child_index + 1;
             }
-            left_child = child_[left_child_index].get();
-            right_child = child_[right_child_index].get();
+            left_child = child_[left_child_index]->get();
+            right_child = child_[right_child_index]->get();
 
 
             // try to borrow an entry from the left. If no additional entry is available in the left, the two nodes will
@@ -114,12 +117,16 @@ namespace tree {
                 // if borrowed (not merged), update the boundary
                 key_[right_child_index] = boundary;
                 underflow = false;
-                child_[left_child_index].close();
-                child_[right_child_index].close();
+                child_[left_child_index]->close();
+                child_[right_child_index]->close();
                 return true;
             }
 
             // merged
+
+
+            child_[right_child_index]->close();
+            child_[right_child_index]->remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
 
             // remove the reference to the deleted child, i.e., right_child
             for (int i = right_child_index; i < size_; ++i) {
@@ -130,8 +137,6 @@ namespace tree {
 
             underflow = this->size_ < UNDERFLOW_BOUND(CAPACITY);
 
-            child_[left_child_index].close();
-            child_[right_child_index].remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             return true;
         }
 
@@ -198,7 +203,7 @@ namespace tree {
             }
 
             key_[insert_position] = boundary_key;
-            child_[insert_position] = in_memory_node_ref<K, V> (innerNode);
+            child_[insert_position] = new in_memory_node_ref<K, V> (innerNode);
 
             ++size_;
         }
@@ -212,11 +217,11 @@ namespace tree {
             // Insert into the target leaf node.
             bool is_split;
             if (exceed_left_boundary) {
-                node_ref = &child_[0];
+                node_ref = child_[0];
                 is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
             } else {
-                node_ref = &child_[target_node_index];
+                node_ref = child_[target_node_index];
                 is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
             }
 
@@ -265,8 +270,8 @@ namespace tree {
         }
 
         Node<K, V> *get_leftmost_leaf_node() {
-            Node<K, V> * ret = child_[0].get()->get_leftmost_leaf_node();
-            child_[0].close();
+            Node<K, V> * ret = child_[0]->get()->get_leftmost_leaf_node();
+            child_[0]->close();
             return ret;
         }
 
@@ -290,8 +295,8 @@ namespace tree {
         std::string nodes_to_string() const {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
-                ss << "[" << child_[i].get()->toString() << "]";
-                child_[i].close();
+                ss << "[" << child_[i]->get()->toString() << "]";
+                child_[i]->close();
                 if (i != size_ - 1) {
                     ss << " ";
                 }
@@ -300,8 +305,8 @@ namespace tree {
         }
 
         const K get_leftmost_key() {
-            K ret = child_[0].get()->get_leftmost_key();
-            child_[0].close();
+            K ret = child_[0]->get()->get_leftmost_key();
+            child_[0]->close();
             return ret;
         }
 
@@ -370,7 +375,7 @@ namespace tree {
 
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
 //        Node<K, V> *child_[CAPACITY];
-        node_reference<K, V> child_[CAPACITY];
+        node_reference<K, V>* child_[CAPACITY];
         int size_;
     };
 }

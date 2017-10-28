@@ -17,7 +17,7 @@ namespace tree {
                                                                                  blk_accessor_(blk_accessor),
                                                                                  instance_(0) {};
 
-        Node<K, V> *get() {
+        Node<K, V> *get() const {
             if (instance_)
                 return instance_;
             void *read_buffer = malloc(blk_accessor_.block_size);
@@ -35,7 +35,7 @@ namespace tree {
 
         };
 
-        void close() {
+        void close() const {
             void *write_buffer = malloc(blk_accessor_.block_size);
             instance_.deserialize(write_buffer);
             blk_accessor_.write(blk_address_, write_buffer);

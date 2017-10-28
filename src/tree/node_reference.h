@@ -11,10 +11,12 @@ namespace tree {
     class node_reference {
     public:
         // get an instance of the node referred to.
-        virtual Node<K, V>* get() {};
+        virtual Node<K, V>* get() const {
+            return nullptr;
+        };
 
         // flush the change.
-        virtual void close() {};
+        virtual void close() const {};
 
         // remove the reference as well as the referred node.
         virtual void remove() {};
