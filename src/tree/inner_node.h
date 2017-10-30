@@ -61,11 +61,11 @@ namespace tree {
 
 
         bool locate_key(const K &k, Node<K, V> *&child, int &index) {
-            index = locate_child_index(k);
-            if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index]->get();
+            int local_index = locate_child_index(k);
+            if (local_index < 0) return false;
+            Node<K, V> *targeNode = child_[local_index]->get();
             bool ret = targeNode->locate_key(k, child, index);
-            child_[index]->close();
+            child_[local_index]->close();
             return ret;
         }
 
@@ -124,10 +124,10 @@ namespace tree {
 
             // merged
 
-
             child_[right_child_index]->close();
             child_[right_child_index]->remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
-
+            delete child_[right_child_index];
+            child_[right_child_index] = 0;
             // remove the reference to the deleted child, i.e., right_child
             for (int i = right_child_index; i < size_; ++i) {
                 this->key_[i] = this->key_[i + 1];
@@ -184,6 +184,7 @@ namespace tree {
                 }
             }
 
+            // otherwise, two nodes get merged.
             for (int l = this->size_, r = 0; r < right->size_; ++l, ++r) {
                 this->key_[l] = right->key_[r];
                 this->child_[l] = right->child_[r];

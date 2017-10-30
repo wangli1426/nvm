@@ -41,6 +41,7 @@ namespace tree {
             is_split = root_->get()->insert_with_split_support(k, v, split);
             if (is_split) {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right);
+                delete root_;
                 root_ = new in_memory_node_ref<K, V>(new_inner_node);
                 ++depth_;
             }
@@ -49,16 +50,18 @@ namespace tree {
 
         // Delete the entry from the tree. Return true if the key exists.
         bool delete_key(const K &k) {
-            bool underflow;
+            bool underflow = false;
             Node<K, V>* root_node = root_->get();
             bool ret = root_node->delete_key(k, underflow);
             if (underflow && root_node->type() == INNER && root_node->size() == 1) {
                 InnerNode<K, V, CAPACITY> *widow_inner_node = static_cast<InnerNode<K, V, CAPACITY> *>(root_node);
                 root_node = widow_inner_node->child_[0]->get();
+                delete widow_inner_node->child_[0];
                 widow_inner_node->size_ = 0;
 
                 delete widow_inner_node;
                 root_->remove();
+                delete root_;
                 root_ = new in_memory_node_ref<K, V>(root_node);
                 --depth_;
             }

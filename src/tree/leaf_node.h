@@ -99,8 +99,8 @@ namespace tree {
                 LeafNode<K, V, CAPACITY> *const left = this;
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>();
 
-                right->right_sibling_ = left->right_sibling_;
-                left->right_sibling_ = new in_memory_node_ref<K, V>(right);
+                right->update_right_sibling(left->right_sibling_);
+                left->update_right_sibling(&in_memory_node_ref<K, V>(right));
 
                 // move entries to the right node
                 for (int i = entry_index_for_right_node, j = 0; i < CAPACITY; ++i, ++j) {
@@ -246,7 +246,7 @@ namespace tree {
             }
             this->size_ += right->size_;
             right->size_ = 0;
-            this->right_sibling_ = right->right_sibling_;
+            this->update_right_sibling(right->right_sibling_);
 
             // delete the right
             delete right;
@@ -294,6 +294,10 @@ namespace tree {
                     os << " ";
             }
             return os;
+        }
+
+        void update_right_sibling(node_reference<K, V>* new_ref) {
+            *right_sibling_ = *new_ref;
         }
 
     protected:
