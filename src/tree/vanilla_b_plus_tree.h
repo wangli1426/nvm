@@ -98,22 +98,35 @@ namespace tree {
 
         class Iterator : public BTree<K, V>::Iterator {
         public:
-            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset) : leaf_node_(leaf_node), offset_(offset),
-                                                                        upper_bound_(false) {};
+            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset) : offset_(offset),
+                                                                        upper_bound_(false) {
+                if (leaf_node)
+                    leaf_node_ref_ = new in_memory_node_ref<K, V>(leaf_node);
+                else
+                    leaf_node_ref_ = 0;
+            };
 
-            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, K key_high) : leaf_node_(leaf_node),
-                                                                                    offset_(offset),
+            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, K key_high) : offset_(offset),
                                                                                     upper_bound_(true),
-                                                                                    key_high_(key_high) {};
+                                                                                    key_high_(key_high) {
+                if (leaf_node)
+                    leaf_node_ref_ = new in_memory_node_ref<K, V>(leaf_node);
+                else
+                    leaf_node_ref_ = 0;
+            };
 
             virtual bool next(K &key, V &val) {
-                if (!leaf_node_)
+                if (!leaf_node_ref_)
                     return false;
-                else if (leaf_node_->getEntry(offset_, key, val)) {
+                LeafNode<K, V, CAPACITY>* leaf_node = dynamic_cast<LeafNode<K, V, CAPACITY>*>(leaf_node_ref_->get());
+                if (leaf_node->getEntry(offset_, key, val)) {
                     offset_++;
+                    leaf_node_ref_->close();
                     return upper_bound_ ? key < key_high_ || key == key_high_ : true;
-                } else if (leaf_node_->right_sibling_ != 0) {
-                    leaf_node_ = leaf_node_->right_sibling_;
+                } else if (leaf_node->right_sibling_ != 0) {
+                    leaf_node_ref_->close();
+                    delete leaf_node_ref_;
+                    leaf_node_ref_ = leaf_node->right_sibling_;
                     offset_ = 0;
                     return next(key, val);
                 } else {
@@ -122,7 +135,7 @@ namespace tree {
             }
 
         private:
-            LeafNode<K, V, CAPACITY> *leaf_node_;
+            node_reference<K, V> *leaf_node_ref_;
             int offset_;
             bool upper_bound_;
             K key_high_;

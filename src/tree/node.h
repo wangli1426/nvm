@@ -75,6 +75,8 @@ namespace tree {
 
         virtual Node *get_leftmost_leaf_node() = 0;
 
+//        virtual node_reference<K, V>* get_leftmost_leaf_node_ref() = 0;
+
         virtual bool locate_key(const K &key, Node *&child, int &offset) = 0;
 
         virtual void serialize(void* buffer) = 0;

@@ -9,6 +9,8 @@
 #include <iostream>
 #include <string>
 #include "node.h"
+#include "node_reference.h"
+#include "in_memory_node_reference.h"
 
 namespace tree {
 
@@ -97,7 +99,7 @@ namespace tree {
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>();
 
                 right->right_sibling_ = left->right_sibling_;
-                left->right_sibling_ = right;
+                left->right_sibling_ = new in_memory_node_ref<K, V>(right);
 
                 // move entries to the right node
                 for (int i = entry_index_for_right_node, j = 0; i < CAPACITY; ++i, ++j) {
@@ -250,9 +252,13 @@ namespace tree {
             return true;
         }
 
-        virtual Node<K, V> *get_leftmost_leaf_node() {
+        Node<K, V> *get_leftmost_leaf_node() {
             return this;
         }
+//
+//        node_reference<K, V>* get_leftmost_leaf_node_ref() {
+//            return new in_memory_node_ref(this);
+//        };
 
         NodeType type() const {
             return LEAF;
@@ -326,7 +332,7 @@ namespace tree {
          */
         Entry entries_[CAPACITY];
         int size_;
-        LeafNode *right_sibling_;
+        node_reference<K, V> *right_sibling_;
 
     };
 }

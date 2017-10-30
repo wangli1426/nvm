@@ -275,6 +275,11 @@ namespace tree {
             return ret;
         }
 
+//        node_reference<K, V>* get_leftmost_leaf_node_ref() {
+//            node_reference<K, V>* ret = child_[0]->get()->get_leftmost_leaf_node_ref();
+//            child_[0]->close();
+//            return ret;
+//        };
 
 
         std::string toString() const {

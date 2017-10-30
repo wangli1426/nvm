@@ -7,6 +7,7 @@
 
 #include "node.h"
 namespace tree {
+
     template<typename K, typename V>
     class node_reference {
     public:
