@@ -100,7 +100,9 @@ namespace tree {
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>();
 
                 right->update_right_sibling(left->right_sibling_);
-                left->update_right_sibling(&in_memory_node_ref<K, V>(right));
+                node_reference<K, V>* right_node_ref = new in_memory_node_ref<K, V>(right);
+                left->update_right_sibling(right_node_ref);
+                delete right_node_ref;
 
                 // move entries to the right node
                 for (int i = entry_index_for_right_node, j = 0; i < CAPACITY; ++i, ++j) {
