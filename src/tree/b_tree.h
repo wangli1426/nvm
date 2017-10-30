@@ -19,6 +19,7 @@ namespace tree {
 
         class Iterator {
         public:
+            virtual ~Iterator(){};
             virtual bool next(K &key, V &val) {
                 return false;
             };

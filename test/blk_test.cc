@@ -3,6 +3,7 @@
 //
 #include <gtest/gtest.h>
 #include <iostream>
+#include <memory.h>
 #include "../src/blk/file_blk_accessor.h"
 TEST(FILE_BLK_ACCESSOR, OPEN_AND_CLOSE) {
     file_blk_accessor accessor("./tmp", 512);
@@ -37,7 +38,7 @@ TEST(FILE_BLK_ACCESSOR, INVALID_ACCESS) {
     accessor.deallocate(address1);
 
     void* write_buffer = malloc(512);
-
+    memset(write_buffer, 512, 1);
     ASSERT_EQ(0, accessor.write(address1, write_buffer));
 
     accessor.close();

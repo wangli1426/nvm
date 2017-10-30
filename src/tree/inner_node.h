@@ -123,7 +123,7 @@ namespace tree {
             }
 
             // merged
-
+//            delete child_[right_child_index]->get();
             child_[right_child_index]->close();
             child_[right_child_index]->remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             delete child_[right_child_index];
@@ -191,7 +191,7 @@ namespace tree {
             }
             this->size_ += right->size_;
             right->size_ = 0;
-//            delete right;
+            delete right;
             return true;
         }
 

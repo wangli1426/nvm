@@ -118,6 +118,10 @@ namespace tree {
                     leaf_node_ref_ = 0;
             };
 
+            ~Iterator() {
+                delete leaf_node_ref_;
+            }
+
             virtual bool next(K &key, V &val) {
                 if (!leaf_node_ref_)
                     return false;
