@@ -17,10 +17,14 @@ namespace tree {
         };
 
         // flush the change.
-        virtual void close() const {};
+        virtual void close() const = 0;
 
         // remove the reference as well as the referred node.
-        virtual void remove() {};
+        virtual void remove() = 0;
+
+        virtual void copy(node_reference* ref) = 0;
+
+        virtual bool is_null_ptr() const = 0;
     };
 }
 #endif //NVM_NODE_REFERENCE_H

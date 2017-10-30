@@ -130,10 +130,10 @@ namespace tree {
                     offset_++;
                     leaf_node_ref_->close();
                     return upper_bound_ ? key < key_high_ || key == key_high_ : true;
-                } else if (leaf_node->right_sibling_ != 0) {
+                } else if (leaf_node->right_sibling_ != 0 && !leaf_node->right_sibling_->is_null_ptr()) {
                     leaf_node_ref_->close();
-                    delete leaf_node_ref_;
-                    leaf_node_ref_ = leaf_node->right_sibling_;
+//                    delete leaf_node_ref_;
+                    leaf_node_ref_->copy(leaf_node->right_sibling_);
                     offset_ = 0;
                     return next(key, val);
                 } else {

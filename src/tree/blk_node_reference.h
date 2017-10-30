@@ -49,6 +49,14 @@ namespace tree {
             blk_accessor_.deallocate(blk_address_);
         }
 
+        void copy(node_reference<K, V>* ref) {
+//            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
+            this->blk_address_ = dynamic_cast<blk_node_reference<K, V>*>(ref_)->blk_address_;
+        }
+        bool is_null_ptr() const {
+            return blk_address_ == 0;
+        }
+
     private:
         blk_address blk_address_;
         blk_accessor blk_accessor_;

@@ -299,7 +299,10 @@ namespace tree {
         }
 
         void update_right_sibling(node_reference<K, V>* new_ref) {
-            *right_sibling_ = *new_ref;
+            if (!right_sibling_)
+                right_sibling_ = new in_memory_node_ref<K, V>(0);
+            if (new_ref)
+                right_sibling_->copy(new_ref);
         }
 
     protected:

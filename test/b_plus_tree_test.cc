@@ -290,7 +290,7 @@ TEST(BPlusTree, IteratorRangeScanTest) {
         tree.insert(*it, *it);
     }
 
-    const int runs = 2;
+    const int runs = 10;
     for (int i = 0; i < runs; i++) {
         int start = rand() % number_of_tuples;
         int end = rand() % number_of_tuples;

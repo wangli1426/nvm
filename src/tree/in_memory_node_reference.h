@@ -23,6 +23,13 @@ namespace tree{
         void remove() override {
 
         }
+
+        void copy(node_reference<K, V>* ref) {
+            this->ref_ = dynamic_cast<in_memory_node_ref<K, V>*>(ref)->ref_;
+        }
+        bool is_null_ptr() const {
+            return !ref_;
+        };
     private:
         Node<K, V> *ref_;
     };
