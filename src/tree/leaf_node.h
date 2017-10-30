@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <memory.h>
 #include "node.h"
 #include "node_reference.h"
 #include "in_memory_node_reference.h"
