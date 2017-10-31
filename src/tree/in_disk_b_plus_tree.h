@@ -12,7 +12,7 @@ namespace tree{
     template<typename K, typename V, int CAPACITY>
     class in_disk_b_plus_tree: public VanillaBPlusTree<K, V, CAPACITY> {
     public:
-        in_disk_b_plus_tree(const char* file_name): VanillaBPlusTree<K, V, CAPACITY>(), file_name_(file_name) {
+        in_disk_b_plus_tree(const char* file_name = "./b_tree.dat"): VanillaBPlusTree<K, V, CAPACITY>(), file_name_(file_name) {
         }
 
         virtual ~in_disk_b_plus_tree() {
