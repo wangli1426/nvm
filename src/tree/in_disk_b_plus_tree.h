@@ -12,7 +12,9 @@ namespace tree{
     template<typename K, typename V, int CAPACITY>
     class in_disk_b_plus_tree: public VanillaBPlusTree<K, V, CAPACITY> {
     public:
-        in_disk_b_plus_tree(const char* file_name = "./b_tree.dat"): VanillaBPlusTree<K, V, CAPACITY>(), file_name_(file_name) {
+        in_disk_b_plus_tree(const char* file_name = "./b_tree.dat"): VanillaBPlusTree<K, V, CAPACITY>(
+                new file_blk_accessor<K, V, CAPACITY>(file_name_, 512)), file_name_(file_name) {
+            set_blk_accessor();
         }
 
         virtual ~in_disk_b_plus_tree() {
@@ -21,6 +23,8 @@ namespace tree{
     private:
 
         void set_blk_accessor() {
+            if (this->blk_accessor_)
+                delete this->blk_accessor_;
             this->blk_accessor_ = new file_blk_accessor<K, V, CAPACITY>(file_name_, 512);
         }
         const char* file_name_;

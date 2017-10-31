@@ -22,13 +22,13 @@ namespace tree {
     template<typename K, typename V, int CAPACITY>
     class VanillaBPlusTree : public BTree<K, V> {
     public:
-        VanillaBPlusTree() {
-            set_blk_accessor();
-            init();
+        VanillaBPlusTree(blk_accessor<K, V, CAPACITY>* blk_accessor = 0): blk_accessor_(blk_accessor) {
         }
 
         virtual ~VanillaBPlusTree() {
             close();
+            delete blk_accessor_;
+            blk_accessor_ = 0;
         }
 
         void clear() {
@@ -41,8 +41,6 @@ namespace tree {
             delete root_->get();
             delete root_;
             blk_accessor_->close();
-            delete blk_accessor_;
-            blk_accessor_ = 0;
         }
 
         // Insert a k-v pair to the tree.
@@ -108,6 +106,16 @@ namespace tree {
             return new Iterator(leftmost_leaf_node, 0);
         }
 
+        void init() {
+            if (!blk_accessor_)
+                blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
+            Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+            root_ = blk_accessor_->allocate_ref();
+            root_->copy(leaf_node->get_self_ref());
+            root_->close();
+            depth_ = 1;
+        }
+
         typename BTree<K, V>::Iterator *range_search(const K &key_low, const K &key_high) {
             Node<K, V> *leaf_node;
             int offset;
@@ -165,18 +173,11 @@ namespace tree {
             bool upper_bound_;
             K key_high_;
         };
-
     protected:
         virtual void set_blk_accessor() {
             blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
         }
     private:
-        void init() {
-            Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
-            root_ = new in_memory_node_ref<K, V>();
-            root_->copy(leaf_node->get_self_ref());
-            depth_ = 1;
-        }
 
     protected:
         node_reference<K, V>* root_;
