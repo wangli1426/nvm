@@ -11,6 +11,7 @@
 #include "node.h"
 #include "leaf_node.h"
 #include "in_memory_node_reference.h"
+#include "../blk/blk.h"
 
 namespace tree {
 
@@ -22,10 +23,23 @@ namespace tree {
         friend class VanillaBPlusTree<K, V, CAPACITY>;
 
     public:
-        InnerNode() : size_(0) {
+        InnerNode(blk_accessor<K, V, CAPACITY>* blk_accessor = 0) : size_(0), blk_accessor_(blk_accessor) {
+            if (blk_accessor_) {
+                self_ref_ = blk_accessor_->allocate_ref();
+                self_ref_->bind(this);
+            } else {
+                self_ref_ = 0;
+            }
         };
 
-        InnerNode(Node<K, V> *left, Node<K, V> *right) {
+        InnerNode(Node<K, V> *left, Node<K, V> *right, blk_accessor<K, V, CAPACITY>* blk_accessor = 0): blk_accessor_(blk_accessor) {
+
+            if (blk_accessor_) {
+                self_ref_ = blk_accessor_->allocate_ref();
+                self_ref_->bind(this);
+            } else {
+                self_ref_ = 0;
+            }
 
             size_ = 2;
             key_[0] = left->get_leftmost_key();
@@ -40,6 +54,7 @@ namespace tree {
                 child_[i]->remove();
                 delete child_[i];
             }
+            delete self_ref_;
         }
 
         bool insert(const K &key, const V &val) {
@@ -204,7 +219,8 @@ namespace tree {
             }
 
             key_[insert_position] = boundary_key;
-            child_[insert_position] = new in_memory_node_ref<K, V> (innerNode);
+            child_[insert_position] = new in_memory_node_ref<K, V>();
+            child_[insert_position]->copy(innerNode->get_self_ref());
 
             ++size_;
         }
@@ -245,7 +261,7 @@ namespace tree {
             //
             int start_index_for_right = CAPACITY / 2;
             InnerNode<K, V, CAPACITY> *left = this;
-            InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>();
+            InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(blk_accessor_);
 
             // move the keys and children to the right node
             for (int i = start_index_for_right, j = 0; i < size_; ++i, ++j) {
@@ -352,6 +368,10 @@ namespace tree {
             memcpy(&key_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
         }
 
+        node_reference<K, V>* get_self_ref() const {
+            return self_ref_;
+        };
+
     protected:
         // Locate the node that might contain the particular key.
         int locate_child_index(K key) const {
@@ -382,7 +402,9 @@ namespace tree {
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
 //        Node<K, V> *child_[CAPACITY];
         node_reference<K, V>* child_[CAPACITY];
+        node_reference<K, V>* self_ref_;
         int size_;
+        blk_accessor<K, V, CAPACITY>* blk_accessor_;
     };
 }
 #endif //B_TREE_INNER_NODE_H

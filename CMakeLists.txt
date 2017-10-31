@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O2 -g -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
@@ -41,7 +41,7 @@ include_directories("${source_dir}/googletest/include"
 
 # Generate main executable
 add_executable(main src/main.cc)
-target_link_libraries(main libblk)
+target_link_libraries(main)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib
@@ -63,17 +63,17 @@ target_link_libraries(main libblk)
 #		-L${CMAKE_SOURCE_DIR}/spdk/lib
 #		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
-add_library(libblk src/blk/file_blk_accessor.cpp)
+#add_library(libblk src/blk/file_blk_accessor.cpp src/blk/void_blk_accessor.cpp src/blk/void_blk_accessor.h)
 
 add_executable(blk_tree src/tree/blk_tree_main.cpp src/tree/blk_inner.h)
-target_link_libraries(blk_tree libblk)
+#target_link_libraries(blk_tree libblk)
 
 
 set(TEST_FILES
 		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc)
 
 add_executable(unittest ${TEST_FILES})
-target_link_libraries(unittest libgtest libblk)
+target_link_libraries(unittest libgtest)
 
 
 

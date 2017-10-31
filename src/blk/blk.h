@@ -6,6 +6,7 @@
 #define NVM_BLK_H
 
 #include <stdint.h>
+#include "../tree/node_reference.h"
 
 //struct blk_address {
 //    blk_address(uint32_t offset) {
@@ -14,13 +15,19 @@
 //    uint32_t id;
 //};
 
-typedef uint64_t blk_address;
+using namespace tree;
+//template<typename K, typename V>
+//class node_reference;
 
+typedef uint64_t blk_address;
+template <typename K, typename V, int CAPACITY>
 class blk_accessor {
 
 public:
     blk_accessor(const uint32_t size): block_size(size){
     }
+    virtual ~blk_accessor() {};
+    virtual node_reference<K, V>* allocate_ref() = 0;
     virtual int open() = 0;
     virtual blk_address allocate() = 0;
     virtual void deallocate(const blk_address& address) = 0;

@@ -12,6 +12,7 @@
 #include "node.h"
 #include "node_reference.h"
 #include "in_memory_node_reference.h"
+#include "../blk/blk.h"
 
 namespace tree {
 
@@ -40,11 +41,18 @@ namespace tree {
 
     public:
 
-        LeafNode() : size_(0), right_sibling_(0) {
+        LeafNode(blk_accessor<K, V, CAPACITY>* blk_accessor = 0) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
+            if (blk_accessor) {
+                self_ref_ = blk_accessor_->allocate_ref();
+                self_ref_->bind(this);
+            } else {
+                self_ref_ = 0;
+            }
         };
 
         ~LeafNode() {
             delete right_sibling_;
+            delete self_ref_;
         }
 
         bool insert(const K &key, const V &val) {
@@ -101,12 +109,12 @@ namespace tree {
 
                 int entry_index_for_right_node = CAPACITY / 2;
                 LeafNode<K, V, CAPACITY> *const left = this;
-                LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>();
+                LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>(blk_accessor_);
 
                 right->update_right_sibling(left->right_sibling_);
-                node_reference<K, V>* right_node_ref = new in_memory_node_ref<K, V>(right);
+                node_reference<K, V>* right_node_ref = right->get_self_ref();
                 left->update_right_sibling(right_node_ref);
-                delete right_node_ref;
+//                delete right_node_ref;
 
                 // move entries to the right node
                 for (int i = entry_index_for_right_node, j = 0; i < CAPACITY; ++i, ++j) {
@@ -309,6 +317,10 @@ namespace tree {
                 right_sibling_->copy(new_ref);
         }
 
+        node_reference<K, V>* get_self_ref() const {
+            return self_ref_;
+        };
+
     protected:
         bool getEntry(int i, K &k, V &v) const {
             if (i >= size_)
@@ -347,7 +359,8 @@ namespace tree {
         Entry entries_[CAPACITY];
         int size_;
         node_reference<K, V> *right_sibling_;
-
+        node_reference<K, V> *self_ref_;
+        blk_accessor<K, V, CAPACITY>* blk_accessor_;
     };
 }
 

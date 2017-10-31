@@ -7,11 +7,15 @@
 
 #include <string>
 #include <iostream>
+#include "node_reference.h"
 #include "b_tree.h"
 #define INNER_NODE 0
 #define LEAF_NODE 1
 #define UNDERFLOW_BOUND(N) ((N + 1) / 2)
 namespace tree {
+
+    template<typename K, typename V>
+    class node_reference;
 
     template<typename K, typename V>
     class Node;
@@ -82,6 +86,8 @@ namespace tree {
         virtual void serialize(void* buffer) = 0;
 
         virtual void deserialize(void* buffer) = 0;
+
+        virtual node_reference<K, V>* get_self_ref() const = 0;
 
         // Indicate if the node is a leaf node. This flag is used to avoid the overhead of virtual function call.
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION

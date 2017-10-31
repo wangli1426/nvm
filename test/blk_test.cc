@@ -6,13 +6,13 @@
 #include <memory.h>
 #include "../src/blk/file_blk_accessor.h"
 TEST(FILE_BLK_ACCESSOR, OPEN_AND_CLOSE) {
-    file_blk_accessor accessor("./tmp", 512);
+    file_blk_accessor<int, int, 32> accessor("./tmp", 512);
     ASSERT_EQ(0, accessor.open());
     ASSERT_EQ(0, accessor.close());
 }
 
 TEST(FILE_BLK_ACCESSOR, ALLOCAT_WRITE_AND_READ) {
-    file_blk_accessor accessor("./tmp", 512);
+    file_blk_accessor<int, int, 32> accessor("./tmp", 512);
     accessor.open();
     blk_address addr = accessor.allocate();
     void* write_buffer = malloc(512);
@@ -29,7 +29,7 @@ TEST(FILE_BLK_ACCESSOR, ALLOCAT_WRITE_AND_READ) {
 }
 
 TEST(FILE_BLK_ACCESSOR, INVALID_ACCESS) {
-    file_blk_accessor accessor("./tmp", 512);
+    file_blk_accessor<int, int, 32> accessor("./tmp", 512);
     accessor.open();
     blk_address address1 = accessor.allocate();
 

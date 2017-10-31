@@ -11,12 +11,19 @@
 #include "inner_node.h"
 #include "node.h"
 #include "in_memory_node_reference.h"
+#include "../blk/void_blk_accessor.h"
+
+template <typename K, typename V, int CAPACITY>
+class blk_accessor;
 
 namespace tree {
+
+
     template<typename K, typename V, int CAPACITY>
     class VanillaBPlusTree : public BTree<K, V> {
     public:
         VanillaBPlusTree() {
+            set_blk_accessor();
             init();
         }
 
@@ -24,6 +31,7 @@ namespace tree {
             root_->close();
             delete root_->get();
             delete root_;
+            delete blk_accessor_;
         }
 
         void clear() {
@@ -40,9 +48,10 @@ namespace tree {
 
             is_split = root_->get()->insert_with_split_support(k, v, split);
             if (is_split) {
-                InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right);
-                delete root_;
-                root_ = new in_memory_node_ref<K, V>(new_inner_node);
+                InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, blk_accessor_);
+                root_->copy(new_inner_node->get_self_ref());
+//                delete root_;
+//                root_ = new in_memory_node_ref<K, V>(new_inner_node);
                 ++depth_;
             }
 
@@ -61,8 +70,11 @@ namespace tree {
 
                 delete widow_inner_node;
                 root_->remove();
-                delete root_;
-                root_ = new in_memory_node_ref<K, V>(root_node);
+
+                // refer to the updated root_node
+                root_->copy(root_node->get_self_ref());
+//                delete root_;
+//                root_ = new in_memory_node_ref<K, V>(root_node);
                 --depth_;
             }
             return ret;
@@ -103,18 +115,20 @@ namespace tree {
         public:
             Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset) : offset_(offset),
                                                                         upper_bound_(false) {
-                if (leaf_node)
-                    leaf_node_ref_ = new in_memory_node_ref<K, V>(leaf_node);
-                else
+                if (leaf_node) {
+                    leaf_node_ref_ = new in_memory_node_ref<K, V>(0);
+                    leaf_node_ref_->copy(leaf_node->get_self_ref());
+                } else
                     leaf_node_ref_ = 0;
             };
 
             Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, K key_high) : offset_(offset),
                                                                                     upper_bound_(true),
                                                                                     key_high_(key_high) {
-                if (leaf_node)
-                    leaf_node_ref_ = new in_memory_node_ref<K, V>(leaf_node);
-                else
+                if (leaf_node) {
+                    leaf_node_ref_ = new in_memory_node_ref<K, V>(0);
+                    leaf_node_ref_->copy(leaf_node->get_self_ref());
+                } else
                     leaf_node_ref_ = 0;
             };
 
@@ -148,16 +162,22 @@ namespace tree {
             K key_high_;
         };
 
+    protected:
+        void set_blk_accessor() {
+            blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
+        }
     private:
         void init() {
-            Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>();
-            root_ = new in_memory_node_ref<K, V>(leaf_node);
+            Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+            root_ = new in_memory_node_ref<K, V>();
+            root_->copy(leaf_node->get_self_ref());
             depth_ = 1;
         }
 
     protected:
         node_reference<K, V>* root_;
         int depth_;
+        blk_accessor<K, V, CAPACITY>* blk_accessor_;
     };
 }
 #endif //B_PLUS_TREE_BPLUSTREE_H
