@@ -1,12 +1,12 @@
 #include <stdio.h>
-#include <vector>
-#include "tree/vanilla_b_plus_tree.h"
-#include <limits.h>
-#include <algorithm>
+#include "tree/in_disk_b_plus_tree.h"
 
 using namespace tree;
+
 int main() {
-    const int I = 10, J = 15, K = 20;
-    int a[I][J][K];
-    int b[I][J][K];
+    in_disk_b_plus_tree<int, int, 16> tree("./tree_file");
+    tree.insert(1, 1);
+    tree.insert(2, 2);
+
+
 }

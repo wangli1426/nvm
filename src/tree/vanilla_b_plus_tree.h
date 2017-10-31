@@ -27,18 +27,22 @@ namespace tree {
             init();
         }
 
-        ~VanillaBPlusTree() {
-            root_->close();
-            delete root_->get();
-            delete root_;
-            delete blk_accessor_;
+        virtual ~VanillaBPlusTree() {
+            close();
         }
 
         void clear() {
+            close();
+            init();
+        }
+
+        void close() {
             root_->close();
             delete root_->get();
             delete root_;
-            init();
+            blk_accessor_->close();
+            delete blk_accessor_;
+            blk_accessor_ = 0;
         }
 
         // Insert a k-v pair to the tree.
@@ -163,7 +167,7 @@ namespace tree {
         };
 
     protected:
-        void set_blk_accessor() {
+        virtual void set_blk_accessor() {
             blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
         }
     private:
