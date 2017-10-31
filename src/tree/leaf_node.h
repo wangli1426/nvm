@@ -43,6 +43,10 @@ namespace tree {
         LeafNode() : size_(0), right_sibling_(0) {
         };
 
+        ~LeafNode() {
+            delete right_sibling_;
+        }
+
         bool insert(const K &key, const V &val) {
 
             int insert_position;

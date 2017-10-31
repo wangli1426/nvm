@@ -4,33 +4,8 @@
 #include <limits.h>
 #include <algorithm>
 
-
-class A {
-public:
-    virtual void print() = 0;
-};
-
-class B: public A {
-public:
-    void print() {
-        printf("%d\n", a);
-    }
-    int a;
-};
-
 using namespace tree;
 int main() {
-
-    B* b1 = new B();
-    B* b2 = new B();
-    b1->a = 1;
-    b2->a = 2;
-
-    A* a1 = b1;
-    A* a2 = b2;
-
-    *a1 = *a2;
-    a1->print();
 
     const int number_of_tuples = 8;
     std::vector<int> tuples;
