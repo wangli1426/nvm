@@ -7,6 +7,8 @@
 
 #include <string>
 #include <iostream>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include "node_reference.h"
 #include "b_tree.h"
 #define INNER_NODE 0
@@ -38,6 +40,9 @@ namespace tree {
     template<typename K, typename V>
     class Node {
     public:
+
+        Node() {};
+
         virtual ~Node() {};
 
         // Insert an entry (key, val) into the node. Return false if there is no room for the new entry
@@ -93,6 +98,11 @@ namespace tree {
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION
         bool is_leaf_;
 #endif
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+        }
     };
 }
 

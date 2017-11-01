@@ -37,6 +37,11 @@ namespace tree {
                 this->val = r.val;
                 return *this;
             }
+            friend class boost::serialization::access;
+            template<class Archive>
+            void serialize(Archive & ar, const unsigned int version) {
+                ar & key & val;
+            }
         };
 
     public:
@@ -363,6 +368,12 @@ namespace tree {
         node_reference<K, V> *right_sibling_;
         node_reference<K, V> *self_ref_;
         blk_accessor<K, V, CAPACITY>* blk_accessor_;
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
+        }
     };
 }
 

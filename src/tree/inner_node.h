@@ -12,6 +12,7 @@
 #include "leaf_node.h"
 #include "in_memory_node_reference.h"
 #include "../blk/blk.h"
+#include "../utils/serialize/serialize_utils.h"
 
 namespace tree {
 
@@ -352,21 +353,22 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
-            *(static_cast<uint32_t*>(buffer)) = INNER_NODE;
-
-            // write size
-            *(static_cast<uint32_t*>(buffer) + 1) = size_;
-
-            // copy entries
-            memcpy((char*)buffer + sizeof(uint32_t) * 2, &key_, CAPACITY * sizeof(K));
+//            *(static_cast<uint32_t*>(buffer)) = INNER_NODE;
+//
+//            // write size
+//            *(static_cast<uint32_t*>(buffer) + 1) = size_;
+//
+//            // copy entries
+//            memcpy((char*)buffer + sizeof(uint32_t) * 2, &key_, CAPACITY * sizeof(K));
+//            utils_serialize(buffer, 512, this);
         }
 
         void deserialize(void* buffer) {
-            // restore size
-            size_ = *(static_cast<uint32_t*>(buffer) + 1);
-
-            // restore keys
-            memcpy(&key_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
+//            // restore size
+//            size_ = *(static_cast<uint32_t*>(buffer) + 1);
+//
+//            // restore keys
+//            memcpy(&key_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
         }
 
         node_reference<K, V>* get_self_ref() const {
@@ -406,6 +408,13 @@ namespace tree {
         node_reference<K, V>* self_ref_;
         int size_;
         blk_accessor<K, V, CAPACITY>* blk_accessor_;
+
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ & child_;
+        }
     };
 }
 #endif //B_TREE_INNER_NODE_H
