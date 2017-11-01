@@ -34,6 +34,28 @@ set_target_properties(libgtest PROPERTIES
 include_directories("${source_dir}/googletest/include"
         "${source_dir}/googlemock/include")
 
+set(BOOST_REQUESTED_VERSION "1.65.1")
+string(REPLACE "." "_" BOOST_REQUESTED_VERSION_UNDERSCORE ${BOOST_REQUESTED_VERSION})
+include(ExternalProject)
+ExternalProject_Add(
+		Boost
+		URL https://downloads.sourceforge.net/project/boost/boost/${BOOST_REQUESTED_VERSION}/boost_${BOOST_REQUESTED_VERSION_UNDERSCORE}.zip
+		PREFIX ${CMAKE_CURRENT_BINARY_DIR}/boost
+		UPDATE_COMMAND ""
+		CONFIGURE_COMMAND ./bootstrap.sh --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost
+		BUILD_COMMAND ./b2 ${BOOST_MAYBE_STATIC} --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost --with-serialization install
+		BUILD_IN_SOURCE true
+		INSTALL_COMMAND ""
+		INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost
+)
+ExternalProject_Get_Property(Boost source_dir binary_dir)
+add_library(libboost IMPORTED STATIC GLOBAL)
+#add_dependencies(libboost Boost)
+#add_library(libboost )
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
+
+
+
 # Used to generate lib when there are some cpp files.
 
 #add_library(source src/main.cc)
@@ -41,7 +63,8 @@ include_directories("${source_dir}/googletest/include"
 
 # Generate main executable
 add_executable(main src/main.cc)
-target_link_libraries(main)
+target_link_libraries(main ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+add_dependencies(main Boost)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib

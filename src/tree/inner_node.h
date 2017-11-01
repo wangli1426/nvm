@@ -235,7 +235,8 @@ namespace tree {
             bool is_split;
             if (exceed_left_boundary) {
                 node_ref = child_[0];
-                is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
+                Node<K, V>* target_child_instance = node_ref->get();
+                is_split = target_child_instance->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
             } else {
                 node_ref = child_[target_node_index];

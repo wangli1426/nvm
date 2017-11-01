@@ -34,6 +34,7 @@ namespace tree {
                 case INNER_NODE:
                     instance_ = new InnerNode<K, V, CAPACITY>();
                     instance_->deserialize(read_buffer);
+                    break;
                 default:
                     return nullptr;
             }
@@ -43,7 +44,7 @@ namespace tree {
 
         void close() {
             void *write_buffer = malloc(blk_accessor_->block_size);
-            instance_->deserialize(write_buffer);
+            instance_->serialize(write_buffer);
             blk_accessor_->write(blk_address_, write_buffer);
             delete instance_;
             instance_ = 0;
@@ -58,7 +59,7 @@ namespace tree {
         void copy(node_reference<K, V>* ref) {
 //            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
             this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY>*>(ref)->blk_address_;
-            this->instance_ = 0;
+//            this->instance_ = 0;
         }
         bool is_null_ptr() const {
             return blk_address_ == 0;

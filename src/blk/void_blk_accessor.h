@@ -40,6 +40,10 @@ public:
         return new in_memory_node_ref<K, V>(0);
     }
 
+    node_reference<K, V>* create_null_ref() {
+        return allocate_ref();
+    };
+
 };
 
 

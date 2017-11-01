@@ -28,6 +28,7 @@ public:
     }
     virtual ~blk_accessor() {};
     virtual node_reference<K, V>* allocate_ref() = 0;
+    virtual node_reference<K, V>* create_null_ref() = 0;
     virtual int open() = 0;
     virtual blk_address allocate() = 0;
     virtual void deallocate(const blk_address& address) = 0;

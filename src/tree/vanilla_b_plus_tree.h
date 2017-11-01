@@ -37,8 +37,9 @@ namespace tree {
         }
 
         void close() {
+            Node<K, V>* root_instance = root_->get();
             root_->close();
-            delete root_->get();
+//            delete root_instance;
             delete root_;
             blk_accessor_->close();
         }
@@ -47,16 +48,17 @@ namespace tree {
         void insert(const K &k, const V &v) {
             Split<K, V> split;
             bool is_split;
-
-            is_split = root_->get()->insert_with_split_support(k, v, split);
+            Node<K, V>* root_instance = root_->get();
+            is_split = root_instance->insert_with_split_support(k, v, split);
             if (is_split) {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, blk_accessor_);
                 root_->copy(new_inner_node->get_self_ref());
+                root_->bind(new_inner_node);
 //                delete root_;
 //                root_ = new in_memory_node_ref<K, V>(new_inner_node);
                 ++depth_;
             }
-
+            root_->close();
         }
 
         // Delete the entry from the tree. Return true if the key exists.
@@ -111,6 +113,7 @@ namespace tree {
                 blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
             Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
             root_ = blk_accessor_->allocate_ref();
+            root_->bind(leaf_node);
             root_->copy(leaf_node->get_self_ref());
             root_->close();
             depth_ = 1;

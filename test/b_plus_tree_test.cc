@@ -13,6 +13,7 @@ using namespace tree;
 
 TEST(BPlusTreeTest, InsertionTest) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(3, 3);
     tree.insert(2, 2);
@@ -42,6 +43,7 @@ TEST(BPlusTreeTest, InsertionTest) {
 
 TEST(BPlusTreeTest, InsertAndQueryTest) {
     VanillaBPlusTree<int, int, 5> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(3, 3);
     tree.insert(6, 6);
@@ -64,6 +66,7 @@ TEST(BPlusTreeTest, InsertAndQueryTest) {
 
 TEST(BPlusTreeTest, InsertReverseOrderAndQueryTest) {
     VanillaBPlusTree<int, int, 2> tree;
+    tree.init();
     tree.insert(11, 11);
     tree.insert(12, 12);
     tree.insert(10, 10);
@@ -86,6 +89,7 @@ TEST(BPlusTreeTest, InsertReverseOrderAndQueryTest) {
 
 TEST(BPlusTree, Search) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     int value;
     EXPECT_EQ(false, tree.search(100, value));
 
@@ -111,6 +115,7 @@ TEST(BPlusTree, Search) {
 TEST(BPlusTree, MassiveRandomInsertionAndQuery) {
     std::set<int> s;
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     const int tuples = 100000;
     const int range = tuples * 10;
 
@@ -133,6 +138,7 @@ TEST(BPlusTree, MassiveRandomInsertionAndQuery) {
 
 TEST(BPlusTree, DeleteWithoutMergeTest) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -148,6 +154,7 @@ TEST(BPlusTree, DeleteWithoutMergeTest) {
 
 TEST(BPlusTree, DeleteWithLeafNodeRebalancedAndMerged) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -182,6 +189,7 @@ TEST(BPlusTree, DeleteWithLeafNodeRebalancedAndMerged) {
 
 TEST(BPlusTree, DeleteWithInnerNodeRebalancedAndMerged) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -230,6 +238,7 @@ TEST(BPlusTree, KeysInsertedAndDeletedInRandomOrder) {
 
 
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }
@@ -253,6 +262,7 @@ TEST(BPlusTree, IteratorFullScanTest) {
 
 
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }
@@ -270,6 +280,7 @@ TEST(BPlusTree, IteratorFullScanTest) {
 
 TEST(BPlusTree, IteratorRangeScanOnEmptyTreeTest) {
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     BTree<int, int>::Iterator *it = tree.range_search(INT_MIN, INT_MAX);
     int k, v;
     EXPECT_EQ(false, it->next(k, v));
@@ -286,6 +297,7 @@ TEST(BPlusTree, IteratorRangeScanTest) {
 
 
     VanillaBPlusTree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }

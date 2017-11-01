@@ -13,6 +13,7 @@ using namespace tree;
 
 TEST(DiskBasedBPlusTreeTest, InsertionTest) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(3, 3);
     tree.insert(2, 2);
@@ -42,6 +43,7 @@ TEST(DiskBasedBPlusTreeTest, InsertionTest) {
 
 TEST(DiskBasedBPlusTreeTest, InsertAndQueryTest) {
     in_disk_b_plus_tree<int, int, 5> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(3, 3);
     tree.insert(6, 6);
@@ -64,6 +66,7 @@ TEST(DiskBasedBPlusTreeTest, InsertAndQueryTest) {
 
 TEST(DiskBasedBPlusTreeTest, InsertReverseOrderAndQueryTest) {
     in_disk_b_plus_tree<int, int, 2> tree;
+    tree.init();
     tree.insert(11, 11);
     tree.insert(12, 12);
     tree.insert(10, 10);
@@ -86,6 +89,7 @@ TEST(DiskBasedBPlusTreeTest, InsertReverseOrderAndQueryTest) {
 
 TEST(DiskBasedBPlusTreeTest, Search) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     int value;
     EXPECT_EQ(false, tree.search(100, value));
 
@@ -111,6 +115,7 @@ TEST(DiskBasedBPlusTreeTest, Search) {
 TEST(DiskBasedBPlusTreeTest, MassiveRandomInsertionAndQuery) {
     std::set<int> s;
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     const int tuples = 100000;
     const int range = tuples * 10;
 
@@ -133,6 +138,7 @@ TEST(DiskBasedBPlusTreeTest, MassiveRandomInsertionAndQuery) {
 
 TEST(DiskBasedBPlusTreeTest, DeleteWithoutMergeTest) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -148,6 +154,7 @@ TEST(DiskBasedBPlusTreeTest, DeleteWithoutMergeTest) {
 
 TEST(DiskBasedBPlusTreeTest, DeleteWithLeafNodeRebalancedAndMerged) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -182,6 +189,7 @@ TEST(DiskBasedBPlusTreeTest, DeleteWithLeafNodeRebalancedAndMerged) {
 
 TEST(DiskBasedBPlusTreeTest, DeleteWithInnerNodeRebalancedAndMerged) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     tree.insert(1, 1);
     tree.insert(2, 2);
     tree.insert(3, 3);
@@ -230,6 +238,7 @@ TEST(DiskBasedBPlusTreeTest, KeysInsertedAndDeletedInRandomOrder) {
 
 
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }
@@ -253,6 +262,7 @@ TEST(DiskBasedBPlusTreeTest, IteratorFullScanTest) {
 
 
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }
@@ -286,6 +296,7 @@ TEST(DiskBasedBPlusTreeTest, IteratorRangeScanTest) {
 
 
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }

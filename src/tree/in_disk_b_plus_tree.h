@@ -26,6 +26,7 @@ namespace tree{
             if (this->blk_accessor_)
                 delete this->blk_accessor_;
             this->blk_accessor_ = new file_blk_accessor<K, V, CAPACITY>(file_name_, 512);
+            this->blk_accessor_->open();
         }
         const char* file_name_;
     };

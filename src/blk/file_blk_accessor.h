@@ -68,6 +68,9 @@ public:
         return new blk_node_reference<K, V, CAPACITY>(addr, this);
     }
 
+    node_reference<K, V>* create_null_ref() {
+        return new blk_node_reference<K, V, CAPACITY>(-1, this);
+    };
 
 private:
     bool is_address_valid(const blk_address& address) const {
