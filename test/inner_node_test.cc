@@ -17,7 +17,7 @@ TEST(InnerNodeTest, InsertWithoutSplit) {
     LeafNode<int, int, 2> *right_leaf = new LeafNode<int, int, 2>(&accessor);;
     left_leaf->insert(1, 1);
     right_leaf->insert(3, 3);
-    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf);
+    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf, &accessor);
     inner_node.insert(2, 2);
     EXPECT_EQ("3 [(1,1) (2,2)] [(3,3)]", inner_node.toString());
 
@@ -32,7 +32,7 @@ TEST(InnerNodeTest, InsertWithoutSplitWithSplitSupport) {
     LeafNode<int, int, 2> *right_leaf = new LeafNode<int, int, 2>(&accessor);;
     left_leaf->insert(1, 1);
     right_leaf->insert(3, 3);
-    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf);
+    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf, &accessor);
 
     Split<int, int> split;
     EXPECT_EQ(false, inner_node.insert_with_split_support(2, 2, split));
@@ -48,7 +48,7 @@ TEST(InnerNodeTest, InsertWithSplitWithSplitSupport) {
     LeafNode<int, int, 2> *right_leaf = new LeafNode<int, int, 2>(&accessor);;
     left_leaf->insert(1, 1);
     right_leaf->insert(6, 6);
-    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf);
+    InnerNode<int, int, 4> inner_node(left_leaf, right_leaf, &accessor);
 
     Split<int, int> split;
     EXPECT_EQ(false, inner_node.insert_with_split_support(4, 4, split));
@@ -76,7 +76,7 @@ TEST(InnerNodeTest, InnerNodeSplit1) {
     left_leaf->insert(3, 3);
     right_leaf->insert(6, 6);
     right_leaf->insert(8, 8);
-    InnerNode<int, int, 2> inner_node(left_leaf, right_leaf);
+    InnerNode<int, int, 2> inner_node(left_leaf, right_leaf, &accessor);
 
     Split<int, int> split;
 
@@ -94,7 +94,7 @@ TEST(InnerNodeTest, InnerNodeSplit2) {
     left_leaf->insert(3, 3);
     right_leaf->insert(6, 6);
     right_leaf->insert(8, 8);
-    InnerNode<int, int, 2> inner_node(left_leaf, right_leaf);
+    InnerNode<int, int, 2> inner_node(left_leaf, right_leaf, &accessor);
 
     Split<int, int> split;
 

@@ -48,21 +48,22 @@ namespace tree {
 //            }
 //            int length = *static_cast<int32_t *>(read_buffer);
 ////
-//            ostringstream ostr;
-//            ostr.write((char*)read_buffer + sizeof(int32_t), length);
-//            ostr.write(read_buffer, length);
-//            std::string tmp = ostr.str();
-//            istringstream istr(tmp);
-//            boost::archive::text_iarchive ia(istr);
 
 
-            std::string received((char*)read_buffer, blk_accessor->block_size);
+            ostringstream ostr;
+            ostr.write((char*)read_buffer, blk_accessor->block_size);
+            std::string tmp = ostr.str();
+            istringstream istr(tmp);
+            boost::archive::text_iarchive ia(istr);
 
-            printf("R[%d]: %s\n", blk_address_, received.c_str());
-            boost::iostreams::basic_array_source<char> device(received.data(),
-                                                              received.size());
-            boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s(device);
-            boost::archive::text_iarchive ia(s);
+
+//            std::string received((char*)read_buffer, blk_accessor->block_size);
+//
+//            printf("R[%d]: %s\n", blk_address_, received.c_str());
+//            boost::iostreams::basic_array_source<char> device(received.data(),
+//                                                              received.size());
+//            boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s(device);
+//            boost::archive::text_iarchive ia(s);
 
 
 
@@ -82,13 +83,14 @@ namespace tree {
             void *write_buffer = malloc(blk_accessor->block_size);
 //            instance_->serialize(write_buffer);
 
-//            ostringstream ostr;
-//            boost::archive::text_oarchive oa(ostr);
-            std::string serial_str;
-            boost::iostreams::back_insert_device<std::string> inserter(serial_str);
-            boost::iostreams::stream<boost::iostreams::back_insert_device<std::string> >
-                    ostr(inserter);
+            ostringstream ostr;
             boost::archive::text_oarchive oa(ostr);
+
+//            std::string serial_str;
+//            boost::iostreams::back_insert_device<std::string> inserter(serial_str);
+//            boost::iostreams::stream<boost::iostreams::back_insert_device<std::string> >
+//                    ostr(inserter);
+//            boost::archive::text_oarchive oa(ostr);
 
 
             oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
@@ -98,14 +100,16 @@ namespace tree {
             oa << instance_;
 //            oa << '\n';
             ostr.flush();
-            memcpy(write_buffer, serial_str.data(), serial_str.size());
-            memset((char*)write_buffer + serial_str.size(), 0, blk_accessor->block_size - serial_str.size());
-            printf("W[%d]: %s\n", blk_address_, serial_str.c_str());
 
-//            std::string str = ostr.str();
-//            int32_t length = str.length();
-//            memcpy(write_buffer, &length, sizeof(int32_t));
-//            memcpy(write_buffer + sizeof(int32_t), str.c_str(), str.size());
+//            memcpy(write_buffer, serial_str.data(), serial_str.size());
+//            memset((char*)write_buffer + serial_str.size(), 0, blk_accessor->block_size - serial_str.size());
+//            printf("W[%d]: %s\n", blk_address_, serial_str.c_str());
+
+            std::string str = ostr.str();
+            int32_t length = str.length();
+            memcpy(write_buffer, str.c_str(), str.size());
+            memset((char*)write_buffer + str.size(), 0, blk_accessor->block_size - str.size());
+            printf("W[%d]: %s\n", blk_address_, str.c_str());
 
             blk_accessor->write(blk_address_, write_buffer);
 //            delete instance_;

@@ -110,7 +110,7 @@ namespace tree {
             LeafNode<K, V, CAPACITY> *leftmost_leaf_node =
                     dynamic_cast<LeafNode<K, V, CAPACITY> *>(root_->get(blk_accessor_)->get_leftmost_leaf_node());
 
-            return new Iterator(leftmost_leaf_node, 0);
+            return new Iterator(leftmost_leaf_node, 0, blk_accessor_);
         }
 
         void init() {

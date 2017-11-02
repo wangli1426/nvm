@@ -14,6 +14,9 @@
 #define INNER_NODE 0
 #define LEAF_NODE 1
 #define UNDERFLOW_BOUND(N) ((N + 1) / 2)
+
+template <typename K, typename V>
+class blk_accessor;
 namespace tree {
 
     template<typename K, typename V>

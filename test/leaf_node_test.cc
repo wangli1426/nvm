@@ -8,7 +8,7 @@
 
 using namespace tree;
 TEST(LeafNode, InsertionWithOverflow) {
-    blk_accessor<int, int, 5>* blk_accessor = new void_blk_accessor<int, int, 5>(512);
+    blk_accessor<int, int>* blk_accessor = new void_blk_accessor<int, int, 5>(512);
     blk_accessor->open();
     LeafNode<int, int, 5> leafNode(blk_accessor);
     leafNode.insert(1, 1);
@@ -22,7 +22,7 @@ TEST(LeafNode, InsertionWithOverflow) {
 }
 
 TEST(LeafNode, InsertionWithOverflowDouble) {
-    blk_accessor<double, int, 5>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
+    blk_accessor<double, int>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
     blk_accessor->open();
     LeafNode<double, int, 5> leafNode(blk_accessor);
     leafNode.insert(1.3, 1);
@@ -36,7 +36,7 @@ TEST(LeafNode, InsertionWithOverflowDouble) {
 }
 
 TEST(LeafNode, InsertionAndUpdate) {
-    blk_accessor<double, int, 5>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
+    blk_accessor<double, int>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
     blk_accessor->open();
     LeafNode<double, int, 5> leaf_node(blk_accessor);
     leaf_node.insert(1, 2);
@@ -47,7 +47,7 @@ TEST(LeafNode, InsertionAndUpdate) {
 }
 
 TEST(LeafNode, Search) {
-    blk_accessor<double, int, 5>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
+    blk_accessor<double, int>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
     blk_accessor->open();
     LeafNode<double, int, 5> leaf_node(blk_accessor);
     leaf_node.insert(1, 5);
@@ -67,7 +67,7 @@ TEST(LeafNode, Search) {
 }
 
 TEST(LeafNode, Update) {
-    blk_accessor<double, int, 5>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
+    blk_accessor<double, int>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
     blk_accessor->open();
     LeafNode<double, int, 5> leaf_node(blk_accessor);
     leaf_node.insert(5, 5);
@@ -92,7 +92,7 @@ TEST(LeafNode, Update) {
 }
 
 TEST(LeafNode, Delete) {
-    blk_accessor<double, int, 5>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
+    blk_accessor<double, int>* blk_accessor = new void_blk_accessor<double, int, 5>(512);
     blk_accessor->open();
     LeafNode<double, int, 5> leaf_node(blk_accessor);
     leaf_node.insert(5, 5);
@@ -119,7 +119,7 @@ TEST(LeafNode, Delete) {
 }
 
 TEST(LeafNode, SplitInsertLeft) {
-    blk_accessor<int, int, 4>* blk_accessor = new void_blk_accessor<int, int, 4>(512);
+    blk_accessor<int, int>* blk_accessor = new void_blk_accessor<int, int, 4>(512);
     blk_accessor->open();
     LeafNode<int, int, 4> *leaf = new LeafNode<int, int, 4>(blk_accessor);
     Split<int, int> split;
@@ -138,7 +138,7 @@ TEST(LeafNode, SplitInsertLeft) {
 }
 
 TEST(LeafNode, SplitInsertRight) {
-    blk_accessor<int, int, 4>* blk_accessor = new void_blk_accessor<int, int, 4>(512);
+    blk_accessor<int, int>* blk_accessor = new void_blk_accessor<int, int, 4>(512);
     blk_accessor->open();
     LeafNode<int, int, 4> *leaf = new LeafNode<int, int, 4>(blk_accessor);
     Split<int, int> split;

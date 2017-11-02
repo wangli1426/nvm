@@ -94,11 +94,11 @@ add_executable(blk_tree src/tree/blk_tree_main.cpp src/tree/blk_inner.h)
 
 set(TEST_FILES
 		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
-		test/disk_based_b_plus_tree_test.cc src/utils/serialize/serialize_utils.c)
+		test/disk_based_b_plus_tree_test.cc)
 
 add_executable(unittest ${TEST_FILES})
-target_link_libraries(unittest libgtest)
-
+target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+add_dependencies(unittest Boost)
 
 
 

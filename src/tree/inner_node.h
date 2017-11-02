@@ -12,7 +12,6 @@
 #include "leaf_node.h"
 #include "in_memory_node_reference.h"
 #include "../blk/blk.h"
-#include "../utils/serialize/serialize_utils.h"
 
 namespace tree {
 
