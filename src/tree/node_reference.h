@@ -4,7 +4,8 @@
 
 #ifndef NVM_NODE_REFERENCE_H
 #define NVM_NODE_REFERENCE_H
-
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include "node.h"
 namespace tree {
 
@@ -31,6 +32,11 @@ namespace tree {
 
         // bind this reference to a particular node
         virtual void bind(Node<K, V>* node) = 0;
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+        }
     };
 }
 #endif //NVM_NODE_REFERENCE_H

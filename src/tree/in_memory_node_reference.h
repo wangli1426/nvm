@@ -41,6 +41,13 @@ namespace tree{
 
     private:
         Node<K, V> *ref_;
+    private:
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            ar & boost::serialization::base_object<node_reference<K, V>>(*this);
+        }
     };
 }
 #endif //NVM_IN_MEMORY_NODE_REFERENCE_H

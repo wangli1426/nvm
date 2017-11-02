@@ -18,6 +18,9 @@ namespace tree {
     template<typename K, typename V, int CAPACITY>
     class blk_node_reference : public node_reference<K, V> {
     public:
+
+        blk_node_reference(): blk_address_(-1), blk_accessor_(0), instance_(0) {};
+
         blk_node_reference(blk_address blk_address, blk_accessor<K, V, CAPACITY>* blk_accessor) : blk_address_(blk_address),
                                                                                  blk_accessor_(blk_accessor),
                                                                                  instance_(0) {};
@@ -50,7 +53,8 @@ namespace tree {
             boost::archive::text_iarchive ia(istr);
             ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
             ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
-            ia.register_type(static_cast<Node<K, V>*>(NULL));
+            ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
+            ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             ia >> instance_;
 
             return instance_;
@@ -65,7 +69,8 @@ namespace tree {
             boost::archive::text_oarchive oa(ostr);
             oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
             oa.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
-            oa.register_type(static_cast<Node<K, V>*>(NULL));
+            oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
+            oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             oa << instance_;
             std::string str = ostr.str();
             memcpy(write_buffer, str.c_str(), str.size());
@@ -97,6 +102,12 @@ namespace tree {
         blk_address blk_address_;
         blk_accessor<K, V, CAPACITY>* blk_accessor_;
         Node<K, V>* instance_;
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            ar & boost::serialization::base_object<node_reference<K, V>>(*this) & blk_address_;
+        }
     };
 }
 #endif //NVM_BLK_NODE_REFERENCE_H
