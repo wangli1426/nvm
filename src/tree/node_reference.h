@@ -7,6 +7,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include "node.h"
+#include "../blk/blk.h"
 namespace tree {
 
     template<typename K, typename V>
@@ -16,15 +17,15 @@ namespace tree {
     class node_reference {
     public:
         // get an instance of the node referred to.
-        virtual Node<K, V>* get() {
+        virtual Node<K, V>* get(blk_accessor<K, V>* blk_accessor) {
             return nullptr;
         };
 
         // flush the change.
-        virtual void close() = 0;
+        virtual void close(blk_accessor<K, V>* blk_accessor) = 0;
 
         // remove the reference as well as the referred node.
-        virtual void remove() = 0;
+        virtual void remove(blk_accessor<K, V>* blk_accessor) = 0;
 
         virtual void copy(node_reference* ref) = 0;
 

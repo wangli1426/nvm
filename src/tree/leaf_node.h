@@ -46,7 +46,7 @@ namespace tree {
 
     public:
 
-        LeafNode(blk_accessor<K, V, CAPACITY>* blk_accessor = 0) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
+        LeafNode(blk_accessor<K, V>* blk_accessor = 0) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
             if (blk_accessor) {
                 self_ref_ = blk_accessor_->allocate_ref();
                 self_ref_->bind(this);
@@ -367,7 +367,7 @@ namespace tree {
         int size_;
         node_reference<K, V> *right_sibling_;
         node_reference<K, V> *self_ref_;
-        blk_accessor<K, V, CAPACITY>* blk_accessor_;
+        blk_accessor<K, V>* blk_accessor_;
     private:
         friend class boost::serialization::access;
         template<class Archive>

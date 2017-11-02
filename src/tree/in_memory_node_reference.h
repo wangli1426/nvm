@@ -15,15 +15,15 @@ namespace tree{
         in_memory_node_ref(Node<K, V>* ref): ref_(ref) {
 
         }
-        Node<K, V>* get() override {
+        Node<K, V>* get(blk_accessor<K, V>* blk_accessor) override {
             return ref_;
         }
 
-        void close() override{
+        void close(blk_accessor<K, V>* blk_accessor) override{
 
         }
 
-        void remove() override {
+        void remove(blk_accessor<K, V>* blk_accessor) override {
 
         }
 

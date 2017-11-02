@@ -15,12 +15,14 @@
 //    uint32_t id;
 //};
 
+namespace tree {
+    template<typename K, typename V>
+    class node_reference;
+}
 using namespace tree;
-//template<typename K, typename V>
-//class node_reference;
 
 typedef uint64_t blk_address;
-template <typename K, typename V, int CAPACITY>
+template <typename K, typename V>
 class blk_accessor {
 
 public:

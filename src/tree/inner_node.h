@@ -24,7 +24,7 @@ namespace tree {
         friend class VanillaBPlusTree<K, V, CAPACITY>;
 
     public:
-        InnerNode(blk_accessor<K, V, CAPACITY>* blk_accessor = 0) : size_(0), blk_accessor_(blk_accessor) {
+        InnerNode(blk_accessor<K, V>* blk_accessor = 0) : size_(0), blk_accessor_(blk_accessor) {
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
                 self_ref_->bind(this);
@@ -33,7 +33,7 @@ namespace tree {
             }
         };
 
-        InnerNode(Node<K, V> *left, Node<K, V> *right, blk_accessor<K, V, CAPACITY>* blk_accessor = 0): blk_accessor_(blk_accessor) {
+        InnerNode(Node<K, V> *left, Node<K, V> *right, blk_accessor<K, V>* blk_accessor = 0): blk_accessor_(blk_accessor) {
 
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
@@ -51,8 +51,8 @@ namespace tree {
 
         ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
-                delete child_[i]->get();
-                child_[i]->remove();
+                delete child_[i]->get(blk_accessor_);
+                child_[i]->remove(blk_accessor_);
                 delete child_[i];
             }
             delete self_ref_;
@@ -60,18 +60,18 @@ namespace tree {
 
         bool insert(const K &key, const V &val) {
             const int insert_position = locate_child_index(key);
-            Node<K, V> *targetNode = child_[insert_position]->get();
+            Node<K, V> *targetNode = child_[insert_position]->get(blk_accessor_);
             bool ret = targetNode->insert(key, val);
-            child_[locate_child_index(key)]->close();
+            child_[locate_child_index(key)]->close(blk_accessor_);
             return ret;
         }
 
         bool search(const K &k, V &v) {
             const int index = locate_child_index(k);
             if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index]->get();
+            Node<K, V> *targeNode = child_[index]->get(blk_accessor_);
             bool ret = targeNode->search(k, v);
-            child_[index]->close();
+            child_[index]->close(blk_accessor_);
             return ret;
         }
 
@@ -79,9 +79,9 @@ namespace tree {
         bool locate_key(const K &k, Node<K, V> *&child, int &index) {
             int local_index = locate_child_index(k);
             if (local_index < 0) return false;
-            Node<K, V> *targeNode = child_[local_index]->get();
+            Node<K, V> *targeNode = child_[local_index]->get(blk_accessor_);
             bool ret = targeNode->locate_key(k, child, index);
-            child_[local_index]->close();
+            child_[local_index]->close(blk_accessor_);
             return ret;
         }
 
@@ -98,15 +98,15 @@ namespace tree {
             if (child_index < 0)
                 return false;
 
-            Node<K, V> *child = child_[child_index]->get();
+            Node<K, V> *child = child_[child_index]->get(blk_accessor_);
             bool deleted = child->delete_key(k, underflow);
             if (!deleted) {
-                child_[child_index]->close();
+                child_[child_index]->close(blk_accessor_);
                 return false;
             }
 
             if (!underflow || size_ < 2) {
-                child_[child_index]->close();
+                child_[child_index]->close(blk_accessor_);
                 return true;
             }
 
@@ -121,8 +121,8 @@ namespace tree {
                 left_child_index = child_index;
                 right_child_index = child_index + 1;
             }
-            left_child = child_[left_child_index]->get();
-            right_child = child_[right_child_index]->get();
+            left_child = child_[left_child_index]->get(blk_accessor_);
+            right_child = child_[right_child_index]->get(blk_accessor_);
 
 
             // try to borrow an entry from the left. If no additional entry is available in the left, the two nodes will
@@ -133,15 +133,15 @@ namespace tree {
                 // if borrowed (not merged), update the boundary
                 key_[right_child_index] = boundary;
                 underflow = false;
-                child_[left_child_index]->close();
-                child_[right_child_index]->close();
+                child_[left_child_index]->close(blk_accessor_);
+                child_[right_child_index]->close(blk_accessor_);
                 return true;
             }
 
             // merged
-//            delete child_[right_child_index]->get();
-            child_[right_child_index]->close();
-            child_[right_child_index]->remove(); // a potential bug here, because the instance of the right node may be freed, in the balance function.
+//            delete child_[right_child_index]->get(blk_accessor_);
+            child_[right_child_index]->close(blk_accessor_);
+            child_[right_child_index]->remove(blk_accessor_); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             delete child_[right_child_index];
             child_[right_child_index] = 0;
             // remove the reference to the deleted child, i.e., right_child
@@ -236,17 +236,17 @@ namespace tree {
             bool is_split;
             if (exceed_left_boundary) {
                 node_ref = child_[0];
-                Node<K, V>* target_child_instance = node_ref->get();
+                Node<K, V>* target_child_instance = node_ref->get(blk_accessor_);
                 is_split = target_child_instance->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
             } else {
                 node_ref = child_[target_node_index];
-                is_split = node_ref->get()->insert_with_split_support(key, val, local_split);
+                is_split = node_ref->get(blk_accessor_)->insert_with_split_support(key, val, local_split);
             }
 
             // The tuple was inserted without causing leaf node split.
             if (!is_split) {
-                node_ref->close();
+                node_ref->close(blk_accessor_);
                 return false;
             }
 
@@ -289,13 +289,13 @@ namespace tree {
         }
 
         Node<K, V> *get_leftmost_leaf_node() {
-            Node<K, V> * ret = child_[0]->get()->get_leftmost_leaf_node();
-            child_[0]->close();
+            Node<K, V> * ret = child_[0]->get(blk_accessor_)->get_leftmost_leaf_node();
+            child_[0]->close(blk_accessor_);
             return ret;
         }
 
 //        node_reference<K, V>* get_leftmost_leaf_node_ref() {
-//            node_reference<K, V>* ret = child_[0]->get()->get_leftmost_leaf_node_ref();
+//            node_reference<K, V>* ret = child_[0]->get(blk_accessor_)->get_leftmost_leaf_node_ref();
 //            child_[0]->close();
 //            return ret;
 //        };
@@ -319,8 +319,8 @@ namespace tree {
         std::string nodes_to_string() const {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
-                ss << "[" << child_[i]->get()->toString() << "]";
-                child_[i]->close();
+                ss << "[" << child_[i]->get(blk_accessor_)->toString() << "]";
+                child_[i]->close(blk_accessor_);
                 if (i != size_ - 1) {
                     ss << " ";
                 }
@@ -329,8 +329,8 @@ namespace tree {
         }
 
         const K get_leftmost_key() {
-            K ret = child_[0]->get()->get_leftmost_key();
-            child_[0]->close();
+            K ret = child_[0]->get(blk_accessor_)->get_leftmost_key();
+            child_[0]->close(blk_accessor_);
             return ret;
         }
 
@@ -407,7 +407,7 @@ namespace tree {
         node_reference<K, V>* child_[CAPACITY];
         node_reference<K, V>* self_ref_;
         int size_;
-        blk_accessor<K, V, CAPACITY>* blk_accessor_;
+        blk_accessor<K, V>* blk_accessor_;
 
     private:
         friend class boost::serialization::access;

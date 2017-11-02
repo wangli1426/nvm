@@ -8,12 +8,16 @@
 #include <unordered_set>
 #include "../tree/blk_node_reference.h"
 #include "blk.h"
+namespace tree {
+    template<typename K, typename V, int CAPACITY>
+    class blk_node_reference;
+}
 
 using namespace std;
 template<typename K, typename V, int CAPACITY>
-class file_blk_accessor: public blk_accessor<K, V, CAPACITY> {
+class file_blk_accessor: public blk_accessor<K, V> {
 public:
-    explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V, CAPACITY>(block_size),
+    explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0) {
     }
 
@@ -65,11 +69,11 @@ public:
 
     node_reference<K, V>* allocate_ref() override {
         blk_address addr = allocate();
-        return new blk_node_reference<K, V, CAPACITY>(addr, this);
+        return new blk_node_reference<K, V, CAPACITY>(addr);
     }
 
     node_reference<K, V>* create_null_ref() {
-        return new blk_node_reference<K, V, CAPACITY>(-1, this);
+        return new blk_node_reference<K, V, CAPACITY>(-1);
     };
 
 private:

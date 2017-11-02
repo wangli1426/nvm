@@ -19,23 +19,22 @@ namespace tree {
     class blk_node_reference : public node_reference<K, V> {
     public:
 
-        blk_node_reference(): blk_address_(-1), blk_accessor_(0), instance_(0) {};
+        blk_node_reference(): blk_address_(-1), instance_(0) {};
 
-        blk_node_reference(blk_address blk_address, blk_accessor<K, V, CAPACITY>* blk_accessor) : blk_address_(blk_address),
-                                                                                 blk_accessor_(blk_accessor),
-                                                                                 instance_(0) {};
+        blk_node_reference(blk_address blk_address) : blk_address_(blk_address),
+                                                                                        instance_(0) {};
 
 
-        Node<K, V> *get() {
+        Node<K, V> *get(blk_accessor<K, V>* blk_accessor) {
             if (instance_)
                 return instance_;
-            void *read_buffer = malloc(blk_accessor_->block_size);
-            blk_accessor_->read(blk_address_, read_buffer);
+            void *read_buffer = malloc(blk_accessor->block_size);
+            blk_accessor->read(blk_address_, read_buffer);
 
 //            uint32_t *type = static_cast<uint32_t*>(read_buffer);
 //            switch (*type) {
 //                case LEAF_NODE:
-//                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+//                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor);
 //                    instance_->deserialize(read_buffer);
 //                    break;
 //                case INNER_NODE:
@@ -47,7 +46,7 @@ namespace tree {
 //            }
 
             ostringstream ostr;
-            ostr.write(read_buffer, blk_accessor_->block_size);
+            ostr.write(read_buffer, blk_accessor->block_size);
             std::string tmp = ostr.str();
             istringstream istr(tmp);
             boost::archive::text_iarchive ia(istr);
@@ -57,12 +56,14 @@ namespace tree {
             ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             ia >> instance_;
 
+
+
             return instance_;
 
         };
 
-        void close() {
-            void *write_buffer = malloc(blk_accessor_->block_size);
+        void close(blk_accessor<K, V>* blk_accessor) {
+            void *write_buffer = malloc(blk_accessor->block_size);
 //            instance_->serialize(write_buffer);
 
             ostringstream ostr;
@@ -75,15 +76,15 @@ namespace tree {
             std::string str = ostr.str();
             memcpy(write_buffer, str.c_str(), str.size());
 
-            blk_accessor_->write(blk_address_, write_buffer);
+            blk_accessor->write(blk_address_, write_buffer);
             delete instance_;
             instance_ = 0;
         }
 
-        void remove() {
+        void remove(blk_accessor<K, V>* blk_accessor) {
             delete instance_;
             instance_ = 0;
-            blk_accessor_->deallocate(blk_address_);
+            blk_accessor->deallocate(blk_address_);
         }
 
         void copy(node_reference<K, V>* ref) {
@@ -100,7 +101,6 @@ namespace tree {
         }
     private:
         blk_address blk_address_;
-        blk_accessor<K, V, CAPACITY>* blk_accessor_;
         Node<K, V>* instance_;
     private:
         friend class boost::serialization::access;

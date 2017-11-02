@@ -7,10 +7,17 @@
 
 
 #include "blk.h"
+#include "../tree/in_memory_node_reference.h"
+
+namespace tree {
+    template<typename K, typename V>
+    class in_memory_node_ref;
+}
+
 template<typename K, typename V, int CAPACITY>
-class void_blk_accessor: public blk_accessor<K, V, CAPACITY> {
+class void_blk_accessor: public blk_accessor<K, V> {
 public:
-    void_blk_accessor(const uint32_t size) : blk_accessor<K, V, CAPACITY>(size) {}
+    void_blk_accessor(const uint32_t size) : blk_accessor<K, V>(size) {}
 
     int open() override {
         return 0;
