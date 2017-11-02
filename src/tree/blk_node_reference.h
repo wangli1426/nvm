@@ -9,6 +9,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <sstream>
 #include <string>
+#include <alloca.h>
 #include "node_reference.h"
 #include "../blk/blk.h"
 #include "node.h"
@@ -95,9 +96,10 @@ namespace tree {
             oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
             oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             oa << instance_;
-
+//            oa << '\n';
             ostr.flush();
             memcpy(write_buffer, serial_str.data(), serial_str.size());
+            memset((char*)write_buffer + serial_str.size(), 0, blk_accessor->block_size - serial_str.size());
             printf("W[%d]: %s\n", blk_address_, serial_str.c_str());
 
 //            std::string str = ostr.str();

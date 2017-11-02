@@ -224,7 +224,10 @@ namespace tree {
             }
 
             key_[insert_position] = boundary_key;
-            child_[insert_position] = new in_memory_node_ref<K, V>();
+//            child_[insert_position] = new in_memory_node_ref<K, V>();
+//            child_[insert_position]->copy(innerNode->get_self_ref());
+
+            child_[insert_position] = blk_accessor_->allocate_ref();
             child_[insert_position]->copy(innerNode->get_self_ref());
 
             ++size_;
@@ -259,6 +262,8 @@ namespace tree {
             if (size_ < CAPACITY) {
                 insert_inner_node(local_split.right, local_split.boundary_key,
                                   target_node_index + 1 + exceed_left_boundary);
+                local_split.left->get_self_ref()->close(blk_accessor_);
+                local_split.right->get_self_ref()->close(blk_accessor_);
                 return false;
             }
 
@@ -269,6 +274,7 @@ namespace tree {
             int start_index_for_right = CAPACITY / 2;
             InnerNode<K, V, CAPACITY> *left = this;
             InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(blk_accessor_);
+            node_reference<K, V>* right_ref = right->get_self_ref();
 
             // move the keys and children to the right node
             for (int i = start_index_for_right, j = 0; i < size_; ++i, ++j) {
@@ -286,10 +292,15 @@ namespace tree {
             host_for_node->insert_inner_node(local_split.right, local_split.boundary_key,
                                              inner_node_insert_position + 1);
 
+
+
             // write the remaining content in the split data structure.
             split.left = (left);
             split.right = (right);
             split.boundary_key = right->get_leftmost_key();
+//            right_ref->close(blk_accessor_);
+            local_split.left->get_self_ref()->close(blk_accessor_);
+            local_split.right->get_self_ref()->close(blk_accessor_);
             return true;
         }
 

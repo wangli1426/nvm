@@ -129,7 +129,7 @@ namespace tree {
             Node<K, V> *leaf_node;
             int offset;
             root_->get(blk_accessor_)->locate_key(key_low, leaf_node, offset);
-            return new Iterator(dynamic_cast<LeafNode<K, V, CAPACITY> *>(leaf_node), offset, key_high);
+            return new Iterator(dynamic_cast<LeafNode<K, V, CAPACITY> *>(leaf_node), offset, key_high, blk_accessor_);
         };
 
         class Iterator : public BTree<K, V>::Iterator {

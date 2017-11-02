@@ -115,10 +115,10 @@ namespace tree {
                 int entry_index_for_right_node = CAPACITY / 2;
                 LeafNode<K, V, CAPACITY> *const left = this;
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+                node_reference<K, V>* right_ref = right->get_self_ref();
 
                 right->update_right_sibling(left->right_sibling_);
-                node_reference<K, V>* right_node_ref = right->get_self_ref();
-                left->update_right_sibling(right_node_ref);
+                left->update_right_sibling(right_ref);
 //                delete right_node_ref;
 
                 // move entries to the right node
@@ -139,6 +139,7 @@ namespace tree {
                 split.left = left;
                 split.right = right;
                 split.boundary_key = right->entries_[0].key;
+//                right_ref->close(blk_accessor_);
                 return true;
             }
 
