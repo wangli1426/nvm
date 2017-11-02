@@ -94,6 +94,8 @@ namespace tree {
 
         virtual node_reference<K, V>* get_self_ref() const {};
 
+        virtual void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {};
+
         // Indicate if the node is a leaf node. This flag is used to avoid the overhead of virtual function call.
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION
         bool is_leaf_;

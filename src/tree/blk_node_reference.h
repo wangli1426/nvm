@@ -8,6 +8,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <sstream>
+#include <string>
 #include "node_reference.h"
 #include "../blk/blk.h"
 #include "node.h"
@@ -44,20 +45,34 @@ namespace tree {
 //                default:
 //                    return nullptr;
 //            }
+//            int length = *static_cast<int32_t *>(read_buffer);
+////
+//            ostringstream ostr;
+//            ostr.write((char*)read_buffer + sizeof(int32_t), length);
+//            ostr.write(read_buffer, length);
+//            std::string tmp = ostr.str();
+//            istringstream istr(tmp);
+//            boost::archive::text_iarchive ia(istr);
 
-            ostringstream ostr;
-            ostr.write(read_buffer, blk_accessor->block_size);
-            std::string tmp = ostr.str();
-            istringstream istr(tmp);
-            boost::archive::text_iarchive ia(istr);
+
+            std::string received((char*)read_buffer, blk_accessor->block_size);
+
+            printf("R[%d]: %s\n", blk_address_, received.c_str());
+            boost::iostreams::basic_array_source<char> device(received.data(),
+                                                              received.size());
+            boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s(device);
+            boost::archive::text_iarchive ia(s);
+
+
+
             ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
             ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
             ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
             ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             ia >> instance_;
+            instance_->set_blk_accessor(blk_accessor);
 
-
-
+            free(read_buffer);
             return instance_;
 
         };
@@ -66,19 +81,34 @@ namespace tree {
             void *write_buffer = malloc(blk_accessor->block_size);
 //            instance_->serialize(write_buffer);
 
-            ostringstream ostr;
+//            ostringstream ostr;
+//            boost::archive::text_oarchive oa(ostr);
+            std::string serial_str;
+            boost::iostreams::back_insert_device<std::string> inserter(serial_str);
+            boost::iostreams::stream<boost::iostreams::back_insert_device<std::string> >
+                    ostr(inserter);
             boost::archive::text_oarchive oa(ostr);
+
+
             oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
             oa.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
             oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
             oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             oa << instance_;
-            std::string str = ostr.str();
-            memcpy(write_buffer, str.c_str(), str.size());
+
+            ostr.flush();
+            memcpy(write_buffer, serial_str.data(), serial_str.size());
+            printf("W[%d]: %s\n", blk_address_, serial_str.c_str());
+
+//            std::string str = ostr.str();
+//            int32_t length = str.length();
+//            memcpy(write_buffer, &length, sizeof(int32_t));
+//            memcpy(write_buffer + sizeof(int32_t), str.c_str(), str.size());
 
             blk_accessor->write(blk_address_, write_buffer);
-            delete instance_;
+//            delete instance_;
             instance_ = 0;
+            free(write_buffer);
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) {

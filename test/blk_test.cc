@@ -44,3 +44,22 @@ TEST(FILE_BLK_ACCESSOR, INVALID_ACCESS) {
     accessor.close();
     free(write_buffer);
 }
+
+TEST(FILE_BLK_ACCESSOR, CONTEXT_VALIDATION) {
+    file_blk_accessor<int, int, 32> accessor("./tmp", 512);
+    accessor.open();
+    blk_address  address = accessor.allocate();
+
+    void* write_buffer = malloc(512);
+    void* read_buffer = malloc(512);
+    * static_cast<uint32_t*>(write_buffer) = 100;
+
+    accessor.write(address, write_buffer);
+    accessor.read(address, read_buffer);
+
+    ASSERT_EQ(100, * static_cast<uint32_t*>(read_buffer));
+
+    free(write_buffer);
+    free(read_buffer);
+
+}

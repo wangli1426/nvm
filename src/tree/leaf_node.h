@@ -328,6 +328,10 @@ namespace tree {
             return self_ref_;
         };
 
+        void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {
+            this->blk_accessor_ = blk_accessor;
+        }
+
     protected:
         bool getEntry(int i, K &k, V &v) const {
             if (i >= size_)

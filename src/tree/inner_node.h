@@ -25,6 +25,7 @@ namespace tree {
 
     public:
         InnerNode(blk_accessor<K, V>* blk_accessor = 0) : size_(0), blk_accessor_(blk_accessor) {
+            initialize_child_refs();
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
                 self_ref_->bind(this);
@@ -34,7 +35,7 @@ namespace tree {
         };
 
         InnerNode(Node<K, V> *left, Node<K, V> *right, blk_accessor<K, V>* blk_accessor = 0): blk_accessor_(blk_accessor) {
-
+            initialize_child_refs();
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
                 self_ref_->bind(this);
@@ -42,11 +43,14 @@ namespace tree {
                 self_ref_ = 0;
             }
 
+
             size_ = 2;
             key_[0] = left->get_leftmost_key();
-            child_[0] = new in_memory_node_ref<K, V>(left);
+            child_[0] = blk_accessor_->create_null_ref();
+            child_[0]->copy(left->get_self_ref());
             key_[1] = right->get_leftmost_key();
-            child_[1] = new in_memory_node_ref<K, V>(right);
+            child_[1] = blk_accessor_->create_null_ref();
+            child_[1]->copy(right->get_self_ref());
         }
 
         ~InnerNode() {
@@ -241,7 +245,8 @@ namespace tree {
                 key_[0] = key;
             } else {
                 node_ref = child_[target_node_index];
-                is_split = node_ref->get(blk_accessor_)->insert_with_split_support(key, val, local_split);
+                Node<K, V>* target_child_instance = node_ref->get(blk_accessor_);
+                is_split = target_child_instance->insert_with_split_support(key, val, local_split);
             }
 
             // The tuple was inserted without causing leaf node split.
@@ -375,6 +380,10 @@ namespace tree {
             return self_ref_;
         };
 
+        void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {
+            blk_accessor_ = blk_accessor;
+        }
+
     protected:
         // Locate the node that might contain the particular key.
         int locate_child_index(K key) const {
@@ -410,10 +419,22 @@ namespace tree {
         blk_accessor<K, V>* blk_accessor_;
 
     private:
+        void initialize_child_refs() {
+            for (int i = 0 ; i < CAPACITY; i++) {
+                child_[i] = nullptr;
+            }
+        }
+
+    private:
         friend class boost::serialization::access;
         template<class Archive>
         void serialize(Archive & ar, const unsigned int version) {
-            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ & child_;
+            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
+            for (int i = 0; i < size_; i++) {
+                ar & child_[i];
+            }
+
+//            child_;
         }
     };
 }

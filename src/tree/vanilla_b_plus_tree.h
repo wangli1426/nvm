@@ -54,6 +54,11 @@ namespace tree {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, blk_accessor_);
                 root_->copy(new_inner_node->get_self_ref());
                 root_->bind(new_inner_node);
+
+                split.left->get_self_ref()->close(blk_accessor_);
+                split.right->get_self_ref()->close(blk_accessor_);
+
+
 //                delete root_;
 //                root_ = new in_memory_node_ref<K, V>(new_inner_node);
                 ++depth_;
@@ -112,9 +117,10 @@ namespace tree {
             if (!blk_accessor_)
                 blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
             Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
-            root_ = blk_accessor_->allocate_ref();
-            root_->bind(leaf_node);
-            root_->copy(leaf_node->get_self_ref());
+//            root_ = blk_accessor_->allocate_ref();
+//            root_->bind(leaf_node);
+//            root_->copy(leaf_node->get_self_ref());
+            root_ = leaf_node->get_self_ref();
             root_->close(blk_accessor_);
             depth_ = 1;
         }
