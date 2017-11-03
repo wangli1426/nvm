@@ -79,7 +79,7 @@ namespace tree {
         }
 
 
-        bool locate_key(const K &k, Node<K, V> *&child, int &index) {
+        bool locate_key(const K &k, node_reference<K, V> *&child, int &index) {
             int local_index = locate_child_index(k);
             if (local_index < 0) return false;
             Node<K, V> *targeNode = child_[local_index]->get(blk_accessor_);
@@ -303,8 +303,8 @@ namespace tree {
             return true;
         }
 
-        Node<K, V> *get_leftmost_leaf_node() {
-            Node<K, V> * ret = child_[0]->get(blk_accessor_)->get_leftmost_leaf_node();
+        node_reference<K, V> *get_leftmost_leaf_node() {
+            node_reference<K, V> * ret = child_[0]->get(blk_accessor_)->get_leftmost_leaf_node();
             child_[0]->close(blk_accessor_);
             return ret;
         }

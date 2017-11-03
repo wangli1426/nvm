@@ -153,9 +153,9 @@ namespace tree {
             return found;
         }
 
-        bool locate_key(const K &k, Node<K, V> *&child, int &position) {
+        bool locate_key(const K &k, node_reference<K, V> *&child, int &position) {
             const bool found = search_key_position(k, position);
-            child = this;
+            child = self_ref_;
             return found;
         };
 
@@ -273,8 +273,11 @@ namespace tree {
             return true;
         }
 
-        Node<K, V> *get_leftmost_leaf_node() {
-            return this;
+        node_reference<K, V> *get_leftmost_leaf_node() {
+            node_reference<K, V>* ret = blk_accessor_->create_null_ref();
+            ret->copy(self_ref_);
+
+            return ret;
         }
 //
 //        node_reference<K, V>* get_leftmost_leaf_node_ref() {

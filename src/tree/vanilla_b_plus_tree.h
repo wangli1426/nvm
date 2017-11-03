@@ -52,7 +52,9 @@ namespace tree {
             is_split = root_instance->insert_with_split_support(k, v, split);
             if (is_split) {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, blk_accessor_);
-                root_->copy(new_inner_node->get_self_ref());
+                root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
+                                                            // a leaf will refer to a inner node now. TODO: release the old root_
+                                                            // reference and create a new one.
                 root_->bind(new_inner_node);
 
                 split.left->get_self_ref()->close(blk_accessor_);
@@ -116,8 +118,7 @@ namespace tree {
         }
 
         typename BTree<K, V>::Iterator *get_iterator() {
-            LeafNode<K, V, CAPACITY> *leftmost_leaf_node =
-                    dynamic_cast<LeafNode<K, V, CAPACITY> *>(root_->get(blk_accessor_)->get_leftmost_leaf_node());
+            node_reference<K, V> *leftmost_leaf_node = root_->get(blk_accessor_)->get_leftmost_leaf_node();
 
             return new Iterator(leftmost_leaf_node, 0, blk_accessor_);
         }
@@ -135,31 +136,23 @@ namespace tree {
         }
 
         typename BTree<K, V>::Iterator *range_search(const K &key_low, const K &key_high) {
-            Node<K, V> *leaf_node;
+            node_reference<K, V> *leaf_node_ref;
             int offset;
-            root_->get(blk_accessor_)->locate_key(key_low, leaf_node, offset);
-            return new Iterator(dynamic_cast<LeafNode<K, V, CAPACITY> *>(leaf_node), offset, key_high, blk_accessor_);
+            root_->get(blk_accessor_)->locate_key(key_low, leaf_node_ref, offset);
+            typename BTree<K, V>::Iterator * ret =  new Iterator(leaf_node_ref, offset, key_high, blk_accessor_);
+            root_->close(blk_accessor_);
+            return ret;
         };
 
         class Iterator : public BTree<K, V>::Iterator {
         public:
-            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, blk_accessor<K, V>* blk_accessor) : offset_(offset),
-                                                                        upper_bound_(false), blk_accessor_(blk_accessor) {
-                if (leaf_node) {
-                    leaf_node_ref_ = blk_accessor_->create_null_ref();
-                    leaf_node_ref_->copy(leaf_node->get_self_ref());
-                } else
-                    leaf_node_ref_ = 0;
+            Iterator(node_reference<K, V> *leaf_node_ref, int offset, blk_accessor<K, V>* blk_accessor):
+                    offset_(offset), upper_bound_(false), blk_accessor_(blk_accessor), leaf_node_ref_(leaf_node_ref) {
             };
 
-            Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, K key_high, blk_accessor<K, V>* blk_accessor)
-                    : offset_(offset), blk_accessor_(blk_accessor), upper_bound_(true),
-                                                                                    key_high_(key_high) {
-                if (leaf_node) {
-                    leaf_node_ref_ = blk_accessor_->create_null_ref();
-                    leaf_node_ref_->copy(leaf_node->get_self_ref());
-                } else
-                    leaf_node_ref_ = 0;
+            Iterator(node_reference<K, V> *leaf_node_ref, int offset, K key_high, blk_accessor<K, V>* blk_accessor)
+                    : offset_(offset), blk_accessor_(blk_accessor), upper_bound_(true), key_high_(key_high),
+                      leaf_node_ref_(leaf_node_ref) {
             };
 
             ~Iterator() {

@@ -85,11 +85,11 @@ namespace tree {
         // Return the string representation of this node.
         virtual std::string toString() const {};
 
-        virtual Node *get_leftmost_leaf_node() {};
+        virtual node_reference<K, V> *get_leftmost_leaf_node() {};
 
 //        virtual node_reference<K, V>* get_leftmost_leaf_node_ref() {};
 
-        virtual bool locate_key(const K &key, Node *&child, int &offset) {};
+        virtual bool locate_key(const K &key, node_reference<K, V> *&child, int &offset) {};
 
         virtual void serialize(void* buffer) {};
 
