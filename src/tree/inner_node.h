@@ -148,9 +148,9 @@ namespace tree {
             delete child_[right_child_index];
             child_[right_child_index] = 0;
             // remove the reference to the deleted child, i.e., right_child
-            for (int i = right_child_index; i < size_; ++i) {
-                this->key_[i] = this->key_[i + 1];
-                this->child_[i] = this->child_[i + 1];
+            for (int i = right_child_index + 1; i < size_; ++i) {
+                this->key_[i - 1] = this->key_[i];
+                this->child_[i - 1] = this->child_[i];
             }
             --this->size_;
 

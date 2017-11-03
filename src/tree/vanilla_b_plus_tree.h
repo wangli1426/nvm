@@ -72,20 +72,29 @@ namespace tree {
             Node<K, V>* root_node = root_->get(blk_accessor_);
             bool ret = root_node->delete_key(k, underflow);
             if (underflow && root_node->type() == INNER && root_node->size() == 1) {
-                InnerNode<K, V, CAPACITY> *widow_inner_node = static_cast<InnerNode<K, V, CAPACITY> *>(root_node);
-                root_node = widow_inner_node->child_[0]->get(blk_accessor_);
-                delete widow_inner_node->child_[0];
-                widow_inner_node->size_ = 0;
+//                InnerNode<K, V, CAPACITY> *widow_inner_node = static_cast<InnerNode<K, V, CAPACITY> *>(root_node);
+//                root_node = widow_inner_node->child_[0]->get(blk_accessor_);
+//                delete widow_inner_node->child_[0];
+//                widow_inner_node->size_ = 0;
+//
+//                delete widow_inner_node;
+//                root_->remove(blk_accessor_);
+//
+//                // refer to the updated root_node
+//                root_->copy(root_node->get_self_ref());
+//                --depth_;
 
-                delete widow_inner_node;
+
+                node_reference<K, V>* single_child_ref = blk_accessor_->create_null_ref();
+                single_child_ref->copy(static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]);
+                static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]->copy(0);
                 root_->remove(blk_accessor_);
-
-                // refer to the updated root_node
-                root_->copy(root_node->get_self_ref());
-//                delete root_;
-//                root_ = new in_memory_node_ref<K, V>(root_node);
+                delete root_;
+                root_ = single_child_ref;
                 --depth_;
+
             }
+            root_->close(blk_accessor_);
             return ret;
         }
 
@@ -137,7 +146,7 @@ namespace tree {
             Iterator(LeafNode<K, V, CAPACITY> *leaf_node, int offset, blk_accessor<K, V>* blk_accessor) : offset_(offset),
                                                                         upper_bound_(false), blk_accessor_(blk_accessor) {
                 if (leaf_node) {
-                    leaf_node_ref_ = new in_memory_node_ref<K, V>(0);
+                    leaf_node_ref_ = blk_accessor_->create_null_ref();
                     leaf_node_ref_->copy(leaf_node->get_self_ref());
                 } else
                     leaf_node_ref_ = 0;
@@ -147,7 +156,7 @@ namespace tree {
                     : offset_(offset), blk_accessor_(blk_accessor), upper_bound_(true),
                                                                                     key_high_(key_high) {
                 if (leaf_node) {
-                    leaf_node_ref_ = new in_memory_node_ref<K, V>(0);
+                    leaf_node_ref_ = blk_accessor_->create_null_ref();
                     leaf_node_ref_->copy(leaf_node->get_self_ref());
                 } else
                     leaf_node_ref_ = 0;

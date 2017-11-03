@@ -28,7 +28,10 @@ namespace tree{
         }
 
         void copy(node_reference<K, V>* ref) {
-            this->ref_ = dynamic_cast<in_memory_node_ref<K, V>*>(ref)->ref_;
+            if (ref)
+                this->ref_ = dynamic_cast<in_memory_node_ref<K, V>*>(ref)->ref_;
+            else
+                this->ref_ = -1;
         }
 
         bool is_null_ptr() const {

@@ -125,7 +125,10 @@ namespace tree {
 
         void copy(node_reference<K, V>* ref) {
 //            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
-            this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY>*>(ref)->blk_address_;
+            if (ref)
+                this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY>*>(ref)->blk_address_;
+            else
+                this->blk_address_ = -1;
 //            this->instance_ = 0;
         }
         bool is_null_ptr() const {

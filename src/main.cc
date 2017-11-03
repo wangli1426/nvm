@@ -10,39 +10,27 @@
 using namespace tree;
 
 int main() {
+    const int number_of_tuples = 8;
+    std::vector<int> tuples;
+    for (int i = 0; i < number_of_tuples; ++i) {
+        tuples.push_back(i);
+    }
+//    std::random_shuffle(tuples.begin(), tuples.end());
+
+
     VanillaBPlusTree<int, int, 4> tree;
     tree.init();
-    tree.insert(1, 1);
-    tree.insert(2, 2);
-    tree.insert(3, 3);
-    tree.insert(4, 4);
-    tree.insert(5, 5);
-    tree.insert(6, 6);
-    tree.insert(7, 7);
-    tree.insert(8, 8);
+    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
+        tree.insert(*it, *it);
+    }
 
-    tree.delete_key(4);
-    printf("%s\n", tree.toString().c_str());
-
-    tree.delete_key(4);
-    tree.delete_key(0);
-
-    printf("%s\n", tree.toString().c_str());
-    tree.delete_key(1);
-    printf("%s\n", tree.toString().c_str());
-    tree.delete_key(3);
-    printf("%s\n", tree.toString().c_str());
-    tree.delete_key(5);
-    printf("%s\n", tree.toString().c_str());
-    tree.delete_key(6);
-    printf("%s\n", tree.toString().c_str());
-
-    tree.delete_key(2);
-    printf("%s\n", tree.toString().c_str());
-
-    printf("%s\n", tree.toString().c_str());
-    tree.delete_key(7);
-    tree.delete_key(8);
-
-    printf("%s\n", tree.toString().c_str());
+    BTree<int, int>::Iterator *it = tree.get_iterator();
+    int key, value;
+    int i = 0;
+    while(it->next(key, value)) {
+        if(i != key || i != value)
+            printf("Wrong!!!");
+        i++;
+    }
+    delete it;
 }
