@@ -43,6 +43,13 @@ namespace tree{
             ref_ = node;
         }
 
+        int64_t get_unified_representation() {
+            return reinterpret_cast<int64_t>(ref_);
+        }
+
+        void restore_by_unified_representation(int64_t value) {
+            ref_ = reinterpret_cast<Node<K, V>*>(value);
+        }
     private:
         Node<K, V> *ref_;
     private:

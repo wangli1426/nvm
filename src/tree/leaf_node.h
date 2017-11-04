@@ -293,21 +293,56 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
-            *(static_cast<uint32_t*>(buffer)) = LEAF_NODE;
+            char* write_offset = static_cast<char*>(buffer);
 
+            *(reinterpret_cast<uint32_t*>(write_offset)) = LEAF_NODE;
+            write_offset += sizeof(uint32_t);
             // write size
-            *(static_cast<uint32_t*>(buffer) + 1) = size_;
+            *(reinterpret_cast<uint32_t*>(write_offset)) = size_;
+            write_offset += sizeof(uint32_t);
+
+            // write self_ref_
+            *(reinterpret_cast<int64_t*>(write_offset)) = self_ref_->get_unified_representation();
+            write_offset += sizeof(int64_t);
+
+            // write right_sibling_ref_;
+            if (right_sibling_)
+                *(reinterpret_cast<int64_t*>(write_offset)) = right_sibling_->get_unified_representation();
+            else
+                *(reinterpret_cast<int64_t*>(write_offset)) = -1;
+            write_offset += sizeof(int64_t);
 
             // copy entries
-            memcpy((char*)buffer + sizeof(uint32_t) * 2, &entries_, CAPACITY * sizeof(Entry));
+            memcpy(write_offset, &entries_, size_ * sizeof(Entry));
+            write_offset += size_ * sizeof(Entry);
+            assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
         }
 
         void deserialize(void* buffer) {
+
+            char* read_offset = static_cast<char*>(buffer);
+
+            // skip type
+            read_offset += sizeof(uint32_t);
+
             // restore size
-            size_ = *(static_cast<uint32_t*>(buffer) + 1);
+            size_ = *reinterpret_cast<uint32_t*>(read_offset);
+            read_offset += sizeof(uint32_t);
+
+            // restore self_ref_
+            int64_t value = * reinterpret_cast<int64_t*>(read_offset);
+            self_ref_->restore_by_unified_representation(value);
+            self_ref_->bind(this);
+            read_offset += sizeof(int64_t);
+
+            // restore right_child_ref_
+            value = * reinterpret_cast<int64_t*>(read_offset);
+            update_right_sibling(value);
+            read_offset += sizeof(int64_t);
 
             // restore entries
-            memcpy(&entries_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(Entry));
+            memcpy(&entries_, read_offset, size_ * sizeof(Entry));
+
         }
 
         friend std::ostream &operator<<(std::ostream &os, LeafNode<K, V, CAPACITY> const &m) {
@@ -319,10 +354,18 @@ namespace tree {
             return os;
         }
 
+
+        void update_right_sibling(int64_t value) {
+            if (!right_sibling_) {
+                right_sibling_ = blk_accessor_->create_null_ref();
+            }
+            right_sibling_->restore_by_unified_representation(value);
+        }
+
         void update_right_sibling(node_reference<K, V>* new_ref) {
             if (!right_sibling_) {
                 right_sibling_ = blk_accessor_->create_null_ref();
-//                right_sibling_ = new in_memory_node_ref<K, V>(0);
+////                right_sibling_ = new in_memory_node_ref<K, V>(0);
             }
             if (new_ref)
                 right_sibling_->copy(new_ref);

@@ -65,21 +65,37 @@ namespace tree {
 
 
 
-            boost_deserialize(read_buffer, blk_accessor);
-            instance_->set_blk_accessor(blk_accessor);
+            specific_deserialize(read_buffer, blk_accessor);
 
             free(read_buffer);
             return instance_;
 
         };
 
+        int specific_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
+            instance_->serialize(write_buffer);
+        }
+
+        int specific_deserialize(void* read_buffer, blk_accessor<K, V>* blk_accessor) {
+            uint32_t *type = static_cast<uint32_t*>(read_buffer);
+            switch (*type) {
+                case LEAF_NODE:
+                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor);
+                    instance_->deserialize(read_buffer);
+                    break;
+                case INNER_NODE:
+                    instance_ = new InnerNode<K, V, CAPACITY>(blk_accessor);
+                    instance_->deserialize(read_buffer);
+                    break;
+                default:
+                    assert(false); // unexpected point of execution.
+                    return -1;
+            }
+        }
+
         int boost_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
             ostringstream ostr;
             boost::archive::binary_oarchive oa(ostr);
-
-
-
-
             oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
             oa.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
             oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
@@ -105,13 +121,14 @@ namespace tree {
             ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
             ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             ia >> instance_;
+            instance_->set_blk_accessor(blk_accessor);
         }
 
         void close(blk_accessor<K, V>* blk_accessor) {
             if (!instance_)
                 return;
             void *write_buffer = malloc(blk_accessor->block_size);
-            int serialized_size = boost_serialize(write_buffer, blk_accessor);
+            int serialized_size = specific_serialize(write_buffer, blk_accessor);
             blk_accessor->write(blk_address_, write_buffer);
             instance_ = 0;
             free(write_buffer);
@@ -141,6 +158,16 @@ namespace tree {
         void bind(Node<K, V>* node) {
             instance_ = node;
         }
+
+        int64_t get_unified_representation() {
+            return reinterpret_cast<int64_t>(blk_address_);
+        }
+
+        void restore_by_unified_representation(int64_t value) {
+            instance_ = nullptr;
+            blk_address_ = value;
+        }
+
     private:
         blk_address blk_address_;
         Node<K, V>* instance_;

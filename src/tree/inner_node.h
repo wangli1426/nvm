@@ -371,22 +371,61 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
-//            *(static_cast<uint32_t*>(buffer)) = INNER_NODE;
-//
-//            // write size
-//            *(static_cast<uint32_t*>(buffer) + 1) = size_;
-//
-//            // copy entries
-//            memcpy((char*)buffer + sizeof(uint32_t) * 2, &key_, CAPACITY * sizeof(K));
-//            utils_serialize(buffer, 512, this);
+            char* write_offset = static_cast<char*>(buffer);
+
+            // write node type info
+            *(reinterpret_cast<uint32_t*>(write_offset)) = INNER_NODE;
+            write_offset += sizeof(uint32_t);
+
+            // write size
+            *(reinterpret_cast<uint32_t*>(write_offset)) = size_;
+            write_offset += sizeof(uint32_t);
+
+            // write self_ref_
+            *(reinterpret_cast<int64_t*>(write_offset)) = self_ref_->get_unified_representation();
+            write_offset += sizeof(int64_t);
+
+            // write valid keys
+            memcpy(write_offset, &key_, size_ * sizeof(K));
+            write_offset += size_ * sizeof(K);
+
+            // write valid child references.
+            for (int i = 0; i < size_; i++) {
+                int64_t value = child_[i]->get_unified_representation();
+                * reinterpret_cast<int64_t*>(write_offset) = value;
+                write_offset += sizeof(int64_t);
+            }
+            assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
         }
 
         void deserialize(void* buffer) {
-//            // restore size
-//            size_ = *(static_cast<uint32_t*>(buffer) + 1);
-//
-//            // restore keys
-//            memcpy(&key_, (char*)buffer + sizeof(uint32_t) * 2, CAPACITY * sizeof(K));
+            char* read_offset = static_cast<char*>(buffer);
+
+            // skip type
+            read_offset += sizeof(uint32_t);
+
+            // restore size
+            size_ = *reinterpret_cast<uint32_t*>(read_offset);
+            read_offset += sizeof(uint32_t);
+
+            // restore self_ref_
+            int64_t value = * reinterpret_cast<int64_t*>(read_offset);
+            read_offset += sizeof(int64_t);
+            self_ref_->restore_by_unified_representation(value);
+            self_ref_->bind(this);
+
+            // restore valid keys
+            memcpy(&key_, read_offset, size_ * sizeof(K));
+            read_offset += size_ * sizeof(K);
+
+            // restore valid child references
+            for (int i = 0; i < size_; i++) {
+                int64_t value = * reinterpret_cast<int64_t*>(read_offset);
+                read_offset += sizeof(int64_t);
+                child_[i] = blk_accessor_->create_null_ref();
+                child_[i]->restore_by_unified_representation(value);
+            }
+
         }
 
         node_reference<K, V>* get_self_ref() const {

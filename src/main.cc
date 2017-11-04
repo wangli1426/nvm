@@ -12,8 +12,12 @@ using namespace tree;
 int main() {
     in_disk_b_plus_tree<int, int, 4> tree;
     tree.init();
-    BTree<int, int>::Iterator *it = tree.range_search(INT_MIN, INT_MAX);
-    int k, v;
-    it->next(k, v);
-    delete it;
+    tree.insert(1, 1);
+    tree.insert(3, 3);
+    tree.insert(2, 2);
+    tree.insert(6, 6);
+
+    printf("%s\n", tree.toString().c_str());
+    tree.insert(10, 10);
+    printf("%s\n", tree.toString().c_str());
 }
