@@ -5,11 +5,11 @@
 #ifndef NVM_BLK_NODE_REFERENCE_H
 #define NVM_BLK_NODE_REFERENCE_H
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <sstream>
 #include <string>
-#include <alloca.h>
+#include <assert.h>
 #include "node_reference.h"
 #include "../blk/blk.h"
 #include "node.h"
@@ -52,11 +52,7 @@ namespace tree {
 ////
 
 
-            ostringstream ostr;
-            ostr.write((char*)read_buffer, blk_accessor->block_size);
-            std::string tmp = ostr.str();
-            istringstream istr(tmp);
-            boost::archive::text_iarchive ia(istr);
+
 
 
 //            std::string received((char*)read_buffer, blk_accessor->block_size);
@@ -69,11 +65,7 @@ namespace tree {
 
 
 
-            ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
-            ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
-            ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
-            ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
-            ia >> instance_;
+            boost_deserialize(read_buffer, blk_accessor);
             instance_->set_blk_accessor(blk_accessor);
 
             free(read_buffer);
@@ -81,20 +73,11 @@ namespace tree {
 
         };
 
-        void close(blk_accessor<K, V>* blk_accessor) {
-            if (!instance_)
-                return;
-            void *write_buffer = malloc(blk_accessor->block_size);
-//            instance_->serialize(write_buffer);
-
+        int boost_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
             ostringstream ostr;
-            boost::archive::text_oarchive oa(ostr);
+            boost::archive::binary_oarchive oa(ostr);
 
-//            std::string serial_str;
-//            boost::iostreams::back_insert_device<std::string> inserter(serial_str);
-//            boost::iostreams::stream<boost::iostreams::back_insert_device<std::string> >
-//                    ostr(inserter);
-//            boost::archive::text_oarchive oa(ostr);
+
 
 
             oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
@@ -102,21 +85,34 @@ namespace tree {
             oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
             oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
             oa << instance_;
-//            oa << '\n';
             ostr.flush();
-
-//            memcpy(write_buffer, serial_str.data(), serial_str.size());
-//            memset((char*)write_buffer + serial_str.size(), 0, blk_accessor->block_size - serial_str.size());
-//            printf("W[%d]: %s\n", blk_address_, serial_str.c_str());
-
             std::string str = ostr.str();
             int32_t length = str.length();
+            assert(length <= blk_accessor->block_size);
             memcpy(write_buffer, str.c_str(), str.size());
             memset((char*)write_buffer + str.size(), 0, blk_accessor->block_size - str.size());
-//            printf("W[%d]: %s\n", blk_address_, str.c_str());
+            return length;
+        }
 
+        void boost_deserialize(void* read_buffer, blk_accessor<K, V>* blk_accessor) {
+            ostringstream ostr;
+            ostr.write((char*)read_buffer, blk_accessor->block_size);
+            std::string tmp = ostr.str();
+            istringstream istr(tmp);
+            boost::archive::binary_iarchive ia(istr);
+            ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
+            ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
+            ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
+            ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
+            ia >> instance_;
+        }
+
+        void close(blk_accessor<K, V>* blk_accessor) {
+            if (!instance_)
+                return;
+            void *write_buffer = malloc(blk_accessor->block_size);
+            int serialized_size = boost_serialize(write_buffer, blk_accessor);
             blk_accessor->write(blk_address_, write_buffer);
-//            delete instance_;
             instance_ = 0;
             free(write_buffer);
         }
