@@ -92,7 +92,7 @@ add_executable(blk_tree src/tree/blk_tree_main.cpp)
 #target_link_libraries(blk_tree libblk)
 
 add_executable(tree_benchmark src/b_tree_benchmark.cc)
-target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread)
 add_dependencies(tree_benchmark Boost)
 
 
