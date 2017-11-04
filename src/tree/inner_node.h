@@ -142,11 +142,14 @@ namespace tree {
             }
 
             // merged
-//            delete child_[right_child_index]->get(blk_accessor_);
+            child_[left_child_index]->close(blk_accessor_);
+
             child_[right_child_index]->close(blk_accessor_);
             child_[right_child_index]->remove(blk_accessor_); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             delete child_[right_child_index];
             child_[right_child_index] = 0;
+
+
             // remove the reference to the deleted child, i.e., right_child
             for (int i = right_child_index + 1; i < size_; ++i) {
                 this->key_[i - 1] = this->key_[i];
@@ -210,7 +213,7 @@ namespace tree {
             }
             this->size_ += right->size_;
             right->size_ = 0;
-            delete right;
+//            delete right;
             return true;
         }
 
@@ -437,15 +440,33 @@ namespace tree {
 
     private:
         friend class boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version) {
+//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
+//            for (int i = 0; i < size_; i++) {
+//                ar & child_[i];
+//            }
+////            child_;
+//        }
+
         template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
+        void save(Archive & ar, const unsigned int version) const
+        {
             ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
             for (int i = 0; i < size_; i++) {
                 ar & child_[i];
             }
-
-//            child_;
         }
+        template<class Archive>
+        void load(Archive & ar, const unsigned int version)
+        {
+            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
+            for (int i = 0; i < size_; i++) {
+                ar & child_[i];
+            }
+            self_ref_->bind(this);
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
     };
 }
 #endif //B_TREE_INNER_NODE_H

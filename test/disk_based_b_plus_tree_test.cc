@@ -116,7 +116,7 @@ TEST(DiskBasedBPlusTreeTest, MassiveRandomInsertionAndQuery) {
     std::set<int> s;
     in_disk_b_plus_tree<int, int, 4> tree;
     tree.init();
-    const int tuples = 100000;
+    const int tuples = 1000;
     const int range = tuples * 10;
 
     for (int i = 0; i < tuples; ++i) {
@@ -229,7 +229,7 @@ TEST(DiskBasedBPlusTreeTest, DeleteWithInnerNodeRebalancedAndMerged) {
 }
 
 TEST(DiskBasedBPlusTreeTest, KeysInsertedAndDeletedInRandomOrder) {
-    const int number_of_tuples = 100000;
+    const int number_of_tuples = 1000;
     std::vector<int> tuples;
     for (int i = 0; i < number_of_tuples; ++i) {
         tuples.push_back(i);
@@ -280,6 +280,7 @@ TEST(DiskBasedBPlusTreeTest, IteratorFullScanTest) {
 
 TEST(DiskBasedBPlusTreeTest, IteratorRangeScanOnEmptyTreeTest) {
     in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
     BTree<int, int>::Iterator *it = tree.range_search(INT_MIN, INT_MAX);
     int k, v;
     EXPECT_EQ(false, it->next(k, v));

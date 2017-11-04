@@ -58,7 +58,7 @@ public:
             return 0;
         if (fseek(file_, address * this->block_size, SEEK_SET) != 0)
             return 0;
-        int status = (int)fwrite(buffer, this->block_size, 1, file_);
+        int status = (int)fwrite(buffer, 1, this->block_size, file_);
         fflush(file_);
         return status;
     }

@@ -127,11 +127,14 @@ namespace tree {
             if (!blk_accessor_)
                 blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
             Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
-//            root_ = blk_accessor_->allocate_ref();
-//            root_->bind(leaf_node);
-//            root_->copy(leaf_node->get_self_ref());
-            root_ = leaf_node->get_self_ref();
-            root_->close(blk_accessor_);
+            node_reference<K, V>* leaf_node_ref = leaf_node->get_self_ref();
+            root_ = blk_accessor_->allocate_ref();
+            root_->copy(leaf_node_ref);
+
+            leaf_node_ref->close(blk_accessor_);
+
+//            root_ = leaf_node->get_self_ref();
+//            root_->close(blk_accessor_);
             depth_ = 1;
         }
 

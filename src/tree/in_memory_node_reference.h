@@ -24,14 +24,15 @@ namespace tree{
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) override {
-
+//            delete ref_;
+//            ref_ = 0;
         }
 
         void copy(node_reference<K, V>* ref) {
             if (ref)
                 this->ref_ = dynamic_cast<in_memory_node_ref<K, V>*>(ref)->ref_;
             else
-                this->ref_ = -1;
+                this->ref_ = nullptr;
         }
 
         bool is_null_ptr() const {

@@ -10,27 +10,10 @@
 using namespace tree;
 
 int main() {
-    const int number_of_tuples = 8;
-    std::vector<int> tuples;
-    for (int i = 0; i < number_of_tuples; ++i) {
-        tuples.push_back(i);
-    }
-//    std::random_shuffle(tuples.begin(), tuples.end());
-
-
-    VanillaBPlusTree<int, int, 4> tree;
+    in_disk_b_plus_tree<int, int, 4> tree;
     tree.init();
-    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
-        tree.insert(*it, *it);
-    }
-
-    BTree<int, int>::Iterator *it = tree.get_iterator();
-    int key, value;
-    int i = 0;
-    while(it->next(key, value)) {
-        if(i != key || i != value)
-            printf("Wrong!!!");
-        i++;
-    }
+    BTree<int, int>::Iterator *it = tree.range_search(INT_MIN, INT_MAX);
+    int k, v;
+    it->next(k, v);
     delete it;
 }

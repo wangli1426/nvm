@@ -28,6 +28,8 @@ namespace tree {
 
 
         Node<K, V> *get(blk_accessor<K, V>* blk_accessor) {
+            if (blk_address_ < 0)
+                return nullptr;
             if (instance_)
                 return instance_;
             void *read_buffer = malloc(blk_accessor->block_size);
@@ -80,6 +82,8 @@ namespace tree {
         };
 
         void close(blk_accessor<K, V>* blk_accessor) {
+            if (!instance_)
+                return;
             void *write_buffer = malloc(blk_accessor->block_size);
 //            instance_->serialize(write_buffer);
 
@@ -109,7 +113,7 @@ namespace tree {
             int32_t length = str.length();
             memcpy(write_buffer, str.c_str(), str.size());
             memset((char*)write_buffer + str.size(), 0, blk_accessor->block_size - str.size());
-            printf("W[%d]: %s\n", blk_address_, str.c_str());
+//            printf("W[%d]: %s\n", blk_address_, str.c_str());
 
             blk_accessor->write(blk_address_, write_buffer);
 //            delete instance_;
@@ -125,14 +129,17 @@ namespace tree {
 
         void copy(node_reference<K, V>* ref) {
 //            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
-            if (ref)
-                this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY>*>(ref)->blk_address_;
-            else
+            if (ref) {
+                this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->blk_address_;
+                this->instance_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->instance_;
+            } else {
                 this->blk_address_ = -1;
+                this->instance_ = 0;
+            }
 //            this->instance_ = 0;
         }
         bool is_null_ptr() const {
-            return blk_address_ == 0;
+            return blk_address_ == -1;
         }
 
         void bind(Node<K, V>* node) {

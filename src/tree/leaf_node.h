@@ -269,7 +269,7 @@ namespace tree {
             this->update_right_sibling(right->right_sibling_);
 
             // delete the right
-            delete right;
+//            delete right;
             return true;
         }
 
@@ -378,10 +378,21 @@ namespace tree {
         blk_accessor<K, V>* blk_accessor_;
     private:
         friend class boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version) {
+//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
+//        }
+
         template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
+        void save(Archive & ar, const unsigned int version) const {
             ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
         }
+        template<class Archive>
+        void load(Archive & ar, const unsigned int version) {
+            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
+            self_ref_->bind(this);
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
     };
 }
 

@@ -21,7 +21,7 @@ namespace tree {
 }
 using namespace tree;
 
-typedef uint64_t blk_address;
+typedef int64_t blk_address;
 template <typename K, typename V>
 class blk_accessor {
 
