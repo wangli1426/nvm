@@ -31,7 +31,7 @@ namespace tree {
             blk_accessor_ = 0;
         }
 
-        void clear() {
+        virtual void clear() {
             close();
             init();
         }
@@ -41,6 +41,7 @@ namespace tree {
             root_->close(blk_accessor_);
 //            delete root_instance;
             delete root_;
+            root_ = 0;
             blk_accessor_->close();
         }
 

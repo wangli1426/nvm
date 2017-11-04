@@ -20,6 +20,11 @@ namespace tree{
         virtual ~in_disk_b_plus_tree() {
         }
 
+        virtual void clear() {
+            VanillaBPlusTree<K, V, CAPACITY>::close();
+            set_blk_accessor();
+            VanillaBPlusTree<K, V, CAPACITY>::init();
+        }
     private:
 
         void set_blk_accessor() {
