@@ -10,14 +10,21 @@
 using namespace tree;
 
 int main() {
-    in_disk_b_plus_tree<int, int, 4> tree;
-    tree.init();
-    tree.insert(1, 1);
-    tree.insert(3, 3);
-    tree.insert(2, 2);
-    tree.insert(6, 6);
+    const int number_of_tuples = 200;
+    std::vector<int> tuples;
+    for (int i = 0; i < number_of_tuples; ++i) {
+        tuples.push_back(i);
+    }
+    std::random_shuffle(tuples.begin(), tuples.end());
 
-    printf("%s\n", tree.toString().c_str());
-    tree.insert(10, 10);
-    printf("%s\n", tree.toString().c_str());
+
+    in_disk_b_plus_tree<int, int, 16> tree;
+    tree.init();
+    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
+        printf("########\n");
+        tree.insert(*it, *it);
+        printf("########\n\n");
+    }
+
+
 }

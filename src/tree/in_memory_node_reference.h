@@ -19,7 +19,7 @@ namespace tree{
             return ref_;
         }
 
-        void close(blk_accessor<K, V>* blk_accessor) override{
+        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) override{
 
         }
 
@@ -35,7 +35,7 @@ namespace tree{
                 this->ref_ = nullptr;
         }
 
-        bool is_null_ptr() const {
+        bool is_null_ptr() const override {
             return !ref_;
         };
 

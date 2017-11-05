@@ -53,6 +53,7 @@ namespace tree {
             is_split = root_instance->insert_with_split_support(k, v, split);
             if (is_split) {
                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, blk_accessor_);
+                new_inner_node->mark_modified();
                 root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
                                                             // a leaf will refer to a inner node now. TODO: release the old root_
                                                             // reference and create a new one.
@@ -105,7 +106,7 @@ namespace tree {
         // in v.
         bool search(const K &k, V &v) {
             bool ret = root_->get(blk_accessor_)->search(k, v);
-            root_->close(blk_accessor_);
+            root_->close(blk_accessor_, READONLY);
             return ret;
         }
 
@@ -128,6 +129,7 @@ namespace tree {
             if (!blk_accessor_)
                 blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
             Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+            leaf_node->mark_modified();
             node_reference<K, V>* leaf_node_ref = leaf_node->get_self_ref();
             root_ = blk_accessor_->allocate_ref();
             root_->copy(leaf_node_ref);

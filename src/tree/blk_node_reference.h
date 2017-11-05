@@ -80,11 +80,11 @@ namespace tree {
             uint32_t *type = static_cast<uint32_t*>(read_buffer);
             switch (*type) {
                 case LEAF_NODE:
-                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor);
+                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor, false);
                     instance_->deserialize(read_buffer);
                     break;
                 case INNER_NODE:
-                    instance_ = new InnerNode<K, V, CAPACITY>(blk_accessor);
+                    instance_ = new InnerNode<K, V, CAPACITY>(blk_accessor, false);
                     instance_->deserialize(read_buffer);
                     break;
                 default:
@@ -124,14 +124,16 @@ namespace tree {
             instance_->set_blk_accessor(blk_accessor);
         }
 
-        void close(blk_accessor<K, V>* blk_accessor) {
+        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) {
             if (!instance_)
                 return;
-            void *write_buffer = malloc(blk_accessor->block_size);
-            int serialized_size = specific_serialize(write_buffer, blk_accessor);
-            blk_accessor->write(blk_address_, write_buffer);
+            if (instance_->is_modified()) {
+                void *write_buffer = malloc(blk_accessor->block_size);
+                int serialized_size = specific_serialize(write_buffer, blk_accessor);
+                blk_accessor->write(blk_address_, write_buffer);
+                free(write_buffer);
+            }
             instance_ = 0;
-            free(write_buffer);
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) {

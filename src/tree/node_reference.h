@@ -10,19 +10,24 @@
 #include "../blk/blk.h"
 namespace tree {
 
+#define READONLY true
+
     template<typename K, typename V>
     class Node;
 
     template<typename K, typename V>
     class node_reference {
     public:
+
+        virtual ~node_reference() {};
+
         // get an instance of the node referred to.
         virtual Node<K, V>* get(blk_accessor<K, V>* blk_accessor) {
             return nullptr;
         };
 
         // flush the change.
-        virtual void close(blk_accessor<K, V>* blk_accessor) = 0;
+        virtual void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) = 0;
 
         // remove the reference as well as the referred node.
         virtual void remove(blk_accessor<K, V>* blk_accessor) = 0;

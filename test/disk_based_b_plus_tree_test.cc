@@ -109,6 +109,11 @@ TEST(DiskBasedBPlusTreeTest, Search) {
     EXPECT_EQ(false, tree.search(160, value));
     EXPECT_EQ(false, tree.search(180, value));
 
+    EXPECT_EQ(true, tree.search(101, value));
+    EXPECT_EQ(true, tree.search(110, value));
+    EXPECT_EQ(true, tree.search(150, value));
+    EXPECT_EQ(true, tree.search(170, value));
+
 
 }
 

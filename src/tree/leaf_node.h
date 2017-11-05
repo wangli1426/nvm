@@ -46,9 +46,12 @@ namespace tree {
 
     public:
 
-        LeafNode(blk_accessor<K, V>* blk_accessor = 0) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
+        LeafNode(blk_accessor<K, V>* blk_accessor = 0, bool allocate_blk_ref = true) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
             if (blk_accessor) {
-                self_ref_ = blk_accessor_->allocate_ref();
+                if (allocate_blk_ref)
+                    self_ref_ = blk_accessor_->allocate_ref();
+                else
+                    self_ref_ = blk_accessor_->create_null_ref();
                 self_ref_->bind(this);
             } else {
                 self_ref_ = 0;
@@ -61,7 +64,7 @@ namespace tree {
         }
 
         bool insert(const K &key, const V &val) {
-
+            this->mark_modified();
             int insert_position;
             const bool found = search_key_position(key, insert_position);
 
@@ -88,6 +91,7 @@ namespace tree {
         }
 
         bool insert_with_split_support(const K &key, const V &val, Split<K, V> &split) {
+            this->mark_modified();
             int insert_position;
             const bool found = search_key_position(key, insert_position);
 
@@ -115,6 +119,7 @@ namespace tree {
                 int entry_index_for_right_node = CAPACITY / 2;
                 LeafNode<K, V, CAPACITY> *const left = this;
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>(blk_accessor_);
+                right->mark_modified();
                 node_reference<K, V>* right_ref = right->get_self_ref();
 
                 right->update_right_sibling(left->right_sibling_);
@@ -190,6 +195,7 @@ namespace tree {
             if (!found)
                 return false;
 
+            this->mark_modified();
             for (int i = position; i < size_ - 1; ++i) {
                 entries_[i] = entries_[i + 1];
             }
@@ -214,6 +220,8 @@ namespace tree {
         }
 
         bool balance(Node<K, V> *right_sibling_node, K &boundary) {
+            this->mark_modified();
+            right_sibling_node->mark_modified();
             LeafNode<K, V, CAPACITY> *right = static_cast<LeafNode<K, V, CAPACITY> * >(right_sibling_node);
             const int underflow_bound = UNDERFLOW_BOUND(CAPACITY);
             if (size_ < underflow_bound) {

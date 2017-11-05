@@ -23,10 +23,13 @@ namespace tree {
         friend class VanillaBPlusTree<K, V, CAPACITY>;
 
     public:
-        InnerNode(blk_accessor<K, V>* blk_accessor = 0) : size_(0), blk_accessor_(blk_accessor) {
+        InnerNode(blk_accessor<K, V>* blk_accessor = 0, bool allocate_blk_ref = true) : size_(0), blk_accessor_(blk_accessor) {
             initialize_child_refs();
             if (blk_accessor_) {
-                self_ref_ = blk_accessor_->allocate_ref();
+                if (allocate_blk_ref)
+                    self_ref_ = blk_accessor_->allocate_ref();
+                else
+                    self_ref_ = blk_accessor_->create_null_ref();
                 self_ref_->bind(this);
             } else {
                 self_ref_ = 0;
@@ -74,7 +77,7 @@ namespace tree {
             if (index < 0) return false;
             Node<K, V> *targeNode = child_[index]->get(blk_accessor_);
             bool ret = targeNode->search(k, v);
-            child_[index]->close(blk_accessor_);
+            child_[index]->close(blk_accessor_, READONLY);
             return ret;
         }
 
@@ -131,6 +134,7 @@ namespace tree {
             // try to borrow an entry from the left. If no additional entry is available in the left, the two nodes will
             // be merged with the right one being deleted.
             bool merged = left_child->balance(right_child, boundary);
+            this->mark_modified();
 
             if (!merged) {
                 // if borrowed (not merged), update the boundary
@@ -163,6 +167,8 @@ namespace tree {
         }
 
         virtual bool balance(Node<K, V> *sibling_node, K &boundary) {
+            this->mark_modified();
+            sibling_node->mark_modified();
             const int underflow_bound = UNDERFLOW_BOUND(CAPACITY);
             InnerNode<K, V, CAPACITY> *right = static_cast<InnerNode<K, V, CAPACITY> *>(sibling_node);
             if (this->size_ < underflow_bound) {
@@ -218,7 +224,7 @@ namespace tree {
         }
 
         void insert_inner_node(Node<K, V> *innerNode, K boundary_key, int insert_position) {
-
+            this->mark_modified();
             // make room for insertion.
             for (int i = size_ - 1; i >= insert_position; --i) {
                 key_[i + 1] = key_[i];
@@ -229,7 +235,7 @@ namespace tree {
 //            child_[insert_position] = new in_memory_node_ref<K, V>();
 //            child_[insert_position]->copy(innerNode->get_self_ref());
 
-            child_[insert_position] = blk_accessor_->allocate_ref();
+            child_[insert_position] = blk_accessor_->create_null_ref();
             child_[insert_position]->copy(innerNode->get_self_ref());
 
             ++size_;
@@ -240,17 +246,20 @@ namespace tree {
             const bool exceed_left_boundary = target_node_index < 0;
             Split<K, V> local_split;
 
+            Node<K, V>* target_child_instance;
+
             node_reference<K, V>* node_ref;
             // Insert into the target leaf node.
             bool is_split;
             if (exceed_left_boundary) {
                 node_ref = child_[0];
-                Node<K, V>* target_child_instance = node_ref->get(blk_accessor_);
+                target_child_instance = node_ref->get(blk_accessor_);
                 is_split = target_child_instance->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
+                this->mark_modified();
             } else {
                 node_ref = child_[target_node_index];
-                Node<K, V>* target_child_instance = node_ref->get(blk_accessor_);
+                target_child_instance = node_ref->get(blk_accessor_);
                 is_split = target_child_instance->insert_with_split_support(key, val, local_split);
             }
 
@@ -259,6 +268,8 @@ namespace tree {
                 node_ref->close(blk_accessor_);
                 return false;
             }
+
+            this->mark_modified();
 
             // The child node was split, but the current node has free slot.
             if (size_ < CAPACITY) {
@@ -276,6 +287,7 @@ namespace tree {
             int start_index_for_right = CAPACITY / 2;
             InnerNode<K, V, CAPACITY> *left = this;
             InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(blk_accessor_);
+            right->mark_modified();
             node_reference<K, V>* right_ref = right->get_self_ref();
 
             // move the keys and children to the right node

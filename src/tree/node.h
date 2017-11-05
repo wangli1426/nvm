@@ -44,7 +44,7 @@ namespace tree {
     class Node {
     public:
 
-        Node() {};
+        Node(): modified_(false) {};
 
         virtual ~Node() {};
 
@@ -99,6 +99,14 @@ namespace tree {
 
         virtual void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {};
 
+        bool is_modified() const {
+            return modified_;
+        };
+
+        bool mark_modified() {
+            modified_ = true;
+        };
+
         // Indicate if the node is a leaf node. This flag is used to avoid the overhead of virtual function call.
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION
         bool is_leaf_;
@@ -108,6 +116,9 @@ namespace tree {
         template<class Archive>
         void serialize(Archive & ar, const unsigned int version) {
         }
+
+    private:
+        bool modified_;
     };
 }
 
