@@ -8,11 +8,17 @@
 #include "tree/in_disk_b_plus_tree.h"
 
 using namespace tree;
-int main() {
-//    VanillaBPlusTree<int, int, 16> tree;
-    in_disk_b_plus_tree<int, int, 256> in_disk_tree("tree.dat", 4096);
-//    tree.init();
+int main(int argc, char** argv) {
+
+    const int order = 256;
+    const int size = 4096;
+    const int ntuples = 100000;
+
+    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat", size);
     in_disk_tree.init();
-//    benchmark<int, int>(&tree, "in-memory", 2, 1000000, 1000000, 1000000, 1);
-    benchmark<int, int>(&in_disk_tree, "on-disk", 1, 10000, 10000, 10000, 1);
+    benchmark<int, int>(&in_disk_tree, "on-disk", 1, ntuples, ntuples, ntuples, 1);
+
+    VanillaBPlusTree<int, int, order> tree;
+    tree.init();
+    benchmark<int, int>(&tree, "in-memory", 2, ntuples, ntuples, ntuples, 1);
 }
