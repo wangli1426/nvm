@@ -68,6 +68,7 @@ namespace tree {
                 ++depth_;
             }
             root_->close(blk_accessor_);
+            blk_accessor_->flush();
         }
 
         // Delete the entry from the tree. Return true if the key exists.
@@ -99,6 +100,7 @@ namespace tree {
 
             }
             root_->close(blk_accessor_);
+            blk_accessor_->flush();
             return ret;
         }
 

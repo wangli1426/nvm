@@ -21,4 +21,8 @@ inline double cycles_to_microseconds(uint64_t cycles) {
     return cycles_to_nanoseconds(cycles) / 1000;
 }
 
+inline double cycles_to_milliseconds(uint64_t cycles) {
+    return cycles_to_nanoseconds(cycles) / 1000000;
+}
+
 #endif //NVM_RDTSC_H

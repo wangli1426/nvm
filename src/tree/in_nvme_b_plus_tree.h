@@ -13,7 +13,7 @@ namespace tree{
     class in_nvme_b_plus_tree: public VanillaBPlusTree<K, V, CAPACITY> {
     public:
         in_nvme_b_plus_tree(const int& block_size = 512): VanillaBPlusTree<K, V, CAPACITY>(
-                new file_blk_accessor<K, V, CAPACITY>(file_name_, block_size)), block_size_(block_size) {
+                new nvme_blk_accessor<K, V, CAPACITY>(block_size)), block_size_(block_size) {
             set_blk_accessor(block_size_);
         }
 
@@ -33,7 +33,6 @@ namespace tree{
             this->blk_accessor_ = new nvme_blk_accessor<K, V, CAPACITY>(block_size_);
             this->blk_accessor_->open();
         }
-        const char* file_name_;
         const int block_size_;
     };
 }

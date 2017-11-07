@@ -3,27 +3,82 @@
 //
 
 #include <stdio.h>
+#include <algorithm>
 #include "perf/perf_test.h"
 #include "tree/vanilla_b_plus_tree.h"
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/in_nvme_b_plus_tree.h"
+#include "utils/rdtsc.h"
 
 using namespace tree;
 int main(int argc, char** argv) {
 
+
+    int writes = 1000;
+    std::vector<int> addresses;
+    for (int i = 0; i < writes; i++) {
+        addresses.push_back(i);
+    }
+    std::random_shuffle(std::begin(addresses), std::end(addresses));
+    void* write_buffer = malloc(512);
+    uint64_t start = ticks();
+    int fd = open("test.file", O_TRUNC|O_WRONLY|O_DIRECT, S_IRWXU|S_IRWXG|S_IRWXO);
+    if (fd < 0) {
+        printf("failed to open the file!\n");
+        exit(1);
+    }
+    for (int i = 0; i < writes; i++) {
+        pwrite(fd, write_buffer, 512, 512 * i);
+    }
+    fsync(fd);
+    close(fd);
+    uint64_t duration = ticks() - start;
+    printf("AVG latency: %f ms\n", cycles_to_milliseconds(duration / writes));
+
+    exit(0);
+
+//    void* write_buffer = malloc(512);
+//    file_blk_accessor<int, int, 32> accessor("t", 512);
+//    accessor.open();
+//    int writes = 100;
+//    std::vector<blk_address > addresses;
+//    for (int i = 0; i < writes; i++ ) {
+//        const blk_address addr = accessor.allocate();
+//        addresses.push_back(blk_address(i));
+//    }
+//
+////    std::random_shuffle(std::begin(addresses), std::end(addresses));
+//
+//    uint64_t start = ticks();
+//    for (int i = 0; i < writes; i++ ) {
+//        memset(write_buffer, i, 1);
+//        accessor.write((blk_address)i, write_buffer);
+//    }
+//
+//    free(write_buffer);
+//    accessor.close();
+//    uint64_t duration = ticks() - start;
+//    printf("average: %.2f ms per write!!!\n", cycles_to_milliseconds(duration / writes));
+//
+//    exit(0);
+//
+//
     const int order = 32;
     const int size = 512;
-    const int ntuples = 100000;
+    const int ntuples = 1000;
 
-    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat", size);
+    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
     in_disk_tree.init();
+//
+//    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
+//    in_nvme_tree.init();
+//
+//
     benchmark<int, int>(&in_disk_tree, "in-disk", 1, ntuples, ntuples, ntuples, 1);
-
-    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
-    in_nvme_tree.init();
-    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, ntuples, 1);
-
-    VanillaBPlusTree<int, int, order> tree;
-    tree.init();
-    benchmark<int, int>(&tree, "in-memory", 2, ntuples, ntuples, ntuples, 1);
+////    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, ntuples, 1);
+//
+////
+////    VanillaBPlusTree<int, int, order> tree;
+////    tree.init();
+////    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
 }

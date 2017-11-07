@@ -7,6 +7,7 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <stdio.h>
 #include <sstream>
 #include <string>
 #include <assert.h>
@@ -15,63 +16,83 @@
 #include "node.h"
 #include "leaf_node.h"
 #include "inner_node.h"
+#include "../utils/rdtsc.h"
 using namespace std;
 namespace tree {
+
+
     template<typename K, typename V, int CAPACITY>
     class blk_node_reference : public node_reference<K, V> {
     public:
 
-        blk_node_reference(): blk_address_(-1), instance_(0) {};
+        blk_node_reference(): blk_address_(-1), instance_(0) {
+        };
 
-        blk_node_reference(blk_address blk_address) : blk_address_(blk_address),
-                                                                                        instance_(0) {};
+        blk_node_reference(blk_address blk_address) : blk_address_(blk_address), instance_(0) {
+        };
 
+        ~blk_node_reference(){
+        }
 
         Node<K, V> *get(blk_accessor<K, V>* blk_accessor) {
             if (blk_address_ < 0)
                 return nullptr;
             if (instance_)
                 return instance_;
-            void *read_buffer = malloc(blk_accessor->block_size);
+            void *read_buffer = blk_accessor->malloc_buffer();
             blk_accessor->read(blk_address_, read_buffer);
-
-//            uint32_t *type = static_cast<uint32_t*>(read_buffer);
-//            switch (*type) {
-//                case LEAF_NODE:
-//                    instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor);
-//                    instance_->deserialize(read_buffer);
-//                    break;
-//                case INNER_NODE:
-//                    instance_ = new InnerNode<K, V, CAPACITY>();
-//                    instance_->deserialize(read_buffer);
-//                    break;
-//                default:
-//                    return nullptr;
-//            }
-//            int length = *static_cast<int32_t *>(read_buffer);
-////
-
-
-
-
-
-//            std::string received((char*)read_buffer, blk_accessor->block_size);
-//
-//            printf("R[%d]: %s\n", blk_address_, received.c_str());
-//            boost::iostreams::basic_array_source<char> device(received.data(),
-//                                                              received.size());
-//            boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s(device);
-//            boost::archive::text_iarchive ia(s);
-
-
-
             specific_deserialize(read_buffer, blk_accessor);
-
-            free(read_buffer);
+            blk_accessor->free_buffer(read_buffer);
             return instance_;
-
         };
 
+        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) {
+            if (!instance_)
+                return;
+            if (instance_->is_modified()) {
+                void *write_buffer = blk_accessor->malloc_buffer();
+                int serialized_size = specific_serialize(write_buffer, blk_accessor);
+                blk_accessor->write(blk_address_, write_buffer);
+                blk_accessor->free_buffer(write_buffer);
+            }
+            instance_ = 0;
+        }
+
+        void remove(blk_accessor<K, V>* blk_accessor) {
+            delete instance_;
+            instance_ = 0;
+            blk_accessor->deallocate(blk_address_);
+        }
+
+        void copy(node_reference<K, V>* ref) {
+//            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
+            if (ref) {
+                this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->blk_address_;
+                this->instance_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->instance_;
+            } else {
+                this->blk_address_ = -1;
+                this->instance_ = 0;
+            }
+//            this->instance_ = 0;
+        }
+        bool is_null_ptr() const {
+            return blk_address_ == -1;
+        }
+
+        void bind(Node<K, V>* node) {
+            instance_ = node;
+        }
+
+        int64_t get_unified_representation() {
+            return reinterpret_cast<int64_t>(blk_address_);
+        }
+
+        void restore_by_unified_representation(int64_t value) {
+            instance_ = nullptr;
+            blk_address_ = value;
+        }
+
+    private:
         int specific_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
             instance_->serialize(write_buffer);
         }
@@ -124,55 +145,11 @@ namespace tree {
             instance_->set_blk_accessor(blk_accessor);
         }
 
-        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) {
-            if (!instance_)
-                return;
-            if (instance_->is_modified()) {
-                void *write_buffer = malloc(blk_accessor->block_size);
-                int serialized_size = specific_serialize(write_buffer, blk_accessor);
-                blk_accessor->write(blk_address_, write_buffer);
-                free(write_buffer);
-            }
-            instance_ = 0;
-        }
-
-        void remove(blk_accessor<K, V>* blk_accessor) {
-            delete instance_;
-            instance_ = 0;
-            blk_accessor->deallocate(blk_address_);
-        }
-
-        void copy(node_reference<K, V>* ref) {
-//            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
-            if (ref) {
-                this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->blk_address_;
-                this->instance_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->instance_;
-            } else {
-                this->blk_address_ = -1;
-                this->instance_ = 0;
-            }
-//            this->instance_ = 0;
-        }
-        bool is_null_ptr() const {
-            return blk_address_ == -1;
-        }
-
-        void bind(Node<K, V>* node) {
-            instance_ = node;
-        }
-
-        int64_t get_unified_representation() {
-            return reinterpret_cast<int64_t>(blk_address_);
-        }
-
-        void restore_by_unified_representation(int64_t value) {
-            instance_ = nullptr;
-            blk_address_ = value;
-        }
-
     private:
         blk_address blk_address_;
         Node<K, V>* instance_;
+
+
     private:
         friend class boost::serialization::access;
         template<class Archive>

@@ -51,6 +51,8 @@ public:
         return allocate_ref();
     };
 
+    void flush() {
+    }
 };
 
 

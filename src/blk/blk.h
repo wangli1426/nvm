@@ -37,6 +37,14 @@ public:
     virtual int close() = 0;
     virtual int read(const blk_address &, void* buffer) = 0;
     virtual int write(const blk_address &, void* buffer) = 0;
+    virtual void flush() = 0;
+
+    virtual void* malloc_buffer() const {
+        return malloc(block_size);
+    }
+    virtual void free_buffer(void* buffer) const {
+        free(buffer);
+    }
 
     const uint32_t block_size;
 };

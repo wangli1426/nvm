@@ -76,13 +76,17 @@ namespace nvm {
 
 
         static int initialize_namespace() {
-            struct spdk_env_opts opts;
-            spdk_env_opts_init(&opts);
-            opts.name = "nvm access interface";
-            opts.shm_id = 0;
-            spdk_env_init(&opts);
-            printf("Initializing NVMe Controllers\n");
-            return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
+            if (!g_ns) {
+                struct spdk_env_opts opts;
+                spdk_env_opts_init(&opts);
+                opts.name = "nvm access interface";
+                opts.shm_id = 0;
+                spdk_env_init(&opts);
+                printf("Initializing NVMe Controllers\n");
+                return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
+            } else {
+                return 0;
+            }
         }
 
         static QPair *allocateQPair(int length = 8) {
