@@ -88,11 +88,24 @@ add_dependencies(main Boost)
 
 #add_library(libblk src/blk/file_blk_accessor.cpp src/blk/void_blk_accessor.cpp src/blk/void_blk_accessor.h)
 
+
+add_library(libnvmblk src/blk/file_blk_accessor.cpp)
+target_link_libraries(libnvmblk
+				${spdk/lib/libspdk.a}
+				${spdk/lib/librte.a}
+				-L${CMAKE_SOURCE_DIR}/spdk/lib
+				-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+
 add_executable(blk_tree src/tree/blk_tree_main.cpp)
 #target_link_libraries(blk_tree libblk)
 
 add_executable(tree_benchmark src/b_tree_benchmark.cc)
-target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread)
+target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+		)
 add_dependencies(tree_benchmark Boost)
 
 
