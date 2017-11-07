@@ -11,8 +11,8 @@
 using namespace tree;
 int main(int argc, char** argv) {
 
-    const int order = 256;
-    const int size = 4096;
+    const int order = 32;
+    const int size = 512;
     const int ntuples = 100000;
 
     in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat", size);
