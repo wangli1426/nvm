@@ -21,9 +21,13 @@ int main() {
     }
 
     cout << "++++++++++ WARMUP ++++++++++" << endl;
-    run_multiple_threads_benchmark(1, 100000, 512, 8, seq_access, read_load, asynch);
-    run_multiple_threads_benchmark(1, 100000, 512, 8, seq_access, write_load, asynch);
+    run_multiple_threads_benchmark(1, 100000, 512, 16, rand_access, read_load, asynch);
+    run_multiple_threads_benchmark(2, 100000, 512, 16, rand_access, read_load, asynch);
+    run_multiple_threads_benchmark(3, 100000, 512, 16, rand_access, read_load, asynch);
+    run_multiple_threads_benchmark(4, 100000, 512, 16, rand_access, read_load, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
+
+    exit(0);
 
     sleep(1);
 

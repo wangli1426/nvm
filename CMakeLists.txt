@@ -79,12 +79,12 @@ add_dependencies(main Boost)
 #		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
 #add_library(perf src/access_pattern_benchmark.cpp)
-#add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
-#target_link_libraries(access_pattern_benchmark
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
+target_link_libraries(access_pattern_benchmark
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
 #add_library(libblk src/blk/file_blk_accessor.cpp src/blk/void_blk_accessor.cpp src/blk/void_blk_accessor.h)
 
