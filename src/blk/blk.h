@@ -40,7 +40,9 @@ public:
     virtual void flush() = 0;
 
     virtual void* malloc_buffer() const {
-        return malloc(block_size);
+        void* buffer;
+        posix_memalign(&buffer, block_size, block_size);
+        return buffer;
     }
     virtual void free_buffer(void* buffer) const {
         free(buffer);

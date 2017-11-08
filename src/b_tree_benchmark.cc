@@ -13,29 +13,42 @@
 using namespace tree;
 int main(int argc, char** argv) {
 
-
-    int writes = 1000;
-    std::vector<int> addresses;
-    for (int i = 0; i < writes; i++) {
-        addresses.push_back(i);
-    }
-    std::random_shuffle(std::begin(addresses), std::end(addresses));
-    void* write_buffer = malloc(512);
-    uint64_t start = ticks();
-    int fd = open("test.file", O_TRUNC|O_WRONLY|O_DIRECT, S_IRWXU|S_IRWXG|S_IRWXO);
-    if (fd < 0) {
-        printf("failed to open the file!\n");
-        exit(1);
-    }
-    for (int i = 0; i < writes; i++) {
-        pwrite(fd, write_buffer, 512, 512 * i);
-    }
-    fsync(fd);
-    close(fd);
-    uint64_t duration = ticks() - start;
-    printf("AVG latency: %f ms\n", cycles_to_milliseconds(duration / writes));
-
-    exit(0);
+//
+//    int writes = 100;
+//    std::vector<int> addresses;
+//    for (int i = 0; i < writes; i++) {
+//        addresses.push_back(i);
+//    }
+//    std::random_shuffle(std::begin(addresses), std::end(addresses));
+//    void* write_buffer;
+//    posix_memalign(&write_buffer, 512, 512);
+//    uint64_t start = ticks();
+////    int fd = open("test.file", O_DIRECT);
+//    int fd = open("test.file", O_CREAT|O_TRUNC|O_RDWR|O_DIRECT, S_IRWXU|S_IRWXG|S_IRWXO);
+//    if (fd < 0) {
+//        printf("failed to open the file!\n");
+//        exit(1);
+//    }
+//    for (int i = 0; i < writes; i++) {
+//        int status = (int)pwrite(fd, write_buffer, 512, 512 * addresses[i]);
+//        if (status < 0) {
+//            printf("[Write:] file access fails, error: %d\n", status);
+//            printf("Reason: %s\n", strerror(errno));
+//        }
+//    }
+//
+//    for (int i = 0; i < writes; i++) {
+//        int status = (int)pread(fd, write_buffer, 512, 512 * addresses[i]);
+//        if (status < 0) {
+//            printf("[Read:] file access fails, error: %d\n", status);
+//            printf("Reason: %s\n", strerror(errno));
+//        }
+//    }
+//    close(fd);
+//    uint64_t duration = ticks() - start;
+//    printf("AVG latency: %f ms\n", cycles_to_milliseconds(duration / writes));
+//
+//    exit(0);
 
 //    void* write_buffer = malloc(512);
 //    file_blk_accessor<int, int, 32> accessor("t", 512);
@@ -63,22 +76,35 @@ int main(int argc, char** argv) {
 //    exit(0);
 //
 //
-    const int order = 32;
-    const int size = 512;
+    const int order = 128;
+    const int size = 4096;
     const int ntuples = 1000;
 
     in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
     in_disk_tree.init();
-//
-//    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
-//    in_nvme_tree.init();
-//
-//
     benchmark<int, int>(&in_disk_tree, "in-disk", 1, ntuples, ntuples, ntuples, 1);
+////
+////    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
+////    in_nvme_tree.init();
+////
+////
 ////    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, ntuples, 1);
 //
 ////
 ////    VanillaBPlusTree<int, int, order> tree;
 ////    tree.init();
 ////    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
+
+
+//    in_disk_b_plus_tree<int, int, 4> tree;
+//    tree.init();
+//    tree.insert(1, 1);
+//    tree.insert(2, 2);
+//    tree.insert(3, 3);
+//    tree.insert(4, 4);
+//    tree.insert(5, 5);
+//    tree.insert(6, 6);
+//
+//    tree.delete_key(4);
+//    tree.delete_key(3);
 }

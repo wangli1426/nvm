@@ -137,7 +137,7 @@ namespace tree {
             root_->copy(leaf_node_ref);
 
             leaf_node_ref->close(blk_accessor_);
-
+            blk_accessor_->flush();
 //            root_ = leaf_node->get_self_ref();
 //            root_->close(blk_accessor_);
             depth_ = 1;

@@ -29,13 +29,9 @@ public:
     }
 
     int open() override{
-//        fd_ = ::open(path_, O_DIRECT | O_SYNC | O_TRUNC |
-        int fd = ::open(path_, O_TRUNC|O_RDWR|O_DIRECT, S_IRWXU|S_IRWXG|S_IRWXO);
-        file_ = fdopen(fd, "w+");
-//        file_ = fopen(path_, "w+");
-        setvbuf(file_, NULL, _IONBF, 0);
-//        setvbuf(file_, NULL, NULL);
-        return file_ ? 0 : errno;
+        fd_ = ::open(path_, O_CREAT|O_TRUNC|O_RDWR|O_DIRECT, S_IRWXU|S_IRWXG|S_IRWXO);
+//        fd_ = ::open(path_, O_CREAT|O_TRUNC|O_RDWR, S_IRWXU|S_IRWXG|S_IRWXO);
+        return fd_ ? 0 : errno;
     }
 
     blk_address allocate() override {
@@ -59,12 +55,12 @@ public:
 
     int read(const blk_address& address, void *buffer) override {
         uint64_t start = ticks();
-        setvbuf(file_, NULL, _IONBF, 0);
         if (!is_address_valid(address))
             return 0;
-        if (fseek(file_, address * this->block_size, SEEK_SET) != 0)
-            return 0;
-        int status = (int)fread(buffer, 1, this->block_size, file_);
+        int status = (int)::pread(fd_, buffer, this->block_size, address * this->block_size);
+        if (status < 0) {
+            printf("%s\n", strerror(errno));
+        }
         read_cycles_ += ticks() - start;
         reads_++;
         return status;
@@ -72,14 +68,12 @@ public:
 
     int write(const blk_address& address, void *buffer) override {
         uint64_t start = ticks();
-        setvbuf(file_, NULL, _IONBF, 0);
         if (!is_address_valid(address))
             return 0;
-        if (fseek(file_, address * this->block_size, SEEK_SET) != 0)
-            return 0;
-        int status = (int)fwrite(buffer, 1, this->block_size, file_);
-        fflush_unlocked(file_);
-//        fsync(fileno(file_));
+        int status = (int)::pwrite(fd_, buffer, this->block_size, address * this->block_size);
+        if (status < 0) {
+            printf("%s\n", strerror(errno));
+        }
         write_cycles_ += ticks() - start;
         writes_++;
         return status;
@@ -90,7 +84,7 @@ public:
             printf("[DISK:] total reads: %ld, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
         if (writes_ > 0)
             printf("[DISK:] total writes: %ld, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
-        return fclose(file_);
+        return ::close(fd_);
     }
 
     node_reference<K, V>* allocate_ref() override {
@@ -103,8 +97,7 @@ public:
     };
 
     void flush() {
-        fflush_unlocked(file_);
-        fsync(fileno(file_));
+//        fsync(fd_);
     }
 private:
     bool is_address_valid(const blk_address& address) const {
@@ -113,7 +106,6 @@ private:
 
 private:
     const char* path_;
-    FILE* file_;
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
