@@ -78,22 +78,43 @@ private:
     volatile char _l;  //__attribute__((aligned(64)))
 };
 
+static long sema_id = 0;
 class Semaphore {
 private:
-    sem_t sem;
+    sem_t* sem;
 
 public:
-    Semaphore(int initialValue = 0) { sem_init(&sem, 0, initialValue); }
+    Semaphore(int initialValue = 0) {
+#ifdef __APPLE__
+        std::ostringstream os;
+        os << "/" << sema_id++;
+        if ((sem = sem_open(os.str().c_str(), O_CREAT|O_EXCL, 0644, 0)) == SEM_FAILED)
+            printf("fail to create semaphore %s\n", os.str().c_str());
 
-    void set_value(int value) { sem_init(&sem, 0, value); }
+        printf("sema[%s] is created!\n", os.str().c_str());
+#else
+        sem = new sem_t();
+        sem_init(sem, 0, initialValue);
+#endif
+    }
+
+    ~Semaphore() {
+#ifdef __APPLE__
+        sem_close(sem);
+#else
+        sem_destroy(sem);
+#endif
+    }
+
+    void set_value(int value) { sem_init(sem, 0, value); }
 
     inline void post(int times = 1) {
         for (int i = 0; i < times; i++) {
-            sem_post(&sem);
+            sem_post(sem);
         }
     }
 
-    inline void wait() { sem_wait(&sem); }
+    inline void wait() { sem_wait(sem); }
 
     /*
      * The timed_wait() shall return true if the calling process/thread
@@ -104,28 +125,29 @@ public:
      * return false.
      */
     bool timed_wait(int millisecond) {
+#ifndef __APPLE__
+        return sem_timedwait(sem, &time) == 0;
         timespec time;
         time.tv_sec = millisecond / 1000;
         millisecond = millisecond % (1000);
         time.tv_nsec = millisecond * (long)1000 * 1000;
-#ifndef __APPLE__
-        return sem_timedwait(&sem, &time) == 0;
 #else
         return false;
 #endif
     }
 
     inline bool try_wait() {
-        return sem_trywait(&sem) ==
+        return sem_trywait(sem) ==
                0;  // if trywait() is successful, return 0, otherwise return -1.
     }
 
-    void destroy() { sem_destroy(&sem); }
+    void destroy() { sem_destroy(sem); }
     int get_value() {
         int ret;
-        sem_getvalue(&sem, &ret);
+        sem_getvalue(sem, &ret);
         return ret;
     }
+
 };
 
 class Barrier {

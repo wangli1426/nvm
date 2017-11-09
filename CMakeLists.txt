@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O3 -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
@@ -63,60 +63,49 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
 
 # Generate main executable
 add_executable(main src/main.cc)
-target_link_libraries(main ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+target_link_libraries(main ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread)
 add_dependencies(main Boost)
-target_link_libraries(main -lpthread)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib
 #  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 
-#add_library(perf src/perf.cpp)
-#add_executable(perf src/perf.cpp)
-#target_link_libraries(perf
+#
+#add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
+#target_link_libraries(access_pattern_benchmark
 #		${spdk/lib/libspdk.a}
 #		${spdk/lib/librte.a}
 #		-L${CMAKE_SOURCE_DIR}/spdk/lib
 #		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
-
-#add_library(perf src/access_pattern_benchmark.cpp)
-add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
-target_link_libraries(access_pattern_benchmark
-		${spdk/lib/libspdk.a}
-		${spdk/lib/librte.a}
-		-L${CMAKE_SOURCE_DIR}/spdk/lib
-		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
-
-#add_library(libblk src/blk/file_blk_accessor.cpp src/blk/void_blk_accessor.cpp src/blk/void_blk_accessor.h)
-
-
-add_library(libnvmblk src/blk/file_blk_accessor.cpp)
-target_link_libraries(libnvmblk
-				${spdk/lib/libspdk.a}
-				${spdk/lib/librte.a}
-				-L${CMAKE_SOURCE_DIR}/spdk/lib
-				-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
-
-add_executable(blk_tree src/tree/blk_tree_main.cpp)
-#target_link_libraries(blk_tree libblk)
-
-add_executable(tree_benchmark src/b_tree_benchmark.cc)
-target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread
-		${spdk/lib/libspdk.a}
-		${spdk/lib/librte.a}
-		-L${CMAKE_SOURCE_DIR}/spdk/lib
-		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
-		)
-add_dependencies(tree_benchmark Boost)
-
-
-set(TEST_FILES
-		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
-		test/disk_based_b_plus_tree_test.cc)
-
-add_executable(unittest ${TEST_FILES})
-target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
-add_dependencies(unittest Boost)
+#
+#
+#
+#add_library(libnvmblk src/blk/file_blk_accessor.cpp)
+#target_link_libraries(libnvmblk
+#				${spdk/lib/libspdk.a}
+#				${spdk/lib/librte.a}
+#				-L${CMAKE_SOURCE_DIR}/spdk/lib
+#				-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+#
+#add_executable(blk_tree src/tree/blk_tree_main.cpp)
+#
+#add_executable(tree_benchmark src/b_tree_benchmark.cc)
+#target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread
+#		${spdk/lib/libspdk.a}
+#		${spdk/lib/librte.a}
+#		-L${CMAKE_SOURCE_DIR}/spdk/lib
+#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+#		)
+#add_dependencies(tree_benchmark Boost)
+#
+#
+#set(TEST_FILES
+#		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
+#		test/disk_based_b_plus_tree_test.cc)
+#
+#add_executable(unittest ${TEST_FILES})
+#target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+#add_dependencies(unittest Boost)
 
 
 

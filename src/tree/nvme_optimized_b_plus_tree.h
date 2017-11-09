@@ -22,10 +22,13 @@ namespace tree {
             V value;
             bool found;
             Semaphore semaphore;
+            search_request() {
+                semaphore = Semaphore(0);
+            }
         };
     public:
         nvme_optimized_b_plus_tree(uint32_t queue_length): VanillaBPlusTree<K, V, CAPACITY>(0) {
-            queue_free_slots_ = Semaphore(8);
+            queue_free_slots_ = Semaphore(1);
             working_thread_terminate_flag_ = false;
 //            thread_handle_ = thread(nvme_optimized_b_plus_tree::worker_thread_logic, (void*)this, working_thread_terminate_flag_);
             pthread_create(&thread_handle_, NULL, nvme_optimized_b_plus_tree::worker_thread_logic, this);
@@ -61,33 +64,36 @@ namespace tree {
         }
 
 //        static void worker_thread_logic(void* para, bool& terminate) {
-        static void worker_thread_logic(void* para) {
+        static void* worker_thread_logic(void* para) {
             nvme_optimized_b_plus_tree* tree = reinterpret_cast<nvme_optimized_b_plus_tree*>(para);
             while(true) {
                 search_request* request;
                 tree->lock_.acquire();
                 if (tree->request_queue_.size() > 0) {
                     request = tree->request_queue_.front();
+                    tree->request_queue_.pop();
                     tree->lock_.release();
                 } else {
                     tree->lock_.release();
                     continue;
                 }
 
+                sleep(1);
                 // we get a new search request.
+                printf("search key: %d\n", request->key);
                 request->found = tree->search(request->key, request->value);
                 request->semaphore.post();
 
-                tree->lock_.acquire();
-                tree->request_queue_.pop();
-                tree->lock_.release();
+//                tree->lock_.acquire();
+//                tree->request_queue_.pop();
+//                tree->lock_.release();
 
                 tree->queue_free_slots_.post();
             }
         }
 
     private:
-        Lock lock_;
+        SpinLock lock_;
         Semaphore queue_free_slots_;
         queue<search_request*> request_queue_;
 //        thread thread_handle_;
