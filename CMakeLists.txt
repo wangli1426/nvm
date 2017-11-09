@@ -65,6 +65,7 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
 add_executable(main src/main.cc)
 target_link_libraries(main ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
 add_dependencies(main Boost)
+target_link_libraries(main -lpthread)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib

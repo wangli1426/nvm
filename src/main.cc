@@ -5,26 +5,22 @@
 #include <boost/archive/text_oarchive.hpp>
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/vanilla_b_plus_tree.h"
+#include "tree/nvme_optimized_b_plus_tree.h"
 
 
 using namespace tree;
 
 int main() {
-    const int number_of_tuples = 200;
-    std::vector<int> tuples;
-    for (int i = 0; i < number_of_tuples; ++i) {
-        tuples.push_back(i);
-    }
-    std::random_shuffle(tuples.begin(), tuples.end());
-
-
-    in_disk_b_plus_tree<int, int, 16> tree;
+    nvme_optimized_b_plus_tree<int, int, 32> tree(8);
     tree.init();
-    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
-        printf("########\n");
-        tree.insert(*it, *it);
-        printf("########\n\n");
-    }
+    tree.insert(8, 8);
+    tree.insert(9, 9);
 
+    int value;
+    tree.asynchronous_search(8, value);
+    printf("%d -> %d\n", 8, value);
+
+    tree.asynchronous_search(9, value);
+    printf("%d -> %d\n", 9, value);
 
 }
