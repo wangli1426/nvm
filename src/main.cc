@@ -11,16 +11,19 @@
 using namespace tree;
 
 int main() {
-    nvme_optimized_b_plus_tree<int, int, 32> tree(8);
+
+    const int tuples = 16;
+
+    nvme_optimized_b_plus_tree<int, int, 16> tree(8);
     tree.init();
-    tree.insert(8, 8);
-    tree.insert(9, 9);
 
-    int value;
-    tree.asynchronous_search(8, value);
-    printf("%d -> %d\n", 8, value);
+    for (int i = 0; i < tuples; i++) {
+        tree.insert(i, i);
+    }
 
-    tree.asynchronous_search(9, value);
-    printf("%d -> %d\n", 9, value);
-
+    for (int i = 0; i < tuples; i++) {
+        int value;
+        tree.asynchronous_search(i, value);
+        printf("%d -> %d\n", i, value);
+    }
 }
