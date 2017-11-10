@@ -125,7 +125,7 @@ public:
      * return false.
      */
     bool timed_wait(int millisecond) {
-#ifndef __APPLE__
+#ifdef __APPLE__
         return sem_timedwait(sem, &time) == 0;
         timespec time;
         time.tv_sec = millisecond / 1000;

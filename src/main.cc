@@ -26,8 +26,5 @@ int main() {
         tree.asynchronous_search(i, value);
         printf("%d -> %d\n", i, value);
     }
-    Semaphore sema;
-    printf("%d\n", sema.get_value());
-//    sema.post();
-//    sema.wait();
+
 }

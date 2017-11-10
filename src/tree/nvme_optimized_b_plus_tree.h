@@ -30,14 +30,12 @@ namespace tree {
         nvme_optimized_b_plus_tree(uint32_t queue_length): VanillaBPlusTree<K, V, CAPACITY>(0) {
             queue_free_slots_ = Semaphore(1);
             working_thread_terminate_flag_ = false;
-//            thread_handle_ = thread(nvme_optimized_b_plus_tree::worker_thread_logic, (void*)this, working_thread_terminate_flag_);
             pthread_create(&thread_handle_, NULL, nvme_optimized_b_plus_tree::worker_thread_logic, this);
         };
 
         ~nvme_optimized_b_plus_tree() {
-//            working_thread_terminate_flag_ = true;
-//            thread_handle_.join();
-            pthread_cancel(thread_handle_);
+            working_thread_terminate_flag_ = true;
+            pthread_join(thread_handle_, NULL);
         }
 
         void init() {
@@ -63,12 +61,14 @@ namespace tree {
                 return false;
         }
 
-//        static void worker_thread_logic(void* para, bool& terminate) {
         static void* worker_thread_logic(void* para) {
             nvme_optimized_b_plus_tree* tree = reinterpret_cast<nvme_optimized_b_plus_tree*>(para);
-            while(true) {
+            while(!tree->working_thread_terminate_flag_) {
                 search_request* request;
-                tree->lock_.acquire();
+                while(!tree->lock_.try_lock()) {
+                    if (tree->working_thread_terminate_flag_)
+                        return;
+                }
                 if (tree->request_queue_.size() > 0) {
                     request = tree->request_queue_.front();
                     tree->request_queue_.pop();
@@ -78,15 +78,10 @@ namespace tree {
                     continue;
                 }
 
-                sleep(1);
                 // we get a new search request.
                 printf("search key: %d\n", request->key);
                 request->found = tree->search(request->key, request->value);
                 request->semaphore.post();
-
-//                tree->lock_.acquire();
-//                tree->request_queue_.pop();
-//                tree->lock_.release();
 
                 tree->queue_free_slots_.post();
             }
@@ -96,9 +91,8 @@ namespace tree {
         SpinLock lock_;
         Semaphore queue_free_slots_;
         queue<search_request*> request_queue_;
-//        thread thread_handle_;
         pthread_t thread_handle_;
-        bool working_thread_terminate_flag_;
+        volatile bool working_thread_terminate_flag_;
     };
 }
 
