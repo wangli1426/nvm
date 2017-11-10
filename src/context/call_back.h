@@ -16,16 +16,21 @@ static void add_to_queue(call_back_context* context);
 
 class call_back_context {
 public:
-    call_back_context(const char* name = "unnamed"): status(-1), name_(name) {};
+    call_back_context(const char* name = "unnamed"): status(0), name_(name) {};
     int status;
 
     virtual void run() {
         if (status == 0) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
+            transition_to_state(1);
         } else {
             printf("[%s]: status %d, I am done!\n", name_, status);
         }
+    }
+
+    void transition_to_state(int status) {
+        this->status = status;
     }
 
 protected:
@@ -40,7 +45,6 @@ static void process_logic(volatile bool *terminate) {
             call_back_context *context = call_back_queue.front();
             call_back_queue.pop();
             lock.release();
-            context->status++;
             context->run();
         }
     }

@@ -14,9 +14,11 @@ public:
         if (status == 0) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
+            transition_to_state(1);
         } else if (status == 1) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
+            transition_to_state(2);
         } else {
             printf("[%s]: status %d, I am done!\n", name_, status);
         }
@@ -25,16 +27,13 @@ public:
 
 int main() {
     pthread_t pid;
-//    pthread_create(&pid, NULL, process, NULL);
     bool terminate_flag;
     std::thread t = std::thread(process_logic, &terminate_flag);
     call_back_context* context1 = new call_back_context("C1");
     call_back_context* context2 = new my_context("C2");
     add_to_queue(context1);
     add_to_queue(context2);
-//    process();
-//    pthread_join(pid, NULL);
-    sleep(1);
+    sleep(4);
     terminate_flag = true;
     t.join();
 }
