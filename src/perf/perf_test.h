@@ -85,6 +85,7 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
          << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
          << ", Update: " << nupdates * runs / update_time / 1000 << " K tuples / s"
          << ", Search: " << reads * runs / search_time / 1000 << " K tuples / s"
+         << ", found: " << founds
          << endl;
 
     uint64_t total_end = ticks();

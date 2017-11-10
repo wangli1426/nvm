@@ -7,8 +7,8 @@
 
 #include <string>
 #include <iostream>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+//#include <boost/archive/text_iarchive.hpp>
+//#include <boost/archive/text_oarchive.hpp>
 #include "node_reference.h"
 #include "b_tree.h"
 #define INNER_NODE 0
@@ -111,11 +111,11 @@ namespace tree {
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION
         bool is_leaf_;
 #endif
-    private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
-        }
+//    private:
+//        friend class boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version) {
+//        }
 
     private:
         bool modified_;

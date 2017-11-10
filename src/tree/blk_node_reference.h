@@ -5,8 +5,8 @@
 #ifndef NVM_BLK_NODE_REFERENCE_H
 #define NVM_BLK_NODE_REFERENCE_H
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+//#include <boost/archive/binary_iarchive.hpp>
+//#include <boost/archive/binary_oarchive.hpp>
 #include <stdio.h>
 #include <sstream>
 #include <string>
@@ -115,34 +115,34 @@ namespace tree {
         }
 
         int boost_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
-            ostringstream ostr;
-            boost::archive::binary_oarchive oa(ostr);
-            oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
-            oa.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
-            oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
-            oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
-            oa << instance_;
-            ostr.flush();
-            std::string str = ostr.str();
-            int32_t length = str.length();
-            assert(length <= blk_accessor->block_size);
-            memcpy(write_buffer, str.c_str(), str.size());
-            memset((char*)write_buffer + str.size(), 0, blk_accessor->block_size - str.size());
-            return length;
+//            ostringstream ostr;
+//            boost::archive::binary_oarchive oa(ostr);
+//            oa.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
+//            oa.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
+//            oa.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
+//            oa.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
+//            oa << instance_;
+//            ostr.flush();
+//            std::string str = ostr.str();
+//            int32_t length = str.length();
+//            assert(length <= blk_accessor->block_size);
+//            memcpy(write_buffer, str.c_str(), str.size());
+//            memset((char*)write_buffer + str.size(), 0, blk_accessor->block_size - str.size());
+//            return length;
         }
 
         void boost_deserialize(void* read_buffer, blk_accessor<K, V>* blk_accessor) {
-            ostringstream ostr;
-            ostr.write((char*)read_buffer, blk_accessor->block_size);
-            std::string tmp = ostr.str();
-            istringstream istr(tmp);
-            boost::archive::binary_iarchive ia(istr);
-            ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
-            ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
-            ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
-            ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
-            ia >> instance_;
-            instance_->set_blk_accessor(blk_accessor);
+//            ostringstream ostr;
+//            ostr.write((char*)read_buffer, blk_accessor->block_size);
+//            std::string tmp = ostr.str();
+//            istringstream istr(tmp);
+//            boost::archive::binary_iarchive ia(istr);
+//            ia.register_type(static_cast<LeafNode<K, V, CAPACITY>*>(NULL));
+//            ia.register_type(static_cast<InnerNode<K, V, CAPACITY>*>(NULL));
+//            ia.register_type(static_cast<in_memory_node_ref<K, V>*>(NULL));
+//            ia.register_type(static_cast<blk_node_reference<K, V, CAPACITY>*>(NULL));
+//            ia >> instance_;
+//            instance_->set_blk_accessor(blk_accessor);
         }
 
     private:
@@ -150,12 +150,12 @@ namespace tree {
         Node<K, V>* instance_;
 
 
-    private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
-            ar & boost::serialization::base_object<node_reference<K, V>>(*this) & blk_address_;
-        }
+//    private:
+//        friend class boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version) {
+//            ar & boost::serialization::base_object<node_reference<K, V>>(*this) & blk_address_;
+//        }
     };
 }
 #endif //NVM_BLK_NODE_REFERENCE_H

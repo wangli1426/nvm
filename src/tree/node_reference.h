@@ -4,8 +4,8 @@
 
 #ifndef NVM_NODE_REFERENCE_H
 #define NVM_NODE_REFERENCE_H
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+//#include <boost/archive/text_iarchive.hpp>
+//#include <boost/archive/text_oarchive.hpp>
 #include "node.h"
 #include "../blk/blk.h"
 namespace tree {
@@ -42,11 +42,11 @@ namespace tree {
         virtual int64_t get_unified_representation() = 0;
 
         virtual void restore_by_unified_representation(int64_t value) = 0;
-    private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
-        }
+//    private:
+//        friend class boost::serialization::access;
+//        template<class Archive>
+//        void serialize(Archive & ar, const unsigned int version) {
+//        }
     };
 }
 #endif //NVM_NODE_REFERENCE_H

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <memory.h>
+#include <assert.h>
 #include "node.h"
 #include "node_reference.h"
 #include "in_memory_node_reference.h"
@@ -37,11 +38,11 @@ namespace tree {
                 this->val = r.val;
                 return *this;
             }
-            friend class boost::serialization::access;
-            template<class Archive>
-            void serialize(Archive & ar, const unsigned int version) {
-                ar & key & val;
-            }
+//            friend class boost::serialization::access;
+//            template<class Archive>
+//            void serialize(Archive & ar, const unsigned int version) {
+//                ar & key & val;
+//            }
         };
 
     public:
@@ -427,19 +428,19 @@ namespace tree {
         node_reference<K, V> *right_sibling_;
         node_reference<K, V> *self_ref_;
         blk_accessor<K, V>* blk_accessor_;
-    private:
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void save(Archive & ar, const unsigned int version) const {
-            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
-        }
-        template<class Archive>
-        void load(Archive & ar, const unsigned int version) {
-            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
-            self_ref_->bind(this);
-        }
-        BOOST_SERIALIZATION_SPLIT_MEMBER()
+//    private:
+//        friend class boost::serialization::access;
+//
+//        template<class Archive>
+//        void save(Archive & ar, const unsigned int version) const {
+//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
+//        }
+//        template<class Archive>
+//        void load(Archive & ar, const unsigned int version) {
+//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & entries_ & right_sibling_ & self_ref_;
+//            self_ref_->bind(this);
+//        }
+//        BOOST_SERIALIZATION_SPLIT_MEMBER()
     };
 }
 

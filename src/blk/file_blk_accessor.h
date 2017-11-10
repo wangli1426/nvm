@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <unordered_set>
 #include "../tree/blk_node_reference.h"
 #include "blk.h"

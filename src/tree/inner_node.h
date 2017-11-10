@@ -489,35 +489,35 @@ namespace tree {
             }
         }
 
-    private:
-        friend class boost::serialization::access;
+//    private:
+//        friend class boost::serialization::access;
+////        template<class Archive>
+////        void serialize(Archive & ar, const unsigned int version) {
+////            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
+////            for (int i = 0; i < size_; i++) {
+////                ar & child_[i];
+////            }
+//////            child_;
+////        }
+//
 //        template<class Archive>
-//        void serialize(Archive & ar, const unsigned int version) {
+//        void save(Archive & ar, const unsigned int version) const
+//        {
 //            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
 //            for (int i = 0; i < size_; i++) {
 //                ar & child_[i];
 //            }
-////            child_;
 //        }
-
-        template<class Archive>
-        void save(Archive & ar, const unsigned int version) const
-        {
-            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
-            for (int i = 0; i < size_; i++) {
-                ar & child_[i];
-            }
-        }
-        template<class Archive>
-        void load(Archive & ar, const unsigned int version)
-        {
-            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
-            for (int i = 0; i < size_; i++) {
-                ar & child_[i];
-            }
-            self_ref_->bind(this);
-        }
-        BOOST_SERIALIZATION_SPLIT_MEMBER()
+//        template<class Archive>
+//        void load(Archive & ar, const unsigned int version)
+//        {
+//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
+//            for (int i = 0; i < size_; i++) {
+//                ar & child_[i];
+//            }
+//            self_ref_->bind(this);
+//        }
+//        BOOST_SERIALIZATION_SPLIT_MEMBER()
     };
 }
 #endif //B_TREE_INNER_NODE_H

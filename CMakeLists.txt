@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O2 -fpermissive -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
@@ -34,25 +34,24 @@ set_target_properties(libgtest PROPERTIES
 include_directories("${source_dir}/googletest/include"
         "${source_dir}/googlemock/include")
 
-set(BOOST_REQUESTED_VERSION "1.65.1")
-string(REPLACE "." "_" BOOST_REQUESTED_VERSION_UNDERSCORE ${BOOST_REQUESTED_VERSION})
-include(ExternalProject)
-ExternalProject_Add(
-		Boost
-		URL https://downloads.sourceforge.net/project/boost/boost/${BOOST_REQUESTED_VERSION}/boost_${BOOST_REQUESTED_VERSION_UNDERSCORE}.zip
-		PREFIX ${CMAKE_CURRENT_BINARY_DIR}/boost
-		UPDATE_COMMAND ""
-		CONFIGURE_COMMAND ./bootstrap.sh --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost
-		BUILD_COMMAND ./b2 ${BOOST_MAYBE_STATIC} --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost --with-serialization install
-		BUILD_IN_SOURCE true
-		INSTALL_COMMAND ""
-		INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost
-)
-ExternalProject_Get_Property(Boost source_dir binary_dir)
-add_library(libboost IMPORTED STATIC GLOBAL)
-#add_dependencies(libboost Boost)
-#add_library(libboost )
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
+
+#set(BOOST_REQUESTED_VERSION "1.65.1")
+#string(REPLACE "." "_" BOOST_REQUESTED_VERSION_UNDERSCORE ${BOOST_REQUESTED_VERSION})
+#include(ExternalProject)
+#ExternalProject_Add(
+#		Boost
+#		URL https://downloads.sourceforge.net/project/boost/boost/${BOOST_REQUESTED_VERSION}/boost_${BOOST_REQUESTED_VERSION_UNDERSCORE}.zip
+#		PREFIX ${CMAKE_CURRENT_BINARY_DIR}/boost
+#		UPDATE_COMMAND ""
+#		CONFIGURE_COMMAND ./bootstrap.sh --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost
+#		BUILD_COMMAND ./b2 ${BOOST_MAYBE_STATIC} --prefix=${CMAKE_CURRENT_BINARY_DIR}/boost --with-serialization install
+#		BUILD_IN_SOURCE true
+#		INSTALL_COMMAND ""
+#		INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/boost
+#)
+#ExternalProject_Get_Property(Boost source_dir binary_dir)
+#add_library(libboost IMPORTED STATIC GLOBAL)
+#include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
 
 
 
@@ -63,8 +62,8 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/boost/include")
 
 # Generate main executable
 add_executable(main src/main.cc)
-target_link_libraries(main ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread)
-add_dependencies(main Boost)
+target_link_libraries(main -lpthread)
+#add_dependencies(main)
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib
@@ -89,14 +88,16 @@ add_dependencies(main Boost)
 #
 #add_executable(blk_tree src/tree/blk_tree_main.cpp)
 #
-#add_executable(tree_benchmark src/b_tree_benchmark.cc)
-#target_link_libraries(tree_benchmark ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a -lpthread
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
-#		)
-#add_dependencies(tree_benchmark Boost)
+add_executable(tree_benchmark src/b_tree_benchmark.cc)
+target_link_libraries(tree_benchmark
+#		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a
+		-lpthread
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+		)
+#add_dependencies(tree_benchmark)
 #
 #
 #set(TEST_FILES
@@ -105,7 +106,7 @@ add_dependencies(main Boost)
 #
 #add_executable(unittest ${TEST_FILES})
 #target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
-#add_dependencies(unittest Boost)
+#add_dependencies(unittest)
 
 
 
