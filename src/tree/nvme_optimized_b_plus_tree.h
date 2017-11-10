@@ -67,7 +67,7 @@ namespace tree {
                 search_request* request;
                 while(!tree->lock_.try_lock()) {
                     if (tree->working_thread_terminate_flag_)
-                        return;
+                        return nullptr;
                 }
                 if (tree->request_queue_.size() > 0) {
                     request = tree->request_queue_.front();

@@ -12,6 +12,7 @@
  */
 
 #include <semaphore.h>
+#include <sstream>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -126,11 +127,12 @@ public:
      */
     bool timed_wait(int millisecond) {
 #ifdef __APPLE__
-        return sem_timedwait(sem, &time) == 0;
         timespec time;
         time.tv_sec = millisecond / 1000;
         millisecond = millisecond % (1000);
         time.tv_nsec = millisecond * (long)1000 * 1000;
+        return false;
+//        return sem_timedwait(sem, &time) == 0;
 #else
         return false;
 #endif

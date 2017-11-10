@@ -2,6 +2,9 @@
 // Created by robert on 10/11/17.
 //
 #include <stdio.h>
+#include <thread>
+#include <pthread.h>
+#include <unistd.h>
 #include "call_back.h"
 
 class my_context: public call_back_context {
@@ -21,9 +24,17 @@ public:
 };
 
 int main() {
+    pthread_t pid;
+//    pthread_create(&pid, NULL, process, NULL);
+    bool terminate_flag;
+    std::thread t = std::thread(process_logic, &terminate_flag);
     call_back_context* context1 = new call_back_context("C1");
     call_back_context* context2 = new my_context("C2");
     add_to_queue(context1);
     add_to_queue(context2);
-    process();
+//    process();
+//    pthread_join(pid, NULL);
+    sleep(1);
+    terminate_flag = true;
+    t.join();
 }

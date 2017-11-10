@@ -11,7 +11,7 @@ class call_back_context;
 
 static std::queue<call_back_context*> call_back_queue;
 static SpinLock lock;
-static void process();
+static void process_logic(volatile bool*);
 static void add_to_queue(call_back_context* context);
 
 class call_back_context {
@@ -32,8 +32,9 @@ protected:
     const char* name_;
 };
 
-static void process() {
-    while (true) {
+static void process_logic(volatile bool *terminate) {
+    printf("thread starts!\n");
+    while (!*terminate) {
         if (call_back_queue.size() > 0) {
             lock.acquire();
             call_back_context *context = call_back_queue.front();
@@ -43,6 +44,7 @@ static void process() {
             context->run();
         }
     }
+    printf("thread terminates!\n");
 }
 
 static void add_to_queue(call_back_context* context) {

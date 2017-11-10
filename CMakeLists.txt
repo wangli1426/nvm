@@ -110,6 +110,7 @@ target_link_libraries(tree_benchmark
 
 
 add_executable(context src/context/call_back_main.cpp)
+target_link_libraries(context -lpthread)
 
 
 
