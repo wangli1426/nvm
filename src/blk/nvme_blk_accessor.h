@@ -12,6 +12,8 @@
 #include "../accessor/ns_entry.h"
 #include "../accessor/qpair_context.h"
 #include "../utils/rdtsc.h"
+#include "../context/call_back.h"
+#include "asynchronous_accessor.h"
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -95,6 +97,20 @@ public:
     }
 
     void flush() {
+    }
+
+    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+//        spdk_nvme_ns_cmd_write(ns_, qpair_, buffer, blk_addr, size / secwtor_size_, context_call_back_function, context, 0);
+        qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, context);
+    }
+
+    int process_completion(int max = 0) {
+
+    }
+
+    static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
+        call_back_context* context = static_cast<call_back_context*>(parms);
+        context->run();
     }
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;

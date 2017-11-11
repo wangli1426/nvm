@@ -63,6 +63,10 @@ namespace nvm {
             }
         }
 
+        void submit_read_operation(void* buffer, uint32_t size, uint64_t start_lba, spdk_nvme_cmd_cb cb, void* args) {
+            spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, cb, args, 0);
+        }
+
         int asynchronous_write(void* content, uint32_t size, uint64_t start_lba, bool *is_complete) {
             cb_parameters* cba = new cb_parameters(this, is_complete, ticks());
 
@@ -101,7 +105,7 @@ namespace nvm {
         }
 
         inline int process_completions(uint32_t max_completions = 0) {
-            spdk_nvme_qpair_process_completions(qpair_, max_completions);
+            return spdk_nvme_qpair_process_completions(qpair_, max_completions);
         }
 
         int get_number_of_free_slots() const {

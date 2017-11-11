@@ -53,6 +53,13 @@ public:
 
     void flush() {
     }
+    virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+
+    }
+
+    int process_completion(int max = 1) {
+
+    }
 };
 
 

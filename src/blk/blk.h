@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include "../tree/node_reference.h"
+#include "../context/call_back.h"
 
 //struct blk_address {
 //    blk_address(uint32_t offset) {
@@ -47,7 +48,8 @@ public:
     virtual void free_buffer(void* buffer) const {
         free(buffer);
     }
-
+    virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
+    virtual int process_completion(int max = 1) = 0;
     const uint32_t block_size;
 };
 

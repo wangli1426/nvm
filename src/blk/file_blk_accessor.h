@@ -9,9 +9,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <unordered_set>
+#include <queue>
 #include "../tree/blk_node_reference.h"
 #include "blk.h"
 #include "../utils/rdtsc.h"
+#include "asynchronous_accessor.h"
+
 namespace tree {
     template<typename K, typename V, int CAPACITY>
     class blk_node_reference;
@@ -19,7 +22,7 @@ namespace tree {
 
 using namespace std;
 template<typename K, typename V, int CAPACITY>
-class file_blk_accessor: public blk_accessor<K, V> {
+class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0) {
@@ -104,6 +107,24 @@ public:
     void flush() {
 //        fsync(fd_);
     }
+
+    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        read(blk_addr, buffer);
+        completed_callbacks_.push(context);
+    }
+
+    int process_completion(int max = 1) {
+        int processed = 0;
+        for (int i = 0; i < max; i++) {
+            if (completed_callbacks_.size() > 0) {
+                call_back_context* callback = completed_callbacks_.front();
+                completed_callbacks_.pop();
+                callback->run();
+                processed++;
+            }
+        }
+        return processed;
+    }
 private:
     bool is_address_valid(const blk_address& address) const {
         return address < cursor_ && freed_blk_addresses_.find(address) == freed_blk_addresses_.cend();
@@ -118,6 +139,7 @@ private:
     uint64_t write_cycles_;
     uint64_t reads_;
     uint64_t writes_;
+    std::queue<call_back_context*> completed_callbacks_;
 };
 
 
