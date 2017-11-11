@@ -11,6 +11,8 @@
 #include "in_nvme_b_plus_tree.h"
 #include "vanilla_b_plus_tree.h"
 #include "../utils/sync.h"
+#include "../context/call_back.h"
+#include "../tree/blk_node_reference.h"
 using namespace std;
 namespace tree {
 
@@ -86,6 +88,22 @@ namespace tree {
                 tree->queue_free_slots_.post();
             }
         }
+
+    private:
+        class search_context: public call_back_context {
+        public:
+            search_context(const char* name, nvme_optimized_b_plus_tree* tree): call_back_context(name), tree_(tree) {};
+            void run() {
+                if (this->status == 0) {
+                    buffer_ = tree_->blk_accessor_->malloc_buffer();
+                    blk_accessor_->read(node_ref_->blk_address_);
+                }
+            }
+        private:
+            nvme_optimized_b_plus_tree* tree_;
+            blk_node_reference<K, V, CAPACITY>* node_ref_;
+            void* buffer_;
+        };
 
     private:
         SpinLock lock_;

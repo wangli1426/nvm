@@ -145,6 +145,9 @@ namespace tree {
 //            instance_->set_blk_accessor(blk_accessor);
         }
 
+        blk_address get_blk_address() const {
+            return blk_address_;
+        }
     private:
         blk_address blk_address_;
         Node<K, V>* instance_;
