@@ -119,8 +119,8 @@ public:
             if (completed_callbacks_.size() > 0) {
                 call_back_context* callback = completed_callbacks_.front();
                 completed_callbacks_.pop();
-                callback->run();
-                processed++;
+                if (callback->run() == CONTEXT_TERMINATED)
+                    processed++;
             }
         }
         return processed;

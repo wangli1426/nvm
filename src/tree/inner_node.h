@@ -448,7 +448,6 @@ namespace tree {
             blk_accessor_ = blk_accessor;
         }
 
-    protected:
         // Locate the node that might contain the particular key.
         int locate_child_index(K key) const {
             if (size_ == 0)
@@ -474,6 +473,12 @@ namespace tree {
                 return l -  1;
             }
         }
+
+        node_reference<K, V>* get_child_reference(int index) {
+            return child_[index];
+        };
+
+    protected:
 
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
 //        Node<K, V> *child_[CAPACITY];

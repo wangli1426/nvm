@@ -37,11 +37,13 @@ namespace tree {
         }
 
         void close() {
-            Node<K, V>* root_instance = root_->get(blk_accessor_);
-            root_->close(blk_accessor_);
+            if (root_) {
+                Node<K, V> *root_instance = root_->get(blk_accessor_);
+                root_->close(blk_accessor_);
 //            delete root_instance;
-            delete root_;
-            root_ = 0;
+                delete root_;
+                root_ = 0;
+            }
             blk_accessor_->close();
         }
 
