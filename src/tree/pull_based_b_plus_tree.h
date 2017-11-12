@@ -57,9 +57,9 @@ namespace tree {
 
         virtual void close() {
 
-            VanillaBPlusTree<K, V, CAPACITY>::close();
             working_thread_terminate_flag_ = true;
             pthread_join(thread_handle_, NULL);
+            VanillaBPlusTree<K, V, CAPACITY>::close();
         }
 
         bool asynchronous_search(K key, V &value) {

@@ -22,11 +22,12 @@ namespace tree{
             context->sema = semaphore;
             semaphore->wait();
             this->asynchronous_search_with_callback(key, context->value, callback, context);
+            printf("submitted %d\n", key);
         }
         static void callback(void* args) {
             search_context* context = reinterpret_cast<search_context*>(args);
             context->sema->post();
-//            printf("%d -> %d\n", context->key, context->value);
+            printf("%d -> %d\n", context->key, context->value);
             delete context;
         }
     struct search_context {

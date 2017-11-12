@@ -6,6 +6,7 @@
 #include "tree/disk_optimized_b_plus_tree.h"
 #include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/sync.h"
+#include "tree/nvme_optimized_tree_for_benchmark.h"
 
 using namespace tree;
 
@@ -37,9 +38,9 @@ int main() {
 //    printf("waited!\n");
 //    exit(0);
 
-    const int tuples = 100;
+    const int tuples = 30;
 //
-    disk_optimized_tree_for_benchmark<int, int, 16> tree("tmp.tree", 8);
+    nvme_optimized_tree_for_benchmark<int, int, 16> tree(8);
     tree.init();
     tree.clear();
 
