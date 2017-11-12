@@ -15,6 +15,9 @@
 #include "../tree/blk_node_reference.h"
 
 using namespace std;
+
+typedef void (*callback_function)(void*);
+
 namespace tree {
 
     template<typename K, typename V, int CAPACITY>
@@ -67,6 +70,27 @@ namespace tree {
                 value = request.value;
                 return true;
             } else
+                return false;
+        }
+
+        // the logic of this function is identical to of asynchronous_search, except for calling callback function before
+        // return
+        bool asynchronous_search_with_callback(K key, V &value, callback_function cb_f, void* args) {
+            queue_free_slots_.wait();
+            search_request request;
+            request.found = false;
+            request.key = key;
+            lock_.acquire();
+            request_queue_.push(&request);
+            lock_.release();
+            request.semaphore.wait();
+            queue_free_slots_.post();
+            if (request.found) {
+                value = request.value;
+                cb_f(args);
+                return true;
+            } else
+                cb_f(args);
                 return false;
         }
 

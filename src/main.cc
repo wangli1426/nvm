@@ -13,7 +13,28 @@ static void dosometing(Semaphore* s) {
     s->post();
 }
 
+struct search_callback_arg {
+    Semaphore* sema;
+    int key;
+    int value;
+};
+
+void update_concurrency(void* args) {
+    search_callback_arg* arg = reinterpret_cast<search_callback_arg*>(args);
+    arg->sema->post();
+    printf("%d -> %d\n", arg->key, arg->value);
+    delete arg;
+}
+
 int main() {
+
+//    Semaphore sema(4);
+//    sema.wait();
+//    sema.wait();
+//    sema.wait();
+//    sema.wait();
+//    printf("waited!\n");
+//    exit(0);
 
     const int tuples = 100;
 //
@@ -24,10 +45,20 @@ int main() {
         tree.insert(i, i);
     }
 
+//    for (int i = 0; i < tuples; i++) {
+//        int value;
+//        bool found = tree.asynchronous_search(i, value);
+//        printf("%d -> %d (%d)\n", i, value, found);
+//    }
+
+    Semaphore semaphore(4);
     for (int i = 0; i < tuples; i++) {
-        int value;
-        bool found = tree.asynchronous_search(i, value);
-        printf("%d -> %d (%d)\n", i, value, found);
+        search_callback_arg* arg = new search_callback_arg();
+        arg->key = i;
+        arg->value = -1;
+        arg->sema = & semaphore;
+        semaphore.wait();
+        tree.asynchronous_search_with_callback(i, arg->value, update_concurrency, arg);
     }
 
     tree.close();

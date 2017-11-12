@@ -89,11 +89,12 @@ public:
 #ifdef __APPLE__
         std::ostringstream os;
         os << "/" << sema_id++;
-        if ((sem = sem_open(os.str().c_str(), O_CREAT|O_TRUNC, 0666, 0)) == SEM_FAILED)
+        if ((sem = sem_open(os.str().c_str(), O_CREAT|O_TRUNC, 0666, initialValue)) == SEM_FAILED)
             printf("fail to create semaphore %s\n", os.str().c_str());
 
 //        printf("sema[%s] is created!\n", os.str().c_str());
         while(!sem_trywait(sem));
+        post(initialValue);
 #else
         sem = new sem_t();
         sem_init(sem, 0, initialValue);
