@@ -28,8 +28,17 @@ void update_concurrency(void* args) {
     delete arg;
 }
 
-int main() {
+typedef void (*p)(int i);
 
+static void print(int i) {
+    printf("%d\n", i);
+}
+
+int main() {
+//    p pi = & print;
+//    p p2 = pi;
+//    (*p2)(1);
+//    exit(0);
 //    Semaphore sema(4);
 //    sema.wait();
 //    sema.wait();
@@ -40,9 +49,9 @@ int main() {
 
     const int tuples = 30;
 //
-    nvme_optimized_tree_for_benchmark<int, int, 16> tree(8);
+    disk_optimized_tree_for_benchmark<int, int, 16> tree("tmp.dat", 2);
     tree.init();
-    tree.clear();
+//    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
         tree.insert(i, i);
@@ -52,6 +61,7 @@ int main() {
     for (int i = 0; i < tuples; i++) {
         int value;
         tree.search(i, value);
+        printf("search operator for [%d] is submitted\n", i);
     }
 
 //    for (int i = 0; i < tuples; i++) {
@@ -72,8 +82,10 @@ int main() {
 //        tree.asynchronous_search_with_callback(i, arg->value, update_concurrency, arg);
 //    }
 
+//    sleep(5);
     tree.close();
 
+    sleep(2);
 //    Semaphore s, s2;
 //    std::thread t = std::thread(dosometing, &s);
 //    std::thread t2 = std::thread(dosometing, &s2);

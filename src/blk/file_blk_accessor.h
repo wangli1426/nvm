@@ -89,9 +89,9 @@ public:
 
     int close() override {
         if (reads_ > 0)
-            printf("[DISK:] total reads: %ld, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
+            printf("[DISK:] total reads: %llu, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
         if (writes_ > 0)
-            printf("[DISK:] total writes: %ld, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
+            printf("[DISK:] total writes: %llu, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
         return ::close(fd_);
     }
 

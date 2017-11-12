@@ -45,6 +45,7 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
 
     printf("begin to run benchmark\n");
     while (run--) {
+//        if (run != runs)
         tree->clear();
         std::set<int> s;
 

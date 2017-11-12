@@ -23,22 +23,32 @@ typedef void (*callback_function)(void*);
 
 namespace tree {
 
+    template<typename K, typename V>
+    class search_request {
+    public:
+        K key;
+        V value;
+        bool found;
+        Semaphore *semaphore;
+        callback_function cb_f;
+        void* args;
+    };
+
     template<typename K, typename V, int CAPACITY>
     class pull_based_b_plus_tree : public VanillaBPlusTree<K, V, CAPACITY> {
     public:
-        struct search_request {
-            K key;
-            V value;
-            bool found;
-            Semaphore semaphore;
-        };
+
+
+//        class search_request_with_semaphore: public search_request {
+//        public:
+//            Semaphore semaphore;
+//        };
 
     public:
         pull_based_b_plus_tree(uint32_t queue_length) : VanillaBPlusTree<K, V, CAPACITY>(0) {
             queue_free_slots_ = Semaphore(1);
             free_context_slots_ = 8;
-
-
+            pending_request_ = 0;
         };
 
         ~pull_based_b_plus_tree() {
@@ -58,16 +68,19 @@ namespace tree {
         virtual void close() {
 
             working_thread_terminate_flag_ = true;
-            pthread_join(thread_handle_, NULL);
+            if (pthread_join(thread_handle_, NULL) != 0) {
+                printf("failed to join the thread!\n");
+            }
             VanillaBPlusTree<K, V, CAPACITY>::close();
         }
 
         bool asynchronous_search(K key, V &value) {
             queue_free_slots_.wait();
-            search_request request;
+            search_request<K, V> request;
             request.found = false;
             request.key = key;
             lock_.acquire();
+            pending_request_ ++;
             request_queue_.push(&request);
             lock_.release();
             request.semaphore.wait();
@@ -81,29 +94,28 @@ namespace tree {
 
         // the logic of this function is identical to of asynchronous_search, except for calling callback function before
         // return
-        bool asynchronous_search_with_callback(K key, V &value, callback_function cb_f, void* args) {
-            queue_free_slots_.wait();
-            search_request request;
-            request.found = false;
-            request.key = key;
+        bool asynchronous_search_with_callback(search_request<K, V>* request) {
+//            queue_free_slots_.wait();
+//            printf("cb: %llx, arg: %llx\n", cb_f, args);
             lock_.acquire();
-            request_queue_.push(&request);
+            pending_request_ ++;
+            request_queue_.push(request);
             lock_.release();
-            request.semaphore.wait();
-            queue_free_slots_.post();
-            if (request.found) {
-                value = request.value;
-                cb_f(args);
-                return true;
-            } else
-                cb_f(args);
-            return false;
+//            request.semaphore.wait();
+//            queue_free_slots_.post();
+//            if (request.found) {
+//                value = request.value;
+//                cb_f(args);
+//                return true;
+//            } else
+//                cb_f(args);
+//            return false;
         }
 
         static void *worker_thread_logic(void *para) {
             pull_based_b_plus_tree *tree = reinterpret_cast<pull_based_b_plus_tree *>(para);
             while (!tree->working_thread_terminate_flag_) {
-                search_request *request;
+                search_request<K, V> *request;
                 while (!tree->lock_.try_lock()) {
                     if (tree->working_thread_terminate_flag_)
                         return nullptr;
@@ -128,11 +140,13 @@ namespace tree {
 
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
-            while (!tree->working_thread_terminate_flag_) {
-                search_request* request;
+            while (!tree->working_thread_terminate_flag_ || tree->pending_request_ > 0) {
+                search_request<K, V>* request;
                 while (!tree->lock_.try_lock()) {
-                    if (tree->working_thread_terminate_flag_)
+                    if (tree->working_thread_terminate_flag_ && tree->pending_request_ == 0) {
+                        printf("context based process thread terminates!\n");
                         return nullptr;
+                    }
                 }
                 if (tree->request_queue_.size() > 0 && tree->free_context_slots_ > 0) {
                     request = tree->request_queue_.front();
@@ -140,14 +154,15 @@ namespace tree {
                     tree->lock_.release();
                     ostringstream ost;
                     ost << "context for " << request->key;
-                    search_context* context = new search_context(ost.str().c_str(), tree, request);
+                    search_context* context = new search_context(ost.str(), tree, request);
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         tree->free_context_slots_ ++;
                 } else {
                     tree->lock_.release();
                     const int processed = tree->blk_accessor_->process_completion();
-                    tree->free_context_slots_ ++;
+                    tree->free_context_slots_ += processed;
+                    tree->pending_request_ -= processed;
                     continue;
                 }
             }
@@ -156,7 +171,7 @@ namespace tree {
     private:
         class search_context : public call_back_context {
         public:
-            search_context(const char *name, pull_based_b_plus_tree *tree, search_request* request) : call_back_context(name),
+            search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : name_(name), call_back_context(name_.c_str()),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
@@ -181,7 +196,12 @@ namespace tree {
                                 request_->found = current_node_->search(request_->key, request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
-                                request_->semaphore.post();
+                                request_->semaphore->post();
+                                if (request_->cb_f) {
+                                    (*request_->cb_f)(request_->args);
+                                }
+                                delete request_;
+                                request_ = 0;
                                 return CONTEXT_TERMINATED;
                             case INNER_NODE:
                                 current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
@@ -191,8 +211,13 @@ namespace tree {
                                     request_->found = false;
                                     delete current_node_;
                                     current_node_ = 0;
-                                    request_->semaphore.post();
+                                    request_->semaphore->post();
                                     tree_->free_context_slots_ ++;
+                                    if (request_->cb_f) {
+                                        (*request_->cb_f)(request_->args);
+                                    }
+                                    delete request_;
+                                    request_ = 0;
                                     return CONTEXT_TERMINATED;
                                 } else {
                                     node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
@@ -214,16 +239,18 @@ namespace tree {
             blk_node_reference<K, V, CAPACITY> *node_ref_;
             void *buffer_;
             Node<K, V>* current_node_;
-            search_request* request_;
+            search_request<K, V>* request_;
+            std::string name_;
         };
 
     private:
         SpinLock lock_;
         Semaphore queue_free_slots_;
-        queue<search_request *> request_queue_;
+        queue<search_request<K, V> *> request_queue_;
         pthread_t thread_handle_;
         volatile bool working_thread_terminate_flag_;
         volatile int free_context_slots_;
+        volatile int pending_request_;
     };
 }
 

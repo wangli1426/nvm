@@ -17,18 +17,20 @@ namespace tree{
         }
 
         bool search(const K& key, V & value) {
-            search_context* context = new search_context();
-            context->key = key;
-            context->sema = semaphore;
-            semaphore->wait();
-            this->asynchronous_search_with_callback(key, context->value, callback, context);
-            printf("submitted %d\n", key);
+            search_request<K,V>* request =
+                    new search_request<K,V>;
+            request->key = key;
+            request->value = value;
+            request->semaphore = semaphore;
+            request->cb_f = &callback;
+            request->args = request;
+            this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {
-            search_context* context = reinterpret_cast<search_context*>(args);
-            context->sema->post();
+            search_request<K,V>* context =
+                    reinterpret_cast<search_request<K,V>*>(args);
+//            context->semaphore->post();
             printf("%d -> %d\n", context->key, context->value);
-            delete context;
         }
     struct search_context {
         K key;
