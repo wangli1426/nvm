@@ -3,8 +3,8 @@
 #include <string>
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/vanilla_b_plus_tree.h"
-#include "tree/nvme_optimized_b_plus_tree.h"
-#include "tree/nvme_optimized_tree_for_benchmark.h"
+#include "tree/disk_optimized_b_plus_tree.h"
+#include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/sync.h"
 
 using namespace tree;
@@ -39,7 +39,7 @@ int main() {
 
     const int tuples = 100;
 //
-    nvme_optimized_tree_for_benchmark<int, int, 16> tree(8);
+    disk_optimized_tree_for_benchmark<int, int, 16> tree("tmp.tree", 8);
     tree.init();
     tree.clear();
 

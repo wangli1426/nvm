@@ -62,12 +62,12 @@ include_directories("${source_dir}/googletest/include"
 
 # Generate main executable
 add_executable(main src/main.cc)
-target_link_libraries(main -lpthread)
-#add_dependencies(main)
+target_link_libraries(main -lpthread
 #	${spdk/lib/libspdk.a}
 #	${spdk/lib/librte.a}
 #	-L${CMAKE_SOURCE_DIR}/spdk/lib
-#  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+#  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt
+		)
 
 #
 #add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
@@ -92,10 +92,10 @@ add_executable(tree_benchmark src/b_tree_benchmark.cc)
 target_link_libraries(tree_benchmark
 #		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a
 		-lpthread
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
 		)
 #add_dependencies(tree_benchmark)
 #

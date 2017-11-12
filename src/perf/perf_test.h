@@ -67,9 +67,9 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
             const bool is_found = tree->search(key, value);
             founds += is_found;
             // avoid the search operator to be wept out by the compile optimizer.
-            if (is_found && value != key) {
-                std::cout << std::endl;
-            }
+//            if (is_found && value != key) {
+//                std::cout << std::endl;
+//            }
         }
         end = ticks();
         search_time += cycles_to_seconds(end - begin);;

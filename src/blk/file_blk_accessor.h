@@ -67,7 +67,7 @@ public:
             return 0;
         int status = (int)::pread(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
-            printf("%s\n", strerror(errno));
+            printf("read error: %s\n", strerror(errno));
         }
         read_cycles_ += ticks() - start;
         reads_++;
@@ -80,7 +80,7 @@ public:
             return 0;
         int status = (int)::pwrite(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
-            printf("%s\n", strerror(errno));
+            printf("write error: %s\n", strerror(errno));
         }
         write_cycles_ += ticks() - start;
         writes_++;
