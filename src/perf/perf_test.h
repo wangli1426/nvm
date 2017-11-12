@@ -55,11 +55,14 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
         double elapsed_secs = cycles_to_seconds(end - begin);
         build_time += elapsed_secs;
 
+        printf("inserted...\n");
+
         begin = ticks();
         update<K, V>(tree, updates, 1);
         end = ticks();
         update_time += cycles_to_seconds(end - begin);;
 
+        printf("updated...\n");
 
         begin = ticks();
         for (int i = 0; i < reads; ++i) {
@@ -74,7 +77,7 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
         }
         end = ticks();
         search_time += cycles_to_seconds(end - begin);;
-
+        printf("searched...\n");
 
     }
     delete[] search_keys;

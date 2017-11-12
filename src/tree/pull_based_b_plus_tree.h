@@ -46,9 +46,10 @@ namespace tree {
 
     public:
         pull_based_b_plus_tree(uint32_t queue_length) : VanillaBPlusTree<K, V, CAPACITY>(0) {
-            queue_free_slots_ = Semaphore(1);
-            free_context_slots_ = 8;
+            queue_free_slots_ = Semaphore(queue_length);
+            free_context_slots_ = queue_length;
             pending_request_ = 0;
+            queue_length_ = queue_length;
         };
 
         ~pull_based_b_plus_tree() {
@@ -160,7 +161,7 @@ namespace tree {
                         tree->free_context_slots_ ++;
                 } else {
                     tree->lock_.release();
-                    const int processed = tree->blk_accessor_->process_completion();
+                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
                     tree->free_context_slots_ += processed;
                     tree->pending_request_ -= processed;
                     continue;
@@ -196,6 +197,7 @@ namespace tree {
                                 request_->found = current_node_->search(request_->key, request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
+//                                sleep(1);
                                 request_->semaphore->post();
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
@@ -251,6 +253,7 @@ namespace tree {
         volatile bool working_thread_terminate_flag_;
         volatile int free_context_slots_;
         volatile int pending_request_;
+        int queue_length_;
     };
 }
 

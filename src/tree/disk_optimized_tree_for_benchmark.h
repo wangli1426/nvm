@@ -12,7 +12,7 @@ namespace tree{
     class disk_optimized_tree_for_benchmark: public disk_optimized_b_plus_tree<K, V, CAPACITY> {
 
     public:
-        disk_optimized_tree_for_benchmark(const char* path, int queue_length):
+        disk_optimized_tree_for_benchmark(int queue_length, const char* path = "temp.dat"):
                 disk_optimized_b_plus_tree<K, V, CAPACITY>(path, queue_length){
             semaphore = new Semaphore(queue_length);
         }
@@ -30,6 +30,7 @@ namespace tree{
             request->semaphore = semaphore;
             request->cb_f = &callback;
             request->args = request;
+            semaphore->wait();
             this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {

@@ -47,11 +47,12 @@ int main() {
 //    printf("waited!\n");
 //    exit(0);
 
-    const int tuples = 30;
+    const int tuples = 100;
 //
-    disk_optimized_tree_for_benchmark<int, int, 16> tree("tmp.dat", 2);
+//    nvme_optimized_tree_for_benchmark<int, int, 32> tree(8);
+    disk_optimized_tree_for_benchmark<int, int, 32> tree(1);
     tree.init();
-//    tree.clear();
+    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
         tree.insert(i, i);
@@ -85,7 +86,7 @@ int main() {
 //    sleep(5);
     tree.close();
 
-    sleep(2);
+//    sleep(2);
 //    Semaphore s, s2;
 //    std::thread t = std::thread(dosometing, &s);
 //    std::thread t2 = std::thread(dosometing, &s2);

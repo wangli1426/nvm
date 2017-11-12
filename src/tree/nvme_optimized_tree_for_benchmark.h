@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include "nvme_optimized_b_plus_tree.h"
+
+static volatile int found = 0;
 namespace tree{
     template <typename K, typename V, int CAPACITY>
     class nvme_optimized_tree_for_benchmark: public nvme_optimized_b_plus_tree<K, V, CAPACITY> {
@@ -14,6 +16,10 @@ namespace tree{
     public:
         nvme_optimized_tree_for_benchmark(int queue_length): nvme_optimized_b_plus_tree<K, V, CAPACITY>(queue_length) {
             semaphore = new Semaphore(queue_length);
+        }
+
+        ~nvme_optimized_tree_for_benchmark() {
+            printf("%d found!\n", found);
         }
 
         bool search(const K& key, V & value) {
@@ -24,13 +30,15 @@ namespace tree{
             request->semaphore = semaphore;
             request->cb_f = &callback;
             request->args = request;
+            semaphore->wait();
             this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {
             search_request<K,V>* context =
                     reinterpret_cast<search_request<K,V>*>(args);
-//            context->semaphore->post();
-            printf("%d -> %d\n", context->key, context->value);
+            if (context->key != context->value)
+                printf("%d -> %d\n", context->key, context->value);
+            found++;
         }
     struct search_context {
         K key;
