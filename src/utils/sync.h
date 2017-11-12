@@ -13,6 +13,7 @@
 
 #include <semaphore.h>
 #include <sstream>
+#include <string>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -83,13 +84,17 @@ static long sema_id = 0;
 class Semaphore {
 private:
     sem_t* sem;
+#ifdef __APPLE__
+    std::string name;
+#endif
 
 public:
     Semaphore(int initialValue = 0) {
 #ifdef __APPLE__
         std::ostringstream os;
         os << "/" << sema_id++;
-        if ((sem = sem_open(os.str().c_str(), O_CREAT|O_TRUNC, 0666, initialValue)) == SEM_FAILED)
+        name = os.str();
+        if ((sem = sem_open(name.c_str(), O_CREAT|O_TRUNC, 0666, initialValue)) == SEM_FAILED)
             printf("fail to create semaphore %s\n", os.str().c_str());
 
 //        printf("sema[%s] is created!\n", os.str().c_str());
@@ -104,6 +109,7 @@ public:
     ~Semaphore() {
 #ifdef __APPLE__
         sem_close(sem);
+        sem_unlink(name.c_str());
 //        printf("sema is closed!\n");
 #else
         sem_destroy(sem);

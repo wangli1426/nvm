@@ -101,17 +101,31 @@ public:
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
 //        spdk_nvme_ns_cmd_write(ns_, qpair_, buffer, blk_addr, size / secwtor_size_, context_call_back_function, context, 0);
-        qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, context);
+        nvme_callback_para* para = new nvme_callback_para;
+        para->context = context;
+        para->finished_context = &finished_contexts_;
+        qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
     }
 
-    int process_completion(int max = 0) {
-
+    int process_completion(int max = 1) {
+        qpair_->process_completions(max);
+        int processed = finished_contexts_;
+        finished_contexts_ = 0;
+        return processed;
     }
 
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
-        call_back_context* context = static_cast<call_back_context*>(parms);
-        context->run();
+        nvme_callback_para* para = static_cast<nvme_callback_para*>(parms);
+        if (para->context->run() == CONTEXT_TERMINATED) {
+            *para->finished_context += 1;
+        }
+        delete para;
     }
+
+    struct nvme_callback_para {
+        call_back_context* context;
+        volatile int32_t* finished_context;
+    };
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
@@ -120,6 +134,7 @@ private:
     uint64_t write_cycles_;
     uint64_t reads_;
     uint64_t writes_;
+    volatile int32_t finished_contexts_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

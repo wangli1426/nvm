@@ -4,6 +4,7 @@
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/vanilla_b_plus_tree.h"
 #include "tree/nvme_optimized_b_plus_tree.h"
+#include "tree/nvme_optimized_tree_for_benchmark.h"
 #include "utils/sync.h"
 
 using namespace tree;
@@ -38,11 +39,18 @@ int main() {
 
     const int tuples = 100;
 //
-    nvme_optimized_b_plus_tree<int, int, 16> tree(8);
+    nvme_optimized_tree_for_benchmark<int, int, 16> tree(8);
     tree.init();
+    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
         tree.insert(i, i);
+    }
+
+
+    for (int i = 0; i < tuples; i++) {
+        int value;
+        tree.search(i, value);
     }
 
 //    for (int i = 0; i < tuples; i++) {
@@ -51,15 +59,17 @@ int main() {
 //        printf("%d -> %d (%d)\n", i, value, found);
 //    }
 
-    Semaphore semaphore(4);
-    for (int i = 0; i < tuples; i++) {
-        search_callback_arg* arg = new search_callback_arg();
-        arg->key = i;
-        arg->value = -1;
-        arg->sema = & semaphore;
-        semaphore.wait();
-        tree.asynchronous_search_with_callback(i, arg->value, update_concurrency, arg);
-    }
+
+
+//    Semaphore semaphore(4);
+//    for (int i = 0; i < tuples; i++) {
+//        search_callback_arg* arg = new search_callback_arg();
+//        arg->key = i;
+//        arg->value = -1;
+//        arg->sema = & semaphore;
+//        semaphore.wait();
+//        tree.asynchronous_search_with_callback(i, arg->value, update_concurrency, arg);
+//    }
 
     tree.close();
 

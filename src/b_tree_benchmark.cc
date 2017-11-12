@@ -9,6 +9,8 @@
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/in_nvme_b_plus_tree.h"
 #include "tree/nvme_optimized_b_plus_tree.h"
+#include "tree/nvme_optimized_tree_for_benchmark.h"
+#include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/rdtsc.h"
 
 using namespace tree;
@@ -98,9 +100,9 @@ int main(int argc, char** argv) {
     tree.init();
     benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
 
-    nvme_optimized_b_plus_tree<int, int, order> tree_optimized(8);
+    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized("tmp.tree", 8);
     tree_optimized.init();
-    benchmark<int, int>(&tree_optimized, "in-memory-optimized", 1, ntuples, ntuples, ntuples, 1);
+    benchmark<int, int>(&tree_optimized, "disk-optimized", 1, ntuples, ntuples, ntuples, 1);
 
 
 //    in_disk_b_plus_tree<int, int, 4> tree;

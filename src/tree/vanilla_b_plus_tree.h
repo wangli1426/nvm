@@ -22,7 +22,7 @@ namespace tree {
     template<typename K, typename V, int CAPACITY>
     class VanillaBPlusTree : public BTree<K, V> {
     public:
-        VanillaBPlusTree(blk_accessor<K, V>* blk_accessor = 0): blk_accessor_(blk_accessor) {
+        VanillaBPlusTree(blk_accessor<K, V>* blk_accessor = 0): blk_accessor_(blk_accessor), root_(nullptr) {
         }
 
         virtual ~VanillaBPlusTree() {
@@ -36,7 +36,7 @@ namespace tree {
             init();
         }
 
-        void close() {
+        virtual void close() {
             if (root_) {
                 Node<K, V> *root_instance = root_->get(blk_accessor_);
                 root_->close(blk_accessor_);
@@ -44,7 +44,8 @@ namespace tree {
                 delete root_;
                 root_ = 0;
             }
-            blk_accessor_->close();
+            if (blk_accessor_)
+                blk_accessor_->close();
         }
 
         // Insert a k-v pair to the tree.
@@ -108,7 +109,7 @@ namespace tree {
 
         // Search for the value associated with the given key. If the key was found, return true and the value is stored
         // in v.
-        bool search(const K &k, V &v) {
+        virtual bool search(const K &k, V &v) {
             bool ret = root_->get(blk_accessor_)->search(k, v);
             root_->close(blk_accessor_, READONLY);
             return ret;
@@ -129,7 +130,7 @@ namespace tree {
             return new Iterator(leftmost_leaf_node, 0, blk_accessor_);
         }
 
-        void init() {
+        virtual void init() {
             if (!blk_accessor_)
                 blk_accessor_ = new void_blk_accessor<K, V, CAPACITY>(512);
             Node<K, V>* leaf_node = new LeafNode<K, V, CAPACITY>(blk_accessor_);
