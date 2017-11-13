@@ -1,69 +1,52 @@
 #include <stdio.h>
 #include <fstream>
+#include <vector>
 #include <string>
+#include <algorithm>
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/vanilla_b_plus_tree.h"
 #include "tree/disk_optimized_b_plus_tree.h"
 #include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/sync.h"
+#include "utils/rdtsc.h"
 #include "tree/nvme_optimized_tree_for_benchmark.h"
 
 using namespace tree;
 
-static void dosometing(Semaphore* s) {
-    sleep(2);
-    s->post();
-}
-
-struct search_callback_arg {
-    Semaphore* sema;
-    int key;
-    int value;
-};
-
-void update_concurrency(void* args) {
-    search_callback_arg* arg = reinterpret_cast<search_callback_arg*>(args);
-    arg->sema->post();
-    printf("%d -> %d\n", arg->key, arg->value);
-    delete arg;
-}
-
-typedef void (*p)(int i);
-
-static void print(int i) {
-    printf("%d\n", i);
-}
-
 int main() {
-//    p pi = & print;
-//    p p2 = pi;
-//    (*p2)(1);
-//    exit(0);
-//    Semaphore sema(4);
-//    sema.wait();
-//    sema.wait();
-//    sema.wait();
-//    sema.wait();
-//    printf("waited!\n");
-//    exit(0);
 
-    const int tuples = 100;
+
+    const int tuples = 10000;
+    std::vector<int> keys;
 //
-//    nvme_optimized_tree_for_benchmark<int, int, 32> tree(8);
-    disk_optimized_tree_for_benchmark<int, int, 32> tree(1);
+//    nvme_optimized_tree_for_benchmark<int, int, 32> tree(512, 128);
+    in_nvme_b_plus_tree<int, int, 32> tree(512);
     tree.init();
-    tree.clear();
+//    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
-        tree.insert(i, i);
+        keys.push_back(i);
+    }
+    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+
+    for(auto it = keys.begin(); it != keys.end(); ++it) {
+        tree.insert(*it, *it);
     }
 
 
+    uint64_t start = ticks();
     for (int i = 0; i < tuples; i++) {
         int value;
-        tree.search(i, value);
-        printf("search operator for [%d] is submitted\n", i);
+        tree.search(keys[i], value);
+//        printf("search operator for [%d] is submitted\n", i);
     }
+
+//    while(tree.get_pending_requests()!=0){
+//        usleep(1);
+//    }
+    uint64_t end = ticks();
+
+    printf("search throughput: %.2f K tuples / s\n", tuples / cycles_to_seconds(end - start) / 1000);
 
 //    for (int i = 0; i < tuples; i++) {
 //        int value;

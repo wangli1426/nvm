@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 2000;
+    const int ntuples = 1000;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
 //    in_disk_tree.init();
@@ -97,18 +97,18 @@ int main(int argc, char** argv) {
 //    tree.init();
 //    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
 //
-//    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(8);
+//    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(256);
 //    tree_optimized.init();
 //    benchmark<int, int>(&tree_optimized, "disk-optimized", 1, ntuples, ntuples, ntuples, 1);
+
 //
-//    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
-//    in_nvme_tree.init();
-//    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, ntuples, 1);
+    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
+    in_nvme_tree.init();
+    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0, 1);
 
-    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(256);
+    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 256);
     nvme_optimized.init();
-    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, ntuples, 1);
-
+    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, 1);
 
 
 //    in_disk_b_plus_tree<int, int, 4> tree;

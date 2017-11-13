@@ -60,7 +60,6 @@ namespace tree {
             create_and_init_blk_accessor();
             VanillaBPlusTree<K, V, CAPACITY>::init();
             working_thread_terminate_flag_ = false;
-//            pthread_create(&thread_handle_, NULL, nvme_optimized_b_plus_tree::worker_thread_logic, this);
             pthread_create(&thread_handle_, NULL, pull_based_b_plus_tree::context_based_process, this);
         }
 
@@ -113,6 +112,10 @@ namespace tree {
 //            return false;
         }
 
+        int get_pending_requests() const {
+            return pending_request_;
+        }
+
         static void *worker_thread_logic(void *para) {
             pull_based_b_plus_tree *tree = reinterpret_cast<pull_based_b_plus_tree *>(para);
             while (!tree->working_thread_terminate_flag_) {
@@ -162,11 +165,14 @@ namespace tree {
                 } else {
                     tree->lock_.release();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    tree->free_context_slots_ += processed;
-                    tree->pending_request_ -= processed;
+                    if (processed > 0) {
+                        tree->free_context_slots_ += processed;
+                        tree->pending_request_ -= processed;
+                    }
                     continue;
                 }
             }
+            printf("context based process thread terminates!\n");
         }
 
     private:

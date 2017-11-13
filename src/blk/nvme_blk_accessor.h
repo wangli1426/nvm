@@ -30,6 +30,7 @@ public:
         write_cycles_ = 0;
         reads_ = 0;
         read_cycles_ = 0;
+        cursor_ = 0;
     };
     virtual node_reference<K, V>* allocate_ref() {
         blk_address addr = allocate();
@@ -104,11 +105,19 @@ public:
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
         para->finished_context = &finished_contexts_;
-        qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
+        int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
+        if (status != 0) {
+            printf("error in submitting read command\n");
+            printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
+        }
     }
 
     int process_completion(int max = 1) {
-        qpair_->process_completions(max);
+        int status = qpair_->process_completions(max);
+        if (status < 0) {
+            printf("errors in process_completions!\n");
+            return status;
+        }
         int processed = finished_contexts_;
         finished_contexts_ = 0;
         return processed;
@@ -128,7 +137,7 @@ public:
     };
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
-    uint32_t cursor_;
+    uint64_t cursor_;
     QPair* qpair_;
     uint64_t read_cycles_;
     uint64_t write_cycles_;

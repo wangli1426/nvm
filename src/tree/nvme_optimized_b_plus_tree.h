@@ -23,13 +23,17 @@ namespace tree {
     template<typename K, typename V, int CAPACITY>
     class nvme_optimized_b_plus_tree : public pull_based_b_plus_tree<K, V, CAPACITY> {
     public:
-        nvme_optimized_b_plus_tree(int queue_length): pull_based_b_plus_tree<K, V, CAPACITY>(queue_length) {
+        nvme_optimized_b_plus_tree(const int block_size, int queue_length):
+                pull_based_b_plus_tree<K, V, CAPACITY>(queue_length), block_size_(block_size) {
         }
 
         void create_and_init_blk_accessor() {
-            this->blk_accessor_ = new nvme_blk_accessor<K, V, CAPACITY>(512);
+            this->blk_accessor_ = new nvme_blk_accessor<K, V, CAPACITY>(block_size_);
             this->blk_accessor_->open();
         }
+
+    private:
+        int block_size_;
     };
 }
 //    public:

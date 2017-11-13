@@ -14,7 +14,7 @@ namespace tree{
     class nvme_optimized_tree_for_benchmark: public nvme_optimized_b_plus_tree<K, V, CAPACITY> {
 
     public:
-        nvme_optimized_tree_for_benchmark(int queue_length): nvme_optimized_b_plus_tree<K, V, CAPACITY>(queue_length) {
+        nvme_optimized_tree_for_benchmark(const int block_size, int queue_length): nvme_optimized_b_plus_tree<K, V, CAPACITY>(block_size, queue_length) {
             semaphore = new Semaphore(queue_length);
         }
 
@@ -34,10 +34,10 @@ namespace tree{
             this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {
-            search_request<K,V>* context =
-                    reinterpret_cast<search_request<K,V>*>(args);
-            if (context->key != context->value)
-                printf("%d -> %d\n", context->key, context->value);
+//            search_request<K,V>* context =
+//                    reinterpret_cast<search_request<K,V>*>(args);
+//            if (context->key != context->value)
+//                printf("%d -> %d\n", context->key, context->value);
             found++;
         }
     struct search_context {

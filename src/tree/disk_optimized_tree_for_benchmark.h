@@ -34,10 +34,10 @@ namespace tree{
             this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {
-            search_request<K,V>* context =
-                    reinterpret_cast<search_request<K,V>*>(args);
-//            context->semaphore->post();
-            printf("%d -> %d\n", context->key, context->value);
+//            search_request<K,V>* context =
+//                    reinterpret_cast<search_request<K,V>*>(args);
+////            context->semaphore->post();
+//            printf("%d -> %d\n", context->key, context->value);
 //            delete context;
         }
 //    struct search_context {

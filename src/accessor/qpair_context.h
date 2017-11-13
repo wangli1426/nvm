@@ -11,6 +11,7 @@
 #include "../utils/sync.h"
 #include "../utils/rdtsc.h"
 
+//#define __LOG__
 
 namespace nvm {
 
@@ -45,26 +46,54 @@ namespace nvm {
             bool is_complete = false;
             cb_parameters* cba = new cb_parameters(this, &is_complete, ticks());
             free_slots_ --;
-            spdk_nvme_ns_cmd_write(ns_, qpair_, content, start_lba, size / sector_size_, QPair::cb_function,cba, 0);
-
-            while(!is_complete) {
-                process_completions();
+#ifdef __LOG__
+            printf("start reading %llu\n", start_lba);
+#endif
+            int status = spdk_nvme_ns_cmd_write(ns_, qpair_, content, start_lba, size / sector_size_, QPair::cb_function,cba, 0);
+            if (status < 0) {
+                printf("error in spdk_nvme_ns_cmd_write()\n");
             }
+#ifdef __LOG__
+            printf("waiting...\n");
+#endif
+            while(!is_complete) {
+                int status = process_completions();
+                if (status < 0) {
+                    printf("error in processing_completions()\n");
+                }
+            }
+#ifdef __LOG__
+            printf("finished reading %llu\n", start_lba);
+#endif
         }
 
         void synchronous_read(void* buffer, uint32_t size, uint64_t start_lba) {
             bool is_complete =  false;
             cb_parameters* cbp = new cb_parameters(this, &is_complete, ticks());
             free_slots_ --;
-            spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, QPair::cb_function, cbp, 0);
-
-            while(!is_complete) {
-                process_completions();
+#ifdef __LOG__
+            printf("start reading %llu\n", start_lba);
+#endif
+            int status = spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, QPair::cb_function, cbp, 0);
+            if (status < 0) {
+                printf("error in spdk_nvme_ns_cmd_read()\n");
             }
+#ifdef __LOG__
+            printf("waiting...\n");
+#endif
+            while(!is_complete) {
+                int status = process_completions();
+                if (status < 0) {
+                    printf("error in processing_completions()\n");
+                }
+            }
+#ifdef __LOG__
+            printf("finished reading %llu\n", start_lba);
+#endif
         }
 
-        void submit_read_operation(void* buffer, uint32_t size, uint64_t start_lba, spdk_nvme_cmd_cb cb, void* args) {
-            spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, cb, args, 0);
+        int submit_read_operation(void* buffer, uint32_t size, uint64_t start_lba, spdk_nvme_cmd_cb cb, void* args) {
+           return spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, cb, args, 0);
         }
 
         int asynchronous_write(void* content, uint32_t size, uint64_t start_lba, bool *is_complete) {
