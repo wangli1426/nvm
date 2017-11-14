@@ -25,6 +25,8 @@ static void add_to_queue(call_back_context* context);
 class call_back_context {
 public:
     call_back_context(const char* name = "unnamed"): status(0), name_(name) {};
+
+    virtual ~call_back_context(){};
     int status;
 
     virtual int run() {

@@ -31,6 +31,7 @@ public:
         reads_ = 0;
         read_cycles_ = 0;
         cursor_ = 0;
+        pending_commands_ = 0;
     };
     virtual node_reference<K, V>* allocate_ref() {
         blk_address addr = allocate();
@@ -101,7 +102,6 @@ public:
     }
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
-//        spdk_nvme_ns_cmd_write(ns_, qpair_, buffer, blk_addr, size / secwtor_size_, context_call_back_function, context, 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
         para->finished_context = &finished_contexts_;
@@ -110,6 +110,7 @@ public:
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
         }
+        pending_commands_ ++;
     }
 
     int process_completion(int max = 1) {
@@ -118,6 +119,8 @@ public:
             printf("errors in process_completions!\n");
             return status;
         }
+        pending_commands_ -= status;
+        printf("%d commands left.\n", pending_commands_);
         int processed = finished_contexts_;
         finished_contexts_ = 0;
         return processed;
@@ -127,6 +130,8 @@ public:
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
         if (para->context->run() == CONTEXT_TERMINATED) {
             *para->finished_context += 1;
+            delete para->context;
+            para->context = 0;
         }
         delete para;
     }
@@ -144,6 +149,7 @@ private:
     uint64_t reads_;
     uint64_t writes_;
     volatile int32_t finished_contexts_;
+    int32_t pending_commands_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H
