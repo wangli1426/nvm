@@ -70,12 +70,12 @@ target_link_libraries(main -lpthread
 		)
 
 #
-#add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
-#target_link_libraries(access_pattern_benchmark
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
+add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
+target_link_libraries(access_pattern_benchmark
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -pthread -lnuma -ldl -luuid -lrt)
 #
 #
 #

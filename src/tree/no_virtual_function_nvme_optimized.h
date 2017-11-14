@@ -70,6 +70,11 @@ namespace tree {
             this->blk_accessor_->open();
         }
 
+        void sync() {
+            while(pending_request_> 0) {
+                usleep(1);
+            }
+        }
         virtual void close() {
 
             working_thread_terminate_flag_ = true;
@@ -151,13 +156,16 @@ namespace tree {
             no_virtual_function_nvme_optimized* tree = reinterpret_cast<no_virtual_function_nvme_optimized*>(para);
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_ > 0) {
                 no_virtual_search_request<K, V>* request;
+                printf("[main thread:] s1\n");
                 while (!tree->lock_.try_lock()) {
                     if (tree->working_thread_terminate_flag_ && tree->pending_request_ == 0) {
                         printf("context based process thread terminates!\n");
                         return nullptr;
                     }
                 }
+                printf("[main thread:] s2\n");
                 if (tree->request_queue_.size() > 0 && tree->free_context_slots_ > 0) {
+                printf("[main thread:] s3\n");
                     request = tree->request_queue_.front();
                     tree->request_queue_.pop();
                     tree->lock_.release();
@@ -170,11 +178,15 @@ namespace tree {
                         delete context;
                     }
                 } else {
+                    printf("[main thread:] s4\n");
                     tree->lock_.release();
-                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    if (processed > 0) {
-                        tree->free_context_slots_ += processed;
-                        tree->pending_request_ -= processed;
+                    if (tree->pending_request_ > 0) {
+                        const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                        printf("main thread processed %d completions\n", processed);
+                        if (processed > 0) {
+                            tree->free_context_slots_ += processed;
+                            tree->pending_request_ -= processed;
+                        }
                     }
                     continue;
                 }

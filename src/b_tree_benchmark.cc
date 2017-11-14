@@ -111,9 +111,9 @@ int main(int argc, char** argv) {
 //    nvme_optimized.init();
 //    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, 1);
 
-    no_virtual_function_nvme_optimized<int, int, order> no_virtual_nvme_optimized(8);
+    no_virtual_function_nvme_optimized<int, int, order> no_virtual_nvme_optimized(4);
     no_virtual_nvme_optimized.init();
-    benchmark<int, int>(&no_virtual_nvme_optimized, "no-virtual-nvme-optimized", 1, ntuples, ntuples, 0, 1);
+    benchmark<int, int>(&no_virtual_nvme_optimized, "no-virtual-nvme-optimized", 1, ntuples, ntuples, 0, 0);
 
 //    in_disk_b_plus_tree<int, int, 4> tree;
 //    tree.init();

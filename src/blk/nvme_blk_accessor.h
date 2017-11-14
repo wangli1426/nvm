@@ -22,6 +22,8 @@ namespace tree {
 
 using namespace nvm;
 
+#define __NVME_ACCESSOR_LOG__
+
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
@@ -109,18 +111,27 @@ public:
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
+            return;
         }
         pending_commands_ ++;
+#ifdef __NVME_ACCESSOR_LOG__
+        printf("pending_commands_ added to %d.\n", pending_commands_);
+#endif
     }
 
     int process_completion(int max = 1) {
-        int status = qpair_->process_completions(max);
+        int32_t status = qpair_->process_completions(max);
         if (status < 0) {
             printf("errors in process_completions!\n");
             return status;
         }
         pending_commands_ -= status;
+#ifdef __NVME_ACCESSOR_LOG__
         printf("%d commands left.\n", pending_commands_);
+        if (pending_commands_ < 0) {
+            sleep(1);
+        }
+#endif
         int processed = finished_contexts_;
         finished_contexts_ = 0;
         return processed;
@@ -149,7 +160,7 @@ private:
     uint64_t reads_;
     uint64_t writes_;
     volatile int32_t finished_contexts_;
-    int32_t pending_commands_;
+    volatile int32_t pending_commands_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

@@ -77,6 +77,7 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
 //                std::cout << std::endl;
 //            }
         }
+        tree->sync();
         end = ticks();
         search_time += cycles_to_seconds(end - begin);;
         printf("searched...\n");

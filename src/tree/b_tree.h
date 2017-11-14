@@ -19,6 +19,8 @@ namespace tree {
 
         virtual void close() {};
 
+        virtual void sync() {};
+
         class Iterator {
         public:
             virtual ~Iterator(){};

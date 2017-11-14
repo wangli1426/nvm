@@ -47,7 +47,7 @@ namespace nvm {
             cb_parameters* cba = new cb_parameters(this, &is_complete, ticks());
             free_slots_ --;
 #ifdef __LOG__
-            printf("start reading %llu\n", start_lba);
+            printf("start writing %llu\n", start_lba);
 #endif
             int status = spdk_nvme_ns_cmd_write(ns_, qpair_, content, start_lba, size / sector_size_, QPair::cb_function,cba, 0);
             if (status < 0) {
@@ -63,7 +63,7 @@ namespace nvm {
                 }
             }
 #ifdef __LOG__
-            printf("finished reading %llu\n", start_lba);
+            printf("finished writing %llu\n\n", start_lba);
 #endif
         }
 
@@ -82,13 +82,13 @@ namespace nvm {
             printf("waiting...\n");
 #endif
             while(!is_complete) {
-                int status = process_completions();
+                int32_t status = process_completions();
                 if (status < 0) {
                     printf("error in processing_completions()\n");
                 }
             }
 #ifdef __LOG__
-            printf("finished reading %llu\n", start_lba);
+            printf("finished reading %llu\n\n", start_lba);
 #endif
         }
 
@@ -133,7 +133,7 @@ namespace nvm {
                                   0);
         }
 
-        inline int process_completions(uint32_t max_completions = 0) {
+        inline int32_t process_completions(uint32_t max_completions = 0) {
             return spdk_nvme_qpair_process_completions(qpair_, max_completions);
         }
 
