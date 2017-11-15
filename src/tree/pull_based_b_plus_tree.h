@@ -161,18 +161,26 @@ namespace tree {
                     search_context* context = new search_context(ost.str(), tree, request);
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
-                        tree->free_context_slots_ ++;
+                        delete context;
                 } else {
                     tree->lock_.release();
-                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    if (processed > 0) {
-                        tree->free_context_slots_ += processed;
-                        tree->pending_request_ -= processed;
+                    if (tree->pending_request_ > 0) {
+                        const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                        if (processed > 0) {
+//                        tree->free_context_slots_ += processed;
+//                        tree->pending_request_ -= processed;
+                        }
                     }
                     continue;
                 }
             }
             printf("context based process thread terminates!\n");
+        }
+
+        void sync() {
+            while(pending_request_> 0) {
+                usleep(1);
+            }
         }
 
     private:
@@ -208,6 +216,8 @@ namespace tree {
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
                                 }
+                                tree_->pending_request_ --;
+                                tree_->free_context_slots_ ++;
                                 delete request_;
                                 request_ = 0;
                                 return CONTEXT_TERMINATED;
@@ -220,10 +230,11 @@ namespace tree {
                                     delete current_node_;
                                     current_node_ = 0;
                                     request_->semaphore->post();
-                                    tree_->free_context_slots_ ++;
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
+                                    tree_->pending_request_ --;
+                                    tree_->free_context_slots_ ++;
                                     delete request_;
                                     request_ = 0;
                                     return CONTEXT_TERMINATED;

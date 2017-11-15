@@ -22,7 +22,7 @@ namespace tree {
 
 using namespace nvm;
 
-#define __NVME_ACCESSOR_LOG__
+//#define __NVME_ACCESSOR_LOG__
 
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
@@ -107,13 +107,15 @@ public:
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
         para->finished_context = &finished_contexts_;
+        pending_commands_ ++;
+        para->pending_command = &pending_commands_;
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
+            pending_commands_ --;
             return;
         }
-        pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
 #endif
@@ -125,7 +127,6 @@ public:
             printf("errors in process_completions!\n");
             return status;
         }
-        pending_commands_ -= status;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("%d commands left.\n", pending_commands_);
         if (pending_commands_ < 0) {
@@ -139,8 +140,9 @@ public:
 
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
+        *para->pending_command -= 1;
         if (para->context->run() == CONTEXT_TERMINATED) {
-            *para->finished_context += 1;
+//            *para->finished_context += 1;
             delete para->context;
             para->context = 0;
         }
@@ -150,6 +152,7 @@ public:
     struct nvme_callback_para {
         call_back_context* context;
         volatile int32_t* finished_context;
+        volatile int32_t* pending_command;
     };
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;

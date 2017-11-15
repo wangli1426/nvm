@@ -156,16 +156,13 @@ namespace tree {
             no_virtual_function_nvme_optimized* tree = reinterpret_cast<no_virtual_function_nvme_optimized*>(para);
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_ > 0) {
                 no_virtual_search_request<K, V>* request;
-                printf("[main thread:] s1\n");
                 while (!tree->lock_.try_lock()) {
                     if (tree->working_thread_terminate_flag_ && tree->pending_request_ == 0) {
                         printf("context based process thread terminates!\n");
                         return nullptr;
                     }
                 }
-                printf("[main thread:] s2\n");
                 if (tree->request_queue_.size() > 0 && tree->free_context_slots_ > 0) {
-                printf("[main thread:] s3\n");
                     request = tree->request_queue_.front();
                     tree->request_queue_.pop();
                     tree->lock_.release();
@@ -174,18 +171,17 @@ namespace tree {
                     search_context* context = new search_context(ost.str(), tree, request);
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED) {
-                        tree->free_context_slots_++;
+//                        tree->free_context_slots_++;
                         delete context;
                     }
                 } else {
-                    printf("[main thread:] s4\n");
                     tree->lock_.release();
                     if (tree->pending_request_ > 0) {
                         const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                        printf("main thread processed %d completions\n", processed);
+//                        printf("main thread processed %d completions\n", processed);
                         if (processed > 0) {
-                            tree->free_context_slots_ += processed;
-                            tree->pending_request_ -= processed;
+//                            tree->free_context_slots_ += processed;
+//                            tree->pending_request_ -= processed;
                         }
                     }
                     continue;
@@ -206,10 +202,10 @@ namespace tree {
             this->asynchronous_search_with_callback(request);
         }
         static void callback(void* args) {
-//            no_virtual_search_request<K,V>* context =
-//                    reinterpret_cast<no_virtual_search_request<K,V>*>(args);
-//            if (context->key != context->value)
-//                printf("%d -> %d\n", context->key, context->value);
+            no_virtual_search_request<K,V>* context =
+                    reinterpret_cast<no_virtual_search_request<K,V>*>(args);
+            if (context->key != context->value)
+                printf("%d -> %d\n", context->key, context->value);
             found++;
         }
 
@@ -252,6 +248,8 @@ namespace tree {
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
                                 }
+                                tree_->pending_request_ --;
+                                tree_->free_context_slots_ ++;
                                 delete request_;
                                 request_ = 0;
                                 return CONTEXT_TERMINATED;
@@ -264,10 +262,11 @@ namespace tree {
                                     delete current_node_;
                                     current_node_ = 0;
                                     request_->semaphore->post();
-                                    tree_->free_context_slots_ ++;
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
+                                    tree_->pending_request_ --;
+                                    tree_->free_context_slots_ ++;
                                     delete request_;
                                     request_ = 0;
                                     return CONTEXT_TERMINATED;
