@@ -16,11 +16,11 @@ using namespace tree;
 int main() {
 
 
-    const int tuples = 10000;
+    const int tuples = 100;
     std::vector<int> keys;
 //
-//    nvme_optimized_tree_for_benchmark<int, int, 32> tree(512, 128);
-    in_nvme_b_plus_tree<int, int, 32> tree(512);
+    disk_optimized_tree_for_benchmark<int, int, 32> tree(4, "tmp.dat");
+//    in_nvme_b_plus_tree<int, int, 32> tree(512);
     tree.init();
 //    tree.clear();
 
@@ -38,7 +38,7 @@ int main() {
     for (int i = 0; i < tuples; i++) {
         int value;
         tree.search(keys[i], value);
-//        printf("search operator for [%d] is submitted\n", i);
+        printf("search operator for [%d] is submitted\n", i);
     }
 
 //    while(tree.get_pending_requests()!=0){

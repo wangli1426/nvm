@@ -10,7 +10,6 @@
 #include "tree/in_nvme_b_plus_tree.h"
 #include "tree/nvme_optimized_b_plus_tree.h"
 #include "tree/nvme_optimized_tree_for_benchmark.h"
-#include "tree/no_virtual_function_nvme_optimized.h"
 #include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/rdtsc.h"
 
@@ -82,15 +81,15 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 100000;
+    const int ntuples = 10000;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
 //    in_disk_tree.init();
 //    benchmark<int, int>(&in_disk_tree, "in-disk", 1, ntuples, ntuples, ntuples, 1);
 
-    in_disk_b_plus_tree<int, int, order> in_disk_tree2("/media/nvme/tree.dat1", size);
-    in_disk_tree2.init();
-    benchmark<int, int>(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, ntuples, 1);
+//    in_disk_b_plus_tree<int, int, order> in_disk_tree2("/media/nvme/tree.dat1", size);
+//    in_disk_tree2.init();
+//    benchmark<int, int>(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, ntuples, 1);
 ////
 //
 ////
@@ -107,13 +106,10 @@ int main(int argc, char** argv) {
 //    in_nvme_tree.init();
 //    benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0, 1);
 //
-//    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 256);
-//    nvme_optimized.init();
-//    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, 1);
+    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 256);
+    nvme_optimized.init();
+    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, 1);
 //
-//    no_virtual_function_nvme_optimized<int, int, order> no_virtual_nvme_optimized(atoi(argv[0]));
-//    no_virtual_nvme_optimized.init();
-//    benchmark<int, int>(&no_virtual_nvme_optimized, "no-virtual-nvme-optimized", 1, ntuples, ntuples, 0, 0);
 
 //    in_disk_b_plus_tree<int, int, 4> tree;
 //    tree.init();

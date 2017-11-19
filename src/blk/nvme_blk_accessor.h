@@ -141,6 +141,7 @@ public:
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
         *para->pending_command -= 1;
+        para->context->transition_to_next_state();
         if (para->context->run() == CONTEXT_TERMINATED) {
 //            *para->finished_context += 1;
             delete para->context;

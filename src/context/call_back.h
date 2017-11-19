@@ -5,8 +5,14 @@
 #ifndef NVM_CALL_BACK_H
 #define NVM_CALL_BACK_H
 #include <stdio.h>
+#include <assert.h>
 #include <queue>
+#include <deque>
 #include "../utils/sync.h"
+//#include "context_barrier.h"
+
+class barrier_token;
+class context_barrier;
 class call_back_context;
 
 static std::queue<call_back_context*> submission_queue;
@@ -24,16 +30,18 @@ static void add_to_queue(call_back_context* context);
 
 class call_back_context {
 public:
-    call_back_context(const char* name = "unnamed"): status(0), name_(name) {};
+    call_back_context(const char* name = "unnamed"): status(0), current_state(0), next_state(-1), name_(name) {};
 
     virtual ~call_back_context(){};
+    int current_state;
+    int next_state;
     int status;
 
     virtual int run() {
         if (status == 0) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
-            transition_to_state(1);
+            set_next_state(1);
             return CONTEXT_TRANSIT;
         } else {
             printf("[%s]: status %d, I am done!\n", name_, status);
@@ -45,7 +53,22 @@ public:
         this->status = status;
     }
 
+    void set_next_state(int state) {
+        next_state = state;
+    }
+
+    void transition_to_next_state() {
+        assert(next_state >= 0);
+        current_state = next_state;
+        next_state = -1;
+    }
+
+    void add_barrier_token(barrier_token* token) {
+        obtained_barriers_.push_back(token);
+    }
+
 protected:
+    std::deque<barrier_token*> obtained_barriers_;
     const char* name_;
 };
 

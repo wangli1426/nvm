@@ -11,11 +11,13 @@
 #include <queue>
 #include <thread>
 #include <pthread.h>
+#include <assert.h>
 //#include "in_nvme_b_plus_tree.h"
 #include "vanilla_b_plus_tree.h"
 #include "../utils/sync.h"
 #include "../context/call_back.h"
 #include "../tree/blk_node_reference.h"
+#include "../context/barrier_manager.h"
 
 using namespace std;
 
@@ -152,6 +154,17 @@ namespace tree {
                         return nullptr;
                     }
                 }
+
+                /**
+                 TODO 1: if all the incoming operations can be completed by calling context->run only once, the pending
+                 context will never be processed. One possible solution is to process_completion() in each round
+                 regardless if new request arrives.
+
+                 TODO 2: It seems to be more efficient in terms of both throughput and processing latency to process
+                 multiple new requests at a time.
+
+                 **/
+
                 if (tree->request_queue_.size() > 0 && tree->free_context_slots_ > 0) {
                     request = tree->request_queue_.front();
                     tree->request_queue_.pop();
@@ -197,34 +210,51 @@ namespace tree {
             }
 
             int run() {
-                switch (this->status) {
+                switch (this->current_state) {
                     case 0:
-                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
-                        transition_to_state(1);
+                        int64_t node_id;
+                        node_id = node_ref_->get_unified_representation();
+                        set_next_state(1);
+                        tree_->manager.request_read_barrier(node_id, this);
                         return CONTEXT_TRANSIT;
                     case 1:
-                        uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
+                        assert(this->obtained_barriers_.size() <= 2);
+                        if (this->obtained_barriers_.size() == 2) {
+                            auto front = this->obtained_barriers_.front();
+                            tree_->manager.remove_read_barrier((*front).barrier_id_);
+                            this->obtained_barriers_.pop_front();
+                        }
+                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
+                        set_next_state(2);
+                        return CONTEXT_TRANSIT;
+                    case 2: {
+                        uint32_t node_type = *reinterpret_cast<uint32_t *>(buffer_);
                         switch (node_type) {
-                            case LEAF_NODE:
+                            case LEAF_NODE: {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 request_->found = current_node_->search(request_->key, request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
-//                                sleep(1);
                                 request_->semaphore->post();
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
                                 }
-                                tree_->pending_request_ --;
-                                tree_->free_context_slots_ ++;
+                                tree_->pending_request_--;
+                                tree_->free_context_slots_++;
                                 delete request_;
                                 request_ = 0;
+                                for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
+                                    tree_->manager.remove_read_barrier((*it)->barrier_id_);
+                                }
+                                obtained_barriers_.clear();
                                 return CONTEXT_TERMINATED;
-                            case INNER_NODE:
+                            }
+                            case INNER_NODE: {
                                 current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
-                                int child_index = dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_)->locate_child_index(request_->key);
+                                int child_index = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->locate_child_index(
+                                        request_->key);
                                 if (child_index < 0) {
                                     request_->found = false;
                                     delete current_node_;
@@ -233,22 +263,32 @@ namespace tree {
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
-                                    tree_->pending_request_ --;
-                                    tree_->free_context_slots_ ++;
+                                    tree_->pending_request_--;
+                                    tree_->free_context_slots_++;
                                     delete request_;
                                     request_ = 0;
+                                    for (auto it = this->obtained_barriers_.begin();
+                                         it != obtained_barriers_.end(); ++it) {
+                                        tree_->manager.remove_read_barrier((*it)->barrier_id_);
+                                    }
+                                    obtained_barriers_.clear();
                                     return CONTEXT_TERMINATED;
                                 } else {
-                                    node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
-                                    node_ref_->copy(dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_)->get_child_reference(child_index));
+                                    node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY> *>(tree_->blk_accessor_->create_null_ref());
+                                    node_ref_->copy(
+                                            dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->get_child_reference(
+                                                    child_index));
 //                                    delete current_node_;
                                     current_node_ = 0;
-                                    transition_to_state(0);
+                                    set_next_state(0);
+                                    transition_to_next_state();
                                     return run();
                                 }
+                            }
 //                            default:
 //                                assert(false);
                         }
+                    }
 
                 }
             }
@@ -271,6 +311,7 @@ namespace tree {
         volatile int free_context_slots_;
         volatile int pending_request_;
         int queue_length_;
+        barrier_manager manager;
     };
 }
 

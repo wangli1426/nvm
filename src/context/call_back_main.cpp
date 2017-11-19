@@ -14,12 +14,12 @@ public:
         if (status == 0) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
-            transition_to_state(1);
+            set_next_state(1);
             return CONTEXT_TRANSIT;
         } else if (status == 1) {
             printf("[%s]: status %d\n", name_, status);
             add_to_queue(this);
-            transition_to_state(2);
+            set_next_state(2);
             return CONTEXT_TRANSIT;
         } else {
             printf("[%s]: status %d, I am done!\n", name_, status);
