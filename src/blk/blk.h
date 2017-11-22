@@ -52,6 +52,7 @@ public:
         free(buffer);
     }
     virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
+    virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual int process_completion(int max = 1) = 0;
     const uint32_t block_size;
 };

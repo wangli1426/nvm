@@ -9,6 +9,8 @@
 //
 
 #include <queue>
+#include <atomic>
+#include <deque>
 #include <thread>
 #include <pthread.h>
 #include <assert.h>
@@ -19,20 +21,43 @@
 #include "../tree/blk_node_reference.h"
 #include "../context/barrier_manager.h"
 
+#define SEARCH_REQUEST 1
+#define INSERT_REQUEST 2
 using namespace std;
 
 typedef void (*callback_function)(void*);
 
 namespace tree {
 
+
     template<typename K, typename V>
-    class search_request {
+    class request {
     public:
+        request(int t): type(t){};
+        int type;
         K key;
+    };
+
+    template<typename K, typename V>
+    class search_request: public request<K, V> {
+    public:
+        search_request(): request<K, V>(SEARCH_REQUEST) {};
+    public:
         V value;
         bool found;
         Semaphore *semaphore;
         callback_function cb_f;
+        void* args;
+    };
+
+    template<typename K, typename V>
+    class insert_request: public request<K, V>  {
+    public:
+        insert_request(): request<K, V>(INSERT_REQUEST) {};
+        V value;
+        bool succeed;
+        Semaphore* semaphore;
+        callback_function  cb_f;
         void* args;
     };
 
@@ -114,8 +139,15 @@ namespace tree {
 //            return false;
         }
 
+        bool asynchronous_insert_with_callback(insert_request<K, V>* request) {
+            lock_.acquire();
+            pending_request_++;
+            request_queue_.push(request);
+            lock_.release();
+        }
+
         int get_pending_requests() const {
-            return pending_request_;
+            return pending_request_.load();
         }
 
         static void *worker_thread_logic(void *para) {
@@ -146,10 +178,10 @@ namespace tree {
 
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
-            while (!tree->working_thread_terminate_flag_ || tree->pending_request_ > 0) {
-                search_request<K, V>* request;
+            while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
+                request<K, V>* request;
                 while (!tree->lock_.try_lock()) {
-                    if (tree->working_thread_terminate_flag_ && tree->pending_request_ == 0) {
+                    if (tree->working_thread_terminate_flag_ && tree->pending_request_.load() == 0) {
                         printf("context based process thread terminates!\n");
                         return nullptr;
                     }
@@ -165,19 +197,23 @@ namespace tree {
 
                  **/
 
-                if (tree->request_queue_.size() > 0 && tree->free_context_slots_ > 0) {
+                if (tree->request_queue_.size() > 0 && tree->free_context_slots_.load() > 0) {
                     request = tree->request_queue_.front();
                     tree->request_queue_.pop();
                     tree->lock_.release();
                     ostringstream ost;
                     ost << "context for " << request->key;
-                    search_context* context = new search_context(ost.str(), tree, request);
+                    call_back_context* context;
+                    if (request->type == SEARCH_REQUEST)
+                        context = new search_context(ost.str(), tree, static_cast<search_request<K, V>*>(request));
+                    else
+                        context = new insert_context(ost.str(), tree, static_cast<insert_request<K, V>*>(request));
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
                 } else {
                     tree->lock_.release();
-                    if (tree->pending_request_ > 0) {
+                    if (tree->pending_request_.load() > 0) {
                         const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
                         if (processed > 0) {
 //                        tree->free_context_slots_ += processed;
@@ -191,12 +227,261 @@ namespace tree {
         }
 
         void sync() {
-            while(pending_request_> 0) {
+            while(pending_request_.load()> 0) {
                 usleep(1);
             }
         }
 
     private:
+
+        class insert_context: public call_back_context {
+        public:
+            insert_context(std::string name, pull_based_b_plus_tree* tree, insert_request<K, V>* request): name_(name),
+                call_back_context(name_.c_str()), tree_(tree), request_(request) {
+                buffer_ = tree_->blk_accessor_->malloc_buffer();
+                buffer_2 = tree_->blk_accessor_->malloc_buffer();
+                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
+                current_state = 1;
+                split_=  new Split<K, V>();
+            }
+
+            ~insert_context() {
+                tree_->blk_accessor_->free_buffer(buffer_);
+                tree_->blk_accessor_->free_buffer(buffer_2);
+                buffer_ = 0;
+                buffer_2 = 0;
+                delete split_;
+                split_ = 0;
+            }
+
+            int run() {
+                switch (this->current_state) {
+                    case 1: {
+                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
+                        set_next_state(2);
+                        return CONTEXT_TRANSIT;
+                    }
+                    case 2: {
+                        uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
+                        switch (node_type) {
+                            case LEAF_NODE: {
+                                current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
+                                current_node_->deserialize(buffer_);
+                                child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, *split_);
+                                if (!child_node_split_) {
+                                    // the leaf node does not split, so we only need to flush the leaf node
+                                    current_node_->serialize(buffer_);
+                                    set_next_state(11);
+                                    tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
+                                    return CONTEXT_TRANSIT;
+                                } else {
+                                    // the leaf node wat split and we need to flush both the leaf node and the new node.
+                                    current_node_->serialize(buffer_);
+                                    split_->right->serialize(buffer_2);
+                                    set_next_state(8);
+                                    write_back_completion_target_ = 2;
+                                    write_back_completion_count_ = 0;
+                                    tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
+                                    tree_->blk_accessor_->asynch_write(split_->right->get_self_ref()->get_unified_representation(), buffer_2, this);
+                                    return CONTEXT_TRANSIT;
+                                }
+                            }
+                            case INNER_NODE: {
+                                current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
+                                current_node_->deserialize(buffer_);
+                                InnerNode<K, V, CAPACITY>* inner_node = dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
+                                const int target_node_index = inner_node->locate_child_index(request_->key);
+                                const bool exceed_left_boundary = target_node_index < 0;
+                                if (exceed_left_boundary) {
+                                    inner_node->key_[0] = request_->key;
+                                    inner_node->mark_modified();
+                                }
+                                blk_node_reference<K, V, CAPACITY>* child_node_ref = inner_node->get_child_reference(std::max(0, target_node_index));
+                                store_parent_node(inner_node, target_node_index);
+                                current_node_ = nullptr;
+                                node_ref_ = tree_->blk_accessor_->create_null_ref();
+                                node_ref_->copy(child_node_ref);
+                                set_next_state(1);
+                                return CONTEXT_TRANSIT;
+                            }
+                        }
+                    }
+                    case 8: {
+                        write_back_completion_count_ ++;
+                        if (write_back_completion_count_ == write_back_completion_target_) {
+                            set_next_state(9);
+                            return run();
+                        }
+                        return CONTEXT_TRANSIT;
+                    }
+                    case 9: {
+                        // The insertion process goes into this state, when the tuple has been inserted into the
+                        // child node. Depending on whether the child node was split during the insertion, the
+                        // process logic varies. If the child node was split, we need to accommodate the new node;
+                        // Otherwise, we only need to close the current node as well as the parent node(s).
+
+                        if (child_node_split_) {
+                            // child node was split
+                            parent_node_context parent_context = pending_parent_nodes_.back();
+                            pending_parent_nodes_.pop_back();
+                            InnerNode<K, V, CAPACITY>* parent_node = parent_context.node;
+                            current_node_ = parent_node;
+                            node_ref_ = tree_->blk_accessor_->create_null_ref();
+                            node_ref_->copy(current_node_->get_self_ref());
+
+                            if (current_node_->size() < CAPACITY) {
+                                // the current node has free slot for the new node.
+                                parent_node->insert_inner_node(split_->right, split_->boundary_key,
+                                                               parent_context.position);
+                                child_node_split_ = false;
+
+                                current_node_->serialize(buffer_);
+
+                                write_back_completion_count_ = 0;
+                                write_back_completion_target_ = 1;
+
+                                set_next_state(10);
+                                tree_->blk_accessor_->asynch_write(current_node_->get_self_ref()->get_unified_representation(), buffer_, this);
+                                return CONTEXT_TRANSIT;
+                            } else {
+                                // the current node need to split to accommodate the new node.
+                                bool insert_to_first_half = parent_context.position < CAPACITY / 2;
+
+                                //
+                                int start_index_for_right = CAPACITY / 2;
+                                InnerNode<K, V, CAPACITY> *left = current_node_;
+                                InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_);
+                                right->mark_modified();
+                                node_reference<K, V>* right_ref = right->get_self_ref();
+
+                                // move the keys and children to the right node
+                                for (int i = start_index_for_right, j = 0; i < right->size_; ++i, ++j) {
+                                    right->key_[j] = left->key_[i];
+                                    right->child_[j] = left->child_[i];
+                                }
+
+                                const int moved = left->size_ - start_index_for_right;
+                                left->size_ -= moved;
+                                right->size_ = moved;
+
+                                // insert the new child node to the appropriate split node.
+                                InnerNode<K, V, CAPACITY> *host_for_node = insert_to_first_half ? left : right;
+                                int inner_node_insert_position = host_for_node->locate_child_index(split_->boundary_key);
+                                host_for_node->insert_inner_node(split_->right, split_->boundary_key,
+                                                                 inner_node_insert_position + 1);
+
+                                // write the remaining content in the split data structure.
+                                split_->left = (left);
+                                split_->right = (right);
+                                split_->boundary_key = right->get_leftmost_key();
+
+                                child_node_split_ = true;
+
+                                left->serialize(buffer_);
+                                right->serialize(buffer_2);
+
+                                write_back_completion_count_ = 0;
+
+                                write_back_completion_target_ = 2;
+                                if (tree_->root_->get_unified_representation() != left->get_self_ref()->get_unified_representation())
+                                    set_next_state(10);
+                                else
+                                    set_next_state(12);
+                                tree_->blk_accessor_->asynch_write(left->get_self_ref()->get_unified_representation(), buffer_, this);
+                                tree_->blk_accessor_->asynch_write(right->get_self_ref()->get_unified_representation(), buffer_2, this);
+                                return CONTEXT_TRANSIT;
+                            }
+
+                        } else {
+                            while (!pending_parent_nodes_.empty()) {
+                                parent_node_context parent_context = pending_parent_nodes_.back();
+                                pending_parent_nodes_.pop_back();
+                                InnerNode<K, V, CAPACITY>* parent_node = parent_context.node;
+//                                parent_node->get_self_ref()->close(tree_->blk_accessor_);
+//                                delete parent_node;
+                                if (parent_node->is_modified()) {
+                                    write_back_completion_target_ = 1;
+                                    write_back_completion_count_ = 0;
+                                    set_next_state(10);
+                                    tree_->blk_accessor_->asynch_write(parent_node->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    return CONTEXT_TRANSIT;
+                                }
+                            }
+                            set_next_state(11);
+                            return run();
+                        }
+                    }
+                    case 10: {
+                        write_back_completion_count_ ++;
+                        if (write_back_completion_count_ == write_back_completion_target_) {
+                            set_next_state(9);
+                            return run();
+                        }
+                        return CONTEXT_TRANSIT;
+                    }
+                    case 11: {
+                        request_->semaphore->post();
+                        if (request_->cb_f) {
+                            (*request_->cb_f)(request_->args);
+                        }
+                        tree_->pending_request_--;
+                        tree_->free_context_slots_++;
+                        delete request_;
+                        return CONTEXT_TERMINATED;
+                    }
+                    case 12: {
+                        // handle root node split
+                        write_back_completion_count_ ++;
+                        if (write_back_completion_count_ == write_back_completion_target_) {
+                            InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split_->left, split_->right, tree_->blk_accessor_);
+                            new_inner_node->mark_modified();
+                            tree_->root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
+                            // a leaf will refer to a inner node now. TODO: release the old root_
+                            // reference and create a new one.
+                            tree_->root_->bind(new_inner_node);
+                            tree_->depth_++;
+                            new_inner_node->deserialize(buffer_);
+                            write_back_completion_count_ = 0;
+                            write_back_completion_target_ = 1;
+                            child_node_split_ = false;
+                            set_next_state(11);
+                            tree_->blk_accessor_->asynch_write(new_inner_node->get_self_ref()->get_unified_representation(), buffer_, this);
+                            return CONTEXT_TRANSIT;
+                        }
+                        return CONTEXT_TRANSIT;
+                    }
+
+                }
+            }
+
+        private:
+            void store_parent_node(InnerNode<K, V, CAPACITY>* node, int position) {
+                pending_parent_nodes_.push_back(parent_node_context(node, position));
+            }
+            struct parent_node_context {
+                parent_node_context(InnerNode<K, V, CAPACITY>* n, int p) {
+                    node = n;
+                    position = p;
+                }
+                InnerNode<K, V, CAPACITY>* node;
+                int position;
+            };
+        private:
+            pull_based_b_plus_tree *tree_;
+            blk_node_reference<K, V, CAPACITY> *node_ref_;
+            void *buffer_, *buffer_2;
+            Node<K, V>* current_node_;
+            insert_request<K, V>* request_;
+            std::string name_;
+            std::deque<parent_node_context> pending_parent_nodes_;
+
+            int write_back_completion_count_;
+            int write_back_completion_target_;
+            bool child_node_split_;
+            Split<K, V> * split_;
+        };
+
+
         class search_context : public call_back_context {
         public:
             search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : name_(name), call_back_context(name_.c_str()),
@@ -224,8 +509,8 @@ namespace tree {
                             tree_->manager.remove_read_barrier((*front).barrier_id_);
                             this->obtained_barriers_.pop_front();
                         }
-                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
                         set_next_state(2);
+                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
                         return CONTEXT_TRANSIT;
                     case 2: {
                         uint32_t node_type = *reinterpret_cast<uint32_t *>(buffer_);
@@ -305,11 +590,11 @@ namespace tree {
     private:
         SpinLock lock_;
         Semaphore queue_free_slots_;
-        queue<search_request<K, V> *> request_queue_;
+        queue<request<K, V> *> request_queue_;
         pthread_t thread_handle_;
         volatile bool working_thread_terminate_flag_;
-        volatile int free_context_slots_;
-        volatile int pending_request_;
+        atomic<int> free_context_slots_;
+        atomic<int> pending_request_;
         int queue_length_;
         barrier_manager manager;
     };

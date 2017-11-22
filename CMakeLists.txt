@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O2 -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
 
@@ -70,7 +70,7 @@ target_link_libraries(main -lpthread
 		)
 
 #
-add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
+#add_executable(access_pattern_benchmark src/access_pattern_benchmark.cpp)
 #target_link_libraries(access_pattern_benchmark
 #		${spdk/lib/libspdk.a}
 #		${spdk/lib/librte.a}

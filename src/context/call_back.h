@@ -60,7 +60,6 @@ public:
     void transition_to_next_state() {
         assert(next_state >= 0);
         current_state = next_state;
-        next_state = -1;
     }
 
     void add_barrier_token(barrier_token* token) {

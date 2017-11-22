@@ -242,8 +242,9 @@ namespace tree {
         }
 
         bool insert_with_split_support(const K &key, const V &val, Split<K, V> &split) {
-            const int target_node_index = locate_child_index(key);
+            int target_node_index = locate_child_index(key);
             const bool exceed_left_boundary = target_node_index < 0;
+            target_node_index = std::max(0, target_node_index);
             Split<K, V> local_split;
 
             Node<K, V>* target_child_instance;
@@ -252,16 +253,12 @@ namespace tree {
             // Insert into the target leaf node.
             bool is_split;
             if (exceed_left_boundary) {
-                node_ref = child_[0];
-                target_child_instance = node_ref->get(blk_accessor_);
-                is_split = target_child_instance->insert_with_split_support(key, val, local_split);
                 key_[0] = key;
                 this->mark_modified();
-            } else {
-                node_ref = child_[target_node_index];
-                target_child_instance = node_ref->get(blk_accessor_);
-                is_split = target_child_instance->insert_with_split_support(key, val, local_split);
             }
+            node_ref = child_[target_node_index];
+            target_child_instance = node_ref->get(blk_accessor_);
+            is_split = target_child_instance->insert_with_split_support(key, val, local_split);
 
             // The tuple was inserted without causing leaf node split.
             if (!is_split) {
@@ -274,7 +271,7 @@ namespace tree {
             // The child node was split, but the current node has free slot.
             if (size_ < CAPACITY) {
                 insert_inner_node(local_split.right, local_split.boundary_key,
-                                  target_node_index + 1 + exceed_left_boundary);
+                                  target_node_index + 1);
                 local_split.left->get_self_ref()->close(blk_accessor_);
                 local_split.right->get_self_ref()->close(blk_accessor_);
                 return false;
@@ -478,13 +475,14 @@ namespace tree {
             return child_[index];
         };
 
-    protected:
-
+    public:
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
-//        Node<K, V> *child_[CAPACITY];
         node_reference<K, V>* child_[CAPACITY];
-        node_reference<K, V>* self_ref_;
         int size_;
+
+    protected:
+//        Node<K, V> *child_[CAPACITY];
+        node_reference<K, V>* self_ref_;
         blk_accessor<K, V>* blk_accessor_;
 
     private:

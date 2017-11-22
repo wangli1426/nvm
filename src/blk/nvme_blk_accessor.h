@@ -138,6 +138,24 @@ public:
         return processed;
     }
 
+    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        nvme_callback_para* para = new nvme_callback_para;
+        para->context = context;
+        para->finished_context = &finished_contexts_;
+        pending_commands_ ++;
+        para->pending_command = &pending_commands_;
+        int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
+        if (status != 0) {
+            printf("error in submitting read command\n");
+            printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
+            pending_commands_ --;
+            return;
+        }
+#ifdef __NVME_ACCESSOR_LOG__
+        printf("pending_commands_ added to %d.\n", pending_commands_);
+#endif
+    }
+
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
         *para->pending_command -= 1;

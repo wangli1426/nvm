@@ -49,7 +49,7 @@ namespace tree {
         }
 
         // Insert a k-v pair to the tree.
-        void insert(const K &k, const V &v) {
+        virtual void insert(const K &k, const V &v) {
             Split<K, V> split;
             bool is_split;
             Node<K, V>* root_instance = root_->get(blk_accessor_);

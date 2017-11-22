@@ -113,6 +113,11 @@ public:
         completed_callbacks_.push(context);
     }
 
+    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        write(blk_addr, buffer);
+        completed_callbacks_.push(context);
+    }
+
     int process_completion(int max = 1) {
         int processed = 0;
         for (int i = 0; i < max; i++) {

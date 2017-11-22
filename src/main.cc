@@ -16,10 +16,10 @@ using namespace tree;
 int main() {
 
 
-    const int tuples = 100;
+    const int tuples = 5;
     std::vector<int> keys;
 //
-    disk_optimized_tree_for_benchmark<int, int, 32> tree(4, "tmp.dat");
+    disk_optimized_tree_for_benchmark<int, int, 4> tree(1, "tmp.dat");
 //    in_nvme_b_plus_tree<int, int, 32> tree(512);
     tree.init();
 //    tree.clear();
@@ -27,18 +27,30 @@ int main() {
     for (int i = 0; i < tuples; i++) {
         keys.push_back(i);
     }
-    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+//    std::random_shuffle(&keys[0], &keys[tuples - 1]);
 
     for(auto it = keys.begin(); it != keys.end(); ++it) {
+
         tree.insert(*it, *it);
+        printf("inserted %d\n", *it);
     }
+
+
+    tree.sync();
+
+//    BTree<int, int>::Iterator* it =  tree.get_iterator();
+//    int k, v;
+//    while (it->next(k, v)) {
+//        printf("%d -----> %d \n", k, v);
+//    }
+
 
 
     uint64_t start = ticks();
     for (int i = 0; i < tuples; i++) {
-        int value;
+        int value = -1024;
         tree.search(keys[i], value);
-        printf("search operator for [%d] is submitted\n", i);
+        printf("[%d]: search operator for %d is submitted\n", i, keys[i]);
     }
 
 //    while(tree.get_pending_requests()!=0){
@@ -46,6 +58,7 @@ int main() {
 //    }
     uint64_t end = ticks();
 
+    tree.close();
     printf("search throughput: %.2f K tuples / s\n", tuples / cycles_to_seconds(end - start) / 1000);
 
 //    for (int i = 0; i < tuples; i++) {
@@ -67,7 +80,6 @@ int main() {
 //    }
 
 //    sleep(5);
-    tree.close();
 
 //    sleep(2);
 //    Semaphore s, s2;

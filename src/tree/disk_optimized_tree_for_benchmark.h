@@ -23,8 +23,7 @@ namespace tree{
 //            context->sema = semaphore;
 //            semaphore->wait();
 //            this->asynchronous_search_with_callback(key, context->value, &callback, context);
-            search_request<K,V>* request =
-                    new search_request<K,V>;
+            search_request<K,V>* request = new search_request<K,V>;
             request->key = key;
             request->value = value;
             request->semaphore = semaphore;
@@ -33,6 +32,18 @@ namespace tree{
             semaphore->wait();
             this->asynchronous_search_with_callback(request);
         }
+
+        void insert(const K& key, const V & value) {
+            insert_request<K, V>* request = new insert_request<K, V>;
+            request->key = key;
+            request->value = value;
+            request->semaphore = semaphore;
+            request->cb_f = &callback;
+            request->args = request;
+            semaphore->wait();
+            this->asynchronous_insert_with_callback(request);
+        }
+
         static void callback(void* args) {
             search_request<K,V>* context =
                     reinterpret_cast<search_request<K,V>*>(args);
