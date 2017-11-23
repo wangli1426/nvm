@@ -271,7 +271,10 @@ namespace tree {
                                 if (!child_node_split_) {
                                     // the leaf node does not split, so we only need to flush the leaf node
                                     current_node_->serialize(buffer_);
-                                    set_next_state(11);
+                                    write_back_completion_target_ = 1;
+                                    write_back_completion_count_ = 0;
+                                    set_next_state(10);
+//                                    set_next_state(11);
                                     tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
                                     return CONTEXT_TRANSIT;
                                 } else {
@@ -295,13 +298,14 @@ namespace tree {
                                 current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 InnerNode<K, V, CAPACITY>* inner_node = dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
-                                const int target_node_index = inner_node->locate_child_index(request_->key);
+                                int target_node_index = inner_node->locate_child_index(request_->key);
                                 const bool exceed_left_boundary = target_node_index < 0;
+                                target_node_index = target_node_index < 0 ? 0 : target_node_index;
                                 if (exceed_left_boundary) {
                                     inner_node->key_[0] = request_->key;
                                     inner_node->mark_modified();
                                 }
-                                blk_node_reference<K, V, CAPACITY>* child_node_ref = inner_node->get_child_reference(std::max(0, target_node_index));
+                                blk_node_reference<K, V, CAPACITY>* child_node_ref = inner_node->get_child_reference(target_node_index);
                                 store_parent_node(inner_node, target_node_index);
                                 current_node_ = nullptr;
                                 node_ref_ = tree_->blk_accessor_->create_null_ref();
@@ -421,6 +425,7 @@ namespace tree {
 //                                parent_node->get_self_ref()->close(tree_->blk_accessor_);
 //                                delete parent_node;
                                 if (parent_node->is_modified()) {
+                                    parent_node->serialize(buffer_);
                                     write_back_completion_target_ = 1;
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
@@ -510,7 +515,7 @@ namespace tree {
             search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : name_(name), call_back_context(name_.c_str()),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
+                node_ref_ = reinterpret_cast<volatile blk_node_reference<K, V, CAPACITY>*>(tree->root_);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);

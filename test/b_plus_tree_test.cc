@@ -67,8 +67,8 @@ TEST(BPlusTreeTest, InsertAndQueryTest) {
 TEST(BPlusTreeTest, InsertReverseOrderAndQueryTest) {
     VanillaBPlusTree<int, int, 2> tree;
     tree.init();
-    tree.insert(11, 11);
     tree.insert(12, 12);
+    tree.insert(11, 11);
     tree.insert(10, 10);
     tree.insert(9, 9);
     tree.insert(8, 8);

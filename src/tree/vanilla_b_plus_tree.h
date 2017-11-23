@@ -117,7 +117,9 @@ namespace tree {
 
         // Return the string representation of the tree.
         std::string toString() const {
-            return root_->get(blk_accessor_)->toString();
+            std::string ret = root_->get(blk_accessor_)->toString();
+            root_->close(blk_accessor_);
+            return ret;
         }
 
         friend std::ostream &operator<<(std::ostream &os, VanillaBPlusTree<K, V, CAPACITY> const &m) {
@@ -142,7 +144,7 @@ namespace tree {
             leaf_node_ref->close(blk_accessor_);
             blk_accessor_->flush();
 //            root_ = leaf_node->get_self_ref();
-//            root_->close(blk_accessor_);
+            root_->close(blk_accessor_);
             depth_ = 1;
         }
 

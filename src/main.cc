@@ -25,13 +25,16 @@ int main() {
 //    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
-        keys.push_back(i);
+        keys.push_back(tuples - i);
     }
-//    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+
+//    std::reverse(&keys[0], &keys[tuples]);
 
     for(auto it = keys.begin(); it != keys.end(); ++it) {
 
         tree.insert(*it, *it);
+        tree.sync();
 //        printf("inserted %d\n", *it);
     }
 
