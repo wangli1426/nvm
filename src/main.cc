@@ -16,7 +16,7 @@ using namespace tree;
 int main() {
 
 
-    const int tuples = 5;
+    const int tuples = 200;
     std::vector<int> keys;
 //
     disk_optimized_tree_for_benchmark<int, int, 4> tree(1, "tmp.dat");
@@ -32,7 +32,7 @@ int main() {
     for(auto it = keys.begin(); it != keys.end(); ++it) {
 
         tree.insert(*it, *it);
-        printf("inserted %d\n", *it);
+//        printf("inserted %d\n", *it);
     }
 
 

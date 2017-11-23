@@ -278,7 +278,12 @@ namespace tree {
                                     // the leaf node wat split and we need to flush both the leaf node and the new node.
                                     current_node_->serialize(buffer_);
                                     split_->right->serialize(buffer_2);
-                                    set_next_state(8);
+                                    if (current_node_->get_self_ref()->get_unified_representation() ==
+                                            tree_->root_->get_unified_representation()) {
+                                        set_next_state(12);
+                                    } else {
+                                        set_next_state(8);
+                                    }
                                     write_back_completion_target_ = 2;
                                     write_back_completion_count_ = 0;
                                     tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
@@ -302,7 +307,8 @@ namespace tree {
                                 node_ref_ = tree_->blk_accessor_->create_null_ref();
                                 node_ref_->copy(child_node_ref);
                                 set_next_state(1);
-                                return CONTEXT_TRANSIT;
+                                transition_to_next_state();
+                                return run();
                             }
                         }
                     }
@@ -310,6 +316,7 @@ namespace tree {
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
+                            transition_to_next_state();
                             return run();
                         }
                         return CONTEXT_TRANSIT;
@@ -322,74 +329,88 @@ namespace tree {
 
                         if (child_node_split_) {
                             // child node was split
-                            parent_node_context parent_context = pending_parent_nodes_.back();
-                            pending_parent_nodes_.pop_back();
-                            InnerNode<K, V, CAPACITY>* parent_node = parent_context.node;
-                            current_node_ = parent_node;
-                            node_ref_ = tree_->blk_accessor_->create_null_ref();
-                            node_ref_->copy(current_node_->get_self_ref());
 
-                            if (current_node_->size() < CAPACITY) {
-                                // the current node has free slot for the new node.
-                                parent_node->insert_inner_node(split_->right, split_->boundary_key,
-                                                               parent_context.position);
-                                child_node_split_ = false;
+                            if (pending_parent_nodes_.empty()) {
+                                // the root node was split.
 
-                                current_node_->serialize(buffer_);
-
-                                write_back_completion_count_ = 0;
-                                write_back_completion_target_ = 1;
-
-                                set_next_state(10);
-                                tree_->blk_accessor_->asynch_write(current_node_->get_self_ref()->get_unified_representation(), buffer_, this);
-                                return CONTEXT_TRANSIT;
                             } else {
-                                // the current node need to split to accommodate the new node.
-                                bool insert_to_first_half = parent_context.position < CAPACITY / 2;
 
-                                //
-                                int start_index_for_right = CAPACITY / 2;
-                                InnerNode<K, V, CAPACITY> *left = current_node_;
-                                InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_);
-                                right->mark_modified();
-                                node_reference<K, V>* right_ref = right->get_self_ref();
+                                parent_node_context parent_context = pending_parent_nodes_.back();
+                                pending_parent_nodes_.pop_back();
+                                InnerNode<K, V, CAPACITY> *parent_node = parent_context.node;
+                                current_node_ = parent_node;
+                                node_ref_ = tree_->blk_accessor_->create_null_ref();
+                                node_ref_->copy(current_node_->get_self_ref());
 
-                                // move the keys and children to the right node
-                                for (int i = start_index_for_right, j = 0; i < right->size_; ++i, ++j) {
-                                    right->key_[j] = left->key_[i];
-                                    right->child_[j] = left->child_[i];
-                                }
+                                if (current_node_->size() < CAPACITY) {
+                                    // the current node has free slot for the new node.
+                                    parent_node->insert_inner_node(split_->right, split_->boundary_key,
+                                                                   parent_context.position + 1);
+                                    child_node_split_ = false;
 
-                                const int moved = left->size_ - start_index_for_right;
-                                left->size_ -= moved;
-                                right->size_ = moved;
+                                    current_node_->serialize(buffer_);
 
-                                // insert the new child node to the appropriate split node.
-                                InnerNode<K, V, CAPACITY> *host_for_node = insert_to_first_half ? left : right;
-                                int inner_node_insert_position = host_for_node->locate_child_index(split_->boundary_key);
-                                host_for_node->insert_inner_node(split_->right, split_->boundary_key,
-                                                                 inner_node_insert_position + 1);
+                                    write_back_completion_count_ = 0;
+                                    write_back_completion_target_ = 1;
 
-                                // write the remaining content in the split data structure.
-                                split_->left = (left);
-                                split_->right = (right);
-                                split_->boundary_key = right->get_leftmost_key();
-
-                                child_node_split_ = true;
-
-                                left->serialize(buffer_);
-                                right->serialize(buffer_2);
-
-                                write_back_completion_count_ = 0;
-
-                                write_back_completion_target_ = 2;
-                                if (tree_->root_->get_unified_representation() != left->get_self_ref()->get_unified_representation())
                                     set_next_state(10);
-                                else
-                                    set_next_state(12);
-                                tree_->blk_accessor_->asynch_write(left->get_self_ref()->get_unified_representation(), buffer_, this);
-                                tree_->blk_accessor_->asynch_write(right->get_self_ref()->get_unified_representation(), buffer_2, this);
-                                return CONTEXT_TRANSIT;
+                                    tree_->blk_accessor_->asynch_write(
+                                            current_node_->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    return CONTEXT_TRANSIT;
+                                } else {
+                                    // the current node need to split to accommodate the new node.
+                                    bool insert_to_first_half = parent_context.position < CAPACITY / 2;
+
+                                    //
+                                    int start_index_for_right = CAPACITY / 2;
+                                    InnerNode<K, V, CAPACITY> *left = current_node_;
+                                    InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(
+                                            tree_->blk_accessor_);
+                                    right->mark_modified();
+                                    node_reference<K, V> *right_ref = right->get_self_ref();
+
+                                    // move the keys and children to the right node
+                                    for (int i = start_index_for_right, j = 0; i < left->size_; ++i, ++j) {
+                                        right->key_[j] = left->key_[i];
+                                        right->child_[j] = left->child_[i];
+                                    }
+
+                                    const int moved = left->size_ - start_index_for_right;
+                                    left->size_ -= moved;
+                                    right->size_ = moved;
+                                    left->mark_modified();
+
+                                    // insert the new child node to the appropriate split node.
+                                    InnerNode<K, V, CAPACITY> *host_for_node = insert_to_first_half ? left : right;
+                                    int inner_node_insert_position = host_for_node->locate_child_index(
+                                            split_->boundary_key);
+                                    host_for_node->insert_inner_node(split_->right, split_->boundary_key,
+                                                                     inner_node_insert_position + 1);
+
+                                    // write the remaining content in the split data structure.
+                                    split_->left = (left);
+                                    split_->right = (right);
+                                    split_->boundary_key = right->get_leftmost_key();
+
+                                    child_node_split_ = true;
+
+                                    left->serialize(buffer_);
+                                    right->serialize(buffer_2);
+
+                                    write_back_completion_count_ = 0;
+
+                                    write_back_completion_target_ = 2;
+                                    if (tree_->root_->get_unified_representation() !=
+                                        left->get_self_ref()->get_unified_representation())
+                                        set_next_state(10);
+                                    else
+                                        set_next_state(12);
+                                    tree_->blk_accessor_->asynch_write(
+                                            left->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    tree_->blk_accessor_->asynch_write(
+                                            right->get_self_ref()->get_unified_representation(), buffer_2, this);
+                                    return CONTEXT_TRANSIT;
+                                }
                             }
 
                         } else {
@@ -408,6 +429,7 @@ namespace tree {
                                 }
                             }
                             set_next_state(11);
+                            transition_to_next_state();
                             return run();
                         }
                     }
@@ -415,6 +437,7 @@ namespace tree {
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
+                            transition_to_next_state();
                             return run();
                         }
                         return CONTEXT_TRANSIT;
@@ -440,7 +463,7 @@ namespace tree {
                             // reference and create a new one.
                             tree_->root_->bind(new_inner_node);
                             tree_->depth_++;
-                            new_inner_node->deserialize(buffer_);
+                            new_inner_node->serialize(buffer_);
                             write_back_completion_count_ = 0;
                             write_back_completion_target_ = 1;
                             child_node_split_ = false;
