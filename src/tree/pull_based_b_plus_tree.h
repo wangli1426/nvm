@@ -240,9 +240,11 @@ namespace tree {
                 call_back_context(name_.c_str()), tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 buffer_2 = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
-                current_state = 1;
+                node_ref_ = nullptr;
+                current_state = 0;
                 split_=  new Split<K, V>();
+                free_slot_available_in_parent_ = false;
+                refer_to_root_ = false;
             }
 
             ~insert_context() {
@@ -256,6 +258,53 @@ namespace tree {
 
             int run() {
                 switch (this->current_state) {
+                    case 0: {
+                        if (node_ref_ == nullptr) {
+                            refer_to_root_ = true;
+                            node_ref_ = static_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
+                            node_ref_->copy(tree_->root_);
+                            printf("begin to insert [%d], root is %lld\n", request_->key,
+                                   tree_->root_->get_unified_representation());
+                        }
+                        set_next_state(10001);
+                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
+                        tree_->manager.request_write_barrier(node_ref_->get_unified_representation(), this);
+                        return CONTEXT_TRANSIT;
+                    }
+                    case 10001: {
+                        if (request_->key == 6) {
+                            printf("breakpoint!\n");
+                        }
+                        if (refer_to_root_) {
+                            if (obtained_barriers_.back()->barrier_id_ != tree_->root_->get_unified_representation()) {
+                                // root was updated
+                                printf("[%d]: detected root update!\n", request_->key);
+                                release_all_barriers();
+                                refer_to_root_ = true;
+                                node_ref_ = nullptr;
+                                set_next_state(0);
+                                transition_to_next_state();
+                                return run();
+                            } else {
+                                refer_to_root_ = false;
+                            }
+                        }
+                        if (obtained_barriers_.back()->barrier_id_ == tree_->root_->get_unified_representation()) {
+                            printf("[%d] ooo <%lld> (root)\n", request_->key, obtained_barriers_.back()->barrier_id_);
+                        } else
+                            printf("[%d] ooo <%lld>\n", request_->key, obtained_barriers_.back()->barrier_id_);
+                        if (free_slot_available_in_parent_ && parent_boundary_update_) {
+                            //TODO release all the
+                            barrier_token* latest_token = obtained_barriers_.back();
+                            obtained_barriers_.pop_back();
+                            release_all_barriers();
+                            obtained_barriers_.push_back(latest_token);
+                        }
+                        set_next_state(1);
+                        transition_to_next_state();
+                        return run();
+                    }
+
                     case 1: {
                         tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
                         set_next_state(2);
@@ -285,7 +334,7 @@ namespace tree {
                                             tree_->root_->get_unified_representation()) {
                                         set_next_state(12);
                                     } else {
-                                        set_next_state(8);
+                                        set_next_state(10);
                                     }
                                     write_back_completion_target_ = 2;
                                     write_back_completion_count_ = 0;
@@ -310,20 +359,13 @@ namespace tree {
                                 current_node_ = nullptr;
                                 node_ref_ = tree_->blk_accessor_->create_null_ref();
                                 node_ref_->copy(child_node_ref);
-                                set_next_state(1);
+                                free_slot_available_in_parent_ = inner_node->has_free_slot();
+                                parent_boundary_update_ = exceed_left_boundary;
+                                set_next_state(0);
                                 transition_to_next_state();
                                 return run();
                             }
                         }
-                    }
-                    case 8: {
-                        write_back_completion_count_ ++;
-                        if (write_back_completion_count_ == write_back_completion_target_) {
-                            set_next_state(9);
-                            transition_to_next_state();
-                            return run();
-                        }
-                        return CONTEXT_TRANSIT;
                     }
                     case 9: {
                         // The insertion process goes into this state, when the tuple has been inserted into the
@@ -448,6 +490,7 @@ namespace tree {
                         return CONTEXT_TRANSIT;
                     }
                     case 11: {
+                        release_all_barriers(); // TODO: this can be done earlier.
                         request_->semaphore->post();
                         if (request_->cb_f) {
                             (*request_->cb_f)(request_->args);
@@ -461,8 +504,11 @@ namespace tree {
                         // handle root node split
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
+                            printf("handling root split, triggered by %d\n", request_->key);
                             InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split_->left, split_->right, tree_->blk_accessor_);
                             new_inner_node->mark_modified();
+                            printf("root update: %lld --> %lld\n", tree_->root_->get_unified_representation(),
+                                   new_inner_node->get_self_ref()->get_unified_representation());
                             tree_->root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
                             // a leaf will refer to a inner node now. TODO: release the old root_
                             // reference and create a new one.
@@ -486,6 +532,21 @@ namespace tree {
             void store_parent_node(InnerNode<K, V, CAPACITY>* node, int position) {
                 pending_parent_nodes_.push_back(parent_node_context(node, position));
             }
+
+            void release_all_barriers() {
+                while (obtained_barriers_.size() > 0) {
+                    barrier_token* token = obtained_barriers_.back();
+                    obtained_barriers_.pop_back();
+                    if (token->type_ == READ_BARRIER) {
+                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
+                               tree_->manager.remove_read_barrier(token->barrier_id_);
+                    } else {
+                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
+                        tree_->manager.remove_write_barrier(token->barrier_id_);
+                    }
+                }
+            }
+
             struct parent_node_context {
                 parent_node_context(InnerNode<K, V, CAPACITY>* n, int p) {
                     node = n;
@@ -507,6 +568,10 @@ namespace tree {
             int write_back_completion_target_;
             bool child_node_split_;
             Split<K, V> * split_;
+
+            bool free_slot_available_in_parent_;
+            bool parent_boundary_update_;
+            bool refer_to_root_;
         };
 
 

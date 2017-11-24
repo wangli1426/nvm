@@ -327,6 +327,9 @@ namespace tree {
 //            return ret;
 //        };
 
+        bool has_free_slot() const {
+            return size_ < CAPACITY;
+        }
 
         std::string toString() const {
 //        return std::to_string(this->id) + ": " + keys_to_string() + " " + nodes_to_string(); // for debug

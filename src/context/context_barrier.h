@@ -88,7 +88,7 @@ private:
                 }
             } else if (request.type == WRITE_BARRIER) {
                 // an write barrier offer can be made when there is no exiting write barrier or read barriers.
-                if (read_barriers == 0 && write_barriers ==0) {
+                if (read_barriers == 0 && write_barriers == 0) {
                     write_barriers ++;
                     pending_barrier_requests.pop();
                     fire_context(request.context, WRITE_BARRIER);

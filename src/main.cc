@@ -16,25 +16,25 @@ using namespace tree;
 int main() {
 
 
-    const int tuples = 200;
+    const int tuples = 7;
     std::vector<int> keys;
 //
-    disk_optimized_tree_for_benchmark<int, int, 4> tree(1, "tmp.dat");
+    disk_optimized_tree_for_benchmark<int, int, 4> tree(4, "tmp.dat");
 //    in_nvme_b_plus_tree<int, int, 32> tree(512);
     tree.init();
 //    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
-        keys.push_back(tuples - i);
+        keys.push_back(i);
     }
-    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+//    std::random_shuffle(&keys[0], &keys[tuples - 1]);
 
 //    std::reverse(&keys[0], &keys[tuples]);
 
     for(auto it = keys.begin(); it != keys.end(); ++it) {
 
         tree.insert(*it, *it);
-        tree.sync();
+//        tree.sync();
 //        printf("inserted %d\n", *it);
     }
 
@@ -53,7 +53,7 @@ int main() {
     for (int i = 0; i < tuples; i++) {
         int value = -1024;
         tree.search(keys[i], value);
-        printf("[%d]: search operator for %d is submitted\n", i, keys[i]);
+//        printf("[%d]: search operator for %d is submitted\n", i, keys[i]);
     }
 
 //    while(tree.get_pending_requests()!=0){

@@ -38,7 +38,7 @@ namespace tree{
             request->key = key;
             request->value = value;
             request->semaphore = semaphore;
-            request->cb_f = &callback;
+            request->cb_f = &insert_callback;
             request->args = request;
             semaphore->wait();
             this->asynchronous_insert_with_callback(request);
@@ -47,7 +47,14 @@ namespace tree{
         static void callback(void* args) {
             search_request<K,V>* context =
                     reinterpret_cast<search_request<K,V>*>(args);
-            printf("%d -> %d\n", context->key, context->value);
+            if (context->key != context->value)
+                printf("%d -> %d\n", context->key, context->value);
+        }
+
+        static void insert_callback(void* args) {
+            search_request<K,V>* context =
+                    reinterpret_cast<search_request<K,V>*>(args);
+                printf("[%d,%d] is inserted!\n", context->key, context->value);
         }
 //    struct search_context {
 //        K key;
