@@ -354,10 +354,10 @@ namespace tree {
                                     inner_node->key_[0] = request_->key;
                                     inner_node->mark_modified();
                                 }
-                                blk_node_reference<K, V, CAPACITY>* child_node_ref = inner_node->get_child_reference(target_node_index);
+                                blk_node_reference<K, V, CAPACITY>* child_node_ref = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(inner_node->get_child_reference(target_node_index));
                                 store_parent_node(inner_node, target_node_index);
                                 current_node_ = nullptr;
-                                node_ref_ = tree_->blk_accessor_->create_null_ref();
+                                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
                                 node_ref_->copy(child_node_ref);
                                 free_slot_available_in_parent_ = inner_node->has_free_slot();
                                 parent_boundary_update_ = exceed_left_boundary;
@@ -385,7 +385,7 @@ namespace tree {
                                 pending_parent_nodes_.pop_back();
                                 InnerNode<K, V, CAPACITY> *parent_node = parent_context.node;
                                 current_node_ = parent_node;
-                                node_ref_ = tree_->blk_accessor_->create_null_ref();
+                                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
                                 node_ref_->copy(current_node_->get_self_ref());
 
                                 if (current_node_->size() < CAPACITY) {
@@ -409,7 +409,7 @@ namespace tree {
 
                                     //
                                     int start_index_for_right = CAPACITY / 2;
-                                    InnerNode<K, V, CAPACITY> *left = current_node_;
+                                    InnerNode<K, V, CAPACITY> *left = reinterpret_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
                                     InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(
                                             tree_->blk_accessor_);
                                     right->mark_modified();
@@ -580,7 +580,7 @@ namespace tree {
             search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : name_(name), call_back_context(name_.c_str()),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = reinterpret_cast<volatile blk_node_reference<K, V, CAPACITY>*>(tree->root_);
+                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);
