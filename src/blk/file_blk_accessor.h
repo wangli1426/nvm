@@ -14,6 +14,7 @@
 #include "blk.h"
 #include "../utils/rdtsc.h"
 #include "asynchronous_accessor.h"
+#include "blk_cache.h"
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -30,6 +31,12 @@ public:
         write_cycles_ = 0;
         reads_ = 0;
         read_cycles_ = 0;
+//        cache_ = new blk_cache(block_size, 10000);
+        cache_ = 0;
+    }
+
+    ~file_blk_accessor() {
+        delete cache_;
     }
 
     int open() override{
@@ -67,12 +74,29 @@ public:
         uint64_t start = ticks();
         if (!is_address_valid(address))
             return 0;
+
+        if (cache_ && cache_->read(address, buffer)) {
+            read_cycles_ += ticks() - start;
+            reads_++;
+            return this->block_size;
+        }
+
         int status = (int)::pread(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
             printf("read error: %s\n", strerror(errno));
         }
         read_cycles_ += ticks() - start;
         reads_++;
+
+        if (cache_) {
+            blk_cache::cache_unit unit;
+            bool evicted = cache_->write(address, buffer, unit);
+            if (evicted) {
+                ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                free(unit.data);
+            }
+        }
+
         return status;
     }
 
@@ -80,6 +104,15 @@ public:
         uint64_t start = ticks();
         if (!is_address_valid(address))
             return 0;
+        if (cache_) {
+            blk_cache::cache_unit unit;
+            if (cache_->write(address, buffer, unit)) {
+                ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                free(unit.data);
+            }
+            return this->block_size;
+        }
+
         int status = (int)::pwrite(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
             printf("write error: %s\n", strerror(errno));
@@ -148,6 +181,7 @@ private:
     uint64_t reads_;
     uint64_t writes_;
     std::queue<call_back_context*> completed_callbacks_;
+    blk_cache *cache_;
 };
 
 

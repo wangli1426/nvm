@@ -102,12 +102,12 @@ target_link_libraries(tree_benchmark
 #add_dependencies(tree_benchmark)
 #
 #
-#set(TEST_FILES
-#		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
-#		test/disk_based_b_plus_tree_test.cc)
-#
-#add_executable(unittest ${TEST_FILES})
-#target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
+set(TEST_FILES
+		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
+		test/disk_based_b_plus_tree_test.cc test/lru_cache_test.cc)
+
+add_executable(unittest ${TEST_FILES})
+target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a)
 #add_dependencies(unittest)
 
 
