@@ -25,7 +25,7 @@ int main() {
 //    tree.clear();
 
     for (int i = 0; i < tuples; i++) {
-        keys.push_back(i);
+        keys.push_back(tuples - i - 1);
     }
 //    std::random_shuffle(&keys[0], &keys[tuples - 1]);
 
@@ -48,6 +48,7 @@ int main() {
 //    }
 
 
+    printf("search begins!\n\n");
 
     uint64_t start = ticks();
     for (int i = 0; i < tuples; i++) {

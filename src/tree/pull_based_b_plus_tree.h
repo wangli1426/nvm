@@ -512,7 +512,7 @@ namespace tree {
                             tree_->root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
                             // a leaf will refer to a inner node now. TODO: release the old root_
                             // reference and create a new one.
-                            tree_->root_->bind(new_inner_node);
+//                            tree_->root_->bind(new_inner_node);
                             tree_->depth_++;
                             new_inner_node->serialize(buffer_);
                             write_back_completion_count_ = 0;
