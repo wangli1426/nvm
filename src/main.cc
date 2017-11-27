@@ -16,10 +16,10 @@ using namespace tree;
 int main() {
 
 
-    const int tuples = 7;
+    const int tuples = 1000;
     std::vector<int> keys;
 //
-    disk_optimized_tree_for_benchmark<int, int, 4> tree(4, "tmp.dat");
+    disk_optimized_tree_for_benchmark<int, int, 4> tree(32, "tmp.dat");
 //    in_nvme_b_plus_tree<int, int, 32> tree(512);
     tree.init();
 //    tree.clear();
@@ -27,7 +27,8 @@ int main() {
     for (int i = 0; i < tuples; i++) {
         keys.push_back(tuples - i - 1);
     }
-//    std::random_shuffle(&keys[0], &keys[tuples - 1]);
+    srand(time(0));
+    std::random_shuffle(&keys[0], &keys[tuples]);
 
 //    std::reverse(&keys[0], &keys[tuples]);
 

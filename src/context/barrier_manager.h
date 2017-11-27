@@ -15,7 +15,8 @@ public:
 
     ~ barrier_manager() {
         for (auto it = barriers_.begin(); it != barriers_.end(); ++it) {
-            printf("[%lld]: %s\n", it->first, it->second->to_string().c_str());
+            if (!it->second->is_clear())
+                printf("[%lld]: %s\n", it->first, it->second->to_string().c_str());
         }
     }
     void request_write_barrier(int64_t node_id, call_back_context* context) {

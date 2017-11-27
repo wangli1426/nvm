@@ -61,6 +61,10 @@ public:
         return ost.str();
     }
 
+    bool is_clear() {
+        return write_barriers == 0 && read_barriers ==0;
+    }
+
 private:
 
     void fire_context(call_back_context* context, int type) {

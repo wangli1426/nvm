@@ -96,9 +96,9 @@ int main(int argc, char** argv) {
 ////
 //
 ////
-//    VanillaBPlusTree<int, int, order> tree;
-//    tree.init();
-//    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
+    VanillaBPlusTree<int, int, order> tree;
+    tree.init();
+    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
 //
 //    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(256);
 //    tree_optimized.init();

@@ -263,22 +263,22 @@ namespace tree {
                             refer_to_root_ = true;
                             node_ref_ = static_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
                             node_ref_->copy(tree_->root_);
-                            printf("begin to insert [%d], root is %lld\n", request_->key,
-                                   tree_->root_->get_unified_representation());
+//                            printf("begin to insert [%d], root is %lld\n", request_->key,
+//                                   tree_->root_->get_unified_representation());
                         }
                         set_next_state(10001);
-                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
+//                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
                         tree_->manager.request_write_barrier(node_ref_->get_unified_representation(), this);
                         return CONTEXT_TRANSIT;
                     }
                     case 10001: {
                         if (request_->key == 6) {
-                            printf("breakpoint!\n");
+//                            printf("breakpoint!\n");
                         }
                         if (refer_to_root_) {
                             if (obtained_barriers_.back()->barrier_id_ != tree_->root_->get_unified_representation()) {
                                 // root was updated
-                                printf("[%d]: detected root update!\n", request_->key);
+//                                printf("[%d]: detected root update!\n", request_->key);
                                 release_all_barriers();
                                 refer_to_root_ = true;
                                 node_ref_ = nullptr;
@@ -289,15 +289,18 @@ namespace tree {
                                 refer_to_root_ = false;
                             }
                         }
-                        if (obtained_barriers_.back()->barrier_id_ == tree_->root_->get_unified_representation()) {
-                            printf("[%d] ooo <%lld> (root)\n", request_->key, obtained_barriers_.back()->barrier_id_);
-                        } else
-                            printf("[%d] ooo <%lld>\n", request_->key, obtained_barriers_.back()->barrier_id_);
-                        if (free_slot_available_in_parent_ && parent_boundary_update_) {
+//                        if (obtained_barriers_.back()->barrier_id_ == tree_->root_->get_unified_representation()) {
+//                            printf("[%d] ooo <%lld> (root)\n", request_->key, obtained_barriers_.back()->barrier_id_);
+//                        } else
+//                            printf("[%d] ooo <%lld>\n", request_->key, obtained_barriers_.back()->barrier_id_);
+                        if (free_slot_available_in_parent_ && !parent_boundary_update_) {
                             //TODO release all the
                             barrier_token* latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
+                            barrier_token* latest_token_but_one = obtained_barriers_.back();
+                            obtained_barriers_.pop_back();
                             release_all_barriers();
+                            obtained_barriers_.push_back(latest_token_but_one);
                             obtained_barriers_.push_back(latest_token);
                         }
                         set_next_state(1);
@@ -323,7 +326,6 @@ namespace tree {
                                     write_back_completion_target_ = 1;
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
-//                                    set_next_state(11);
                                     tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
                                     return CONTEXT_TRANSIT;
                                 } else {
@@ -504,11 +506,11 @@ namespace tree {
                         // handle root node split
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
-                            printf("handling root split, triggered by %d\n", request_->key);
+//                            printf("handling root split, triggered by %d\n", request_->key);
                             InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split_->left, split_->right, tree_->blk_accessor_);
                             new_inner_node->mark_modified();
-                            printf("root update: %lld --> %lld\n", tree_->root_->get_unified_representation(),
-                                   new_inner_node->get_self_ref()->get_unified_representation());
+//                            printf("root update: %lld --> %lld\n", tree_->root_->get_unified_representation(),
+//                                   new_inner_node->get_self_ref()->get_unified_representation());
                             tree_->root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
                             // a leaf will refer to a inner node now. TODO: release the old root_
                             // reference and create a new one.
@@ -538,10 +540,10 @@ namespace tree {
                     barrier_token* token = obtained_barriers_.back();
                     obtained_barriers_.pop_back();
                     if (token->type_ == READ_BARRIER) {
-                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
-                               tree_->manager.remove_read_barrier(token->barrier_id_);
+//                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
+                        tree_->manager.remove_read_barrier(token->barrier_id_);
                     } else {
-                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
+//                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
                         tree_->manager.remove_write_barrier(token->barrier_id_);
                     }
                 }
