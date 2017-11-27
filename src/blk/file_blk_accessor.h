@@ -31,8 +31,8 @@ public:
         write_cycles_ = 0;
         reads_ = 0;
         read_cycles_ = 0;
-//        cache_ = new blk_cache(block_size, 10000);
-        cache_ = 0;
+        cache_ = new blk_cache(block_size, 10000);
+//        cache_ = 0;
     }
 
     ~file_blk_accessor() {

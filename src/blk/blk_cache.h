@@ -9,6 +9,7 @@
 #include <list>
 #include <string>
 #include <sstream>
+#include <stdio.h>
 
 using namespace std;
 
@@ -21,16 +22,21 @@ public:
     };
 public:
     blk_cache(const int32_t blk_size, const int32_t capacity): blk_size_(blk_size), size_(0), capacity_(capacity) {
+        hits_ = 0;
+        probes_ = 0;
     };
 
     ~blk_cache() {
         for(auto it = key_.begin(); it != key_.end(); ++it) {
             free(it->data);
         }
+        if (probes_)
+            printf("blk cache hit rates: %.3d\n", double(hits_) / double(probes_));
     }
 
 
     bool write(const int64_t &id, void* buffer, cache_unit & evict) {
+        probes_++;
         cache_unit unit;
         bool evicted = false;
         if (cache_.find(id) == cache_.cend()) {
@@ -42,6 +48,7 @@ public:
                 evict = evict_unit();
             }
         } else {
+            hits_++;
             unit = get(id);
         }
         memcpy(unit.data, buffer, blk_size_);
@@ -49,9 +56,11 @@ public:
     }
 
     bool read(const int64_t &id, void* buffer) {
+        probes_++;
         if (cache_.find(id) == cache_.cend()) {
             return false;
         }
+        hits_++;
         cache_unit unit = get(id);
         memcpy(buffer, unit.data, blk_size_);
         return true;
@@ -97,5 +106,7 @@ private:
     int32_t size_;
     unordered_map<int64_t, list<cache_unit>::iterator> cache_;
     list<cache_unit> key_;
+    int32_t hits_;
+    int32_t probes_;
 };
 #endif //NVM_BLK_CACHE_H

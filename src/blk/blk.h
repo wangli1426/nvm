@@ -6,6 +6,7 @@
 #define NVM_BLK_H
 
 #include <stdint.h>
+#include <list>
 #include "../tree/node_reference.h"
 #include "../context/call_back.h"
 
@@ -15,6 +16,8 @@
 //    }
 //    uint32_t id;
 //};
+
+using namespace std;
 
 namespace tree {
     template<typename K, typename V>
