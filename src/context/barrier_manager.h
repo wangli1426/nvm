@@ -14,9 +14,19 @@ class barrier_manager {
 public:
 
     ~ barrier_manager() {
+        print_uncleared_barriers();
+    }
+
+    void print_uncleared_barriers() {
+        bool all_cleared = true;
         for (auto it = barriers_.begin(); it != barriers_.end(); ++it) {
-            if (!it->second->is_clear())
+            if (!it->second->is_clear()) {
+                all_cleared = false;
                 printf("[%lld]: %s\n", it->first, it->second->to_string().c_str());
+            }
+        }
+        if (all_cleared) {
+            printf("all barriers are cleared!\n");
         }
     }
     void request_write_barrier(int64_t node_id, call_back_context* context) {

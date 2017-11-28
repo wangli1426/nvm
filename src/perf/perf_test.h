@@ -98,3 +98,101 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
     uint64_t total_end = ticks();
     cout << "total execution time: " << cycles_to_seconds(total_end - total_start) << endl;
 }
+
+
+#define READ_OP 1
+#define WRITE_OP 2
+
+template <typename K, typename V>
+struct operation{
+    K key;
+    V val;
+    int type;
+};
+
+template <typename K, typename V>
+void benchmark_mixed_workload(BTree<K, V> *tree, const string name, const int runs, const int ntuples, const int noperations,
+               const double write_rate, double skewness) {
+    uint64_t total_start = ticks();
+    double build_time = 0, search_time = 0, update_time = 0;
+    int run = runs;
+    int founds = 0;
+    int errors = 0;
+    uint64_t search_cycles = 0;
+    ZipfGenerator generator(ntuples, skewness);
+
+//    int *tuples = new int[ntuples];
+
+    vector<pair<K, V>> tuples;
+    vector<operation<K, V>> operations;
+
+    for (int i = 0; i < ntuples; ++i) {
+        tuples.push_back(make_pair(i, i));
+    }
+    random_shuffle(tuples.begin(), tuples.end());
+
+    for (int i = 0; i < noperations; ++i) {
+        const int key = generator.gen();
+        operation<K, V> op;
+        op.key = key;
+        op.val = key;
+        if (rand() / (double)RAND_MAX < write_rate) {
+            op.type = WRITE_OP;
+        } else {
+            op.type = READ_OP;
+        }
+        operations.push_back(op);
+    }
+
+    printf("begin to run benchmark\n");
+    while (run--) {
+//        if (run != runs)
+        tree->clear();
+        std::set<int> s;
+
+        uint64_t begin = ticks();
+        insert<K, V>(tree, tuples, 1);
+        uint64_t end = ticks();
+        double elapsed_secs = cycles_to_seconds(end - begin);
+        build_time += elapsed_secs;
+
+        printf("inserted...\n");
+
+//        sleep(1);
+
+        begin = ticks();
+//        for (int i = 0; i < reads; ++i) {
+//            int value;
+//            const K key = search_keys[i];
+//            const bool is_found = tree->search(key, value);
+//            founds += is_found;
+//            // avoid the search operator to be wept out by the compile optimizer.
+////            if (is_found && value != key) {
+////                std::cout << std::endl;
+////            }
+//        }
+        for (int i = 0; i < noperations; ++i) {
+            operation<K,V> op = operations[i];
+            if (op.type == WRITE_OP) {
+                tree->insert(op.key, op.val);
+            } else {
+                tree->search(op.key, op.val);
+            }
+        }
+        tree->sync();
+        end = ticks();
+        search_time += cycles_to_seconds(end - begin);;
+        printf("searched...\n");
+
+    }
+
+    cout << ntuples << " tuples." << endl;
+
+    cout << "[" << name.c_str() << "]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
+         << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
+         << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
+         << endl;
+
+    uint64_t total_end = ticks();
+    cout << "total execution time: " << cycles_to_seconds(total_end - total_start) << endl;
+}

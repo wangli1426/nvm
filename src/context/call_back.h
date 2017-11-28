@@ -30,7 +30,7 @@ static void add_to_queue(call_back_context* context);
 
 class call_back_context {
 public:
-    call_back_context(const char* name = "unnamed"): status(0), current_state(0), next_state(-1), name_(name) {};
+    call_back_context(const char* name = "unnamed"): status(0), current_state(0), next_state(-1), name_(std::string(name)) {};
 
     virtual ~call_back_context(){};
     int current_state;
@@ -39,12 +39,12 @@ public:
 
     virtual int run() {
         if (status == 0) {
-            printf("[%s]: status %d\n", name_, status);
+            printf("[%s]: status %d\n", name_.c_str(), status);
             add_to_queue(this);
             set_next_state(1);
             return CONTEXT_TRANSIT;
         } else {
-            printf("[%s]: status %d, I am done!\n", name_, status);
+            printf("[%s]: status %d, I am done!\n", name_.c_str(), status);
             return CONTEXT_TERMINATED;
         }
     }
@@ -66,9 +66,13 @@ public:
         obtained_barriers_.push_back(token);
     }
 
+    const char* get_name() const {
+        return name_.c_str();
+    }
+
 protected:
     std::deque<barrier_token*> obtained_barriers_;
-    const char* name_;
+    std::string name_;
 };
 
 static void process_logic(volatile bool *terminate) {

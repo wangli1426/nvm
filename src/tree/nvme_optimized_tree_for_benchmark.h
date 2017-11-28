@@ -33,12 +33,31 @@ namespace tree{
             semaphore->wait();
             this->asynchronous_search_with_callback(request);
         }
+
+        void insert(const K& key, const V & value) {
+            insert_request<K, V>* request = new insert_request<K, V>;
+            request->key = key;
+            request->value = value;
+            request->semaphore = semaphore;
+            request->cb_f = &insert_callback;
+            request->args = request;
+            semaphore->wait();
+            this->asynchronous_insert_with_callback(request);
+        }
+
         static void callback(void* args) {
-//            search_request<K,V>* context =
-//                    reinterpret_cast<search_request<K,V>*>(args);
+            search_request<K,V>* context =
+                    reinterpret_cast<search_request<K,V>*>(args);
 //            if (context->key != context->value)
 //                printf("%d -> %d\n", context->key, context->value);
-            found++;
+            if (context->found)
+                found++;
+        }
+
+        static void insert_callback(void* args) {
+//            search_request<K,V>* context =
+//                    reinterpret_cast<search_request<K,V>*>(args);
+//                printf("[%d,%d] is inserted!\n", context->key, context->value);
         }
     struct search_context {
         K key;

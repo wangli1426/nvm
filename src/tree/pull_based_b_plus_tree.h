@@ -179,6 +179,7 @@ namespace tree {
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
+//                usleep(100000);
                 request<K, V>* request;
                 while (!tree->lock_.try_lock()) {
                     if (tree->working_thread_terminate_flag_ && tree->pending_request_.load() == 0) {
@@ -204,10 +205,11 @@ namespace tree {
                     ostringstream ost;
                     ost << "context for " << request->key;
                     call_back_context* context;
+                    std::string name = ost.str();
                     if (request->type == SEARCH_REQUEST)
-                        context = new search_context(ost.str(), tree, static_cast<search_request<K, V>*>(request));
+                        context = new search_context(name, tree, static_cast<search_request<K, V>*>(request));
                     else
-                        context = new insert_context(ost.str(), tree, static_cast<insert_request<K, V>*>(request));
+                        context = new insert_context(name, tree, static_cast<insert_request<K, V>*>(request));
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
@@ -236,8 +238,8 @@ namespace tree {
 
         class insert_context: public call_back_context {
         public:
-            insert_context(std::string name, pull_based_b_plus_tree* tree, insert_request<K, V>* request): name_(name),
-                call_back_context(name_.c_str()), tree_(tree), request_(request) {
+            insert_context(std::string name, pull_based_b_plus_tree* tree, insert_request<K, V>* request):
+                call_back_context(name.c_str()), tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 buffer_2 = tree_->blk_accessor_->malloc_buffer();
                 node_ref_ = nullptr;
@@ -438,7 +440,7 @@ namespace tree {
                                     // write the remaining content in the split data structure.
                                     split_->left = (left);
                                     split_->right = (right);
-                                    split_->boundary_key = right->get_leftmost_key();
+                                    split_->boundary_key = right->key_[0];
 
                                     child_node_split_ = true;
 
@@ -563,7 +565,6 @@ namespace tree {
             void *buffer_, *buffer_2;
             Node<K, V>* current_node_;
             insert_request<K, V>* request_;
-            std::string name_;
             std::deque<parent_node_context> pending_parent_nodes_;
 
             int write_back_completion_count_;
@@ -579,7 +580,7 @@ namespace tree {
 
         class search_context : public call_back_context {
         public:
-            search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : name_(name), call_back_context(name_.c_str()),
+            search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(name.c_str()),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
@@ -679,7 +680,6 @@ namespace tree {
             void *buffer_;
             Node<K, V>* current_node_;
             search_request<K, V>* request_;
-            std::string name_;
         };
 
     private:

@@ -7,6 +7,8 @@
 
 #include <unordered_set>
 #include <stdio.h>
+#include <string>
+#include <unordered_map>
 #include "blk.h"
 #include "../tree/blk_node_reference.h"
 #include "../accessor/ns_entry.h"
@@ -14,6 +16,8 @@
 #include "../utils/rdtsc.h"
 #include "../context/call_back.h"
 #include "asynchronous_accessor.h"
+
+using namespace std;
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -104,11 +108,19 @@ public:
     }
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
         para->finished_context = &finished_contexts_;
         pending_commands_ ++;
         para->pending_command = &pending_commands_;
+        para->id = blk_addr;
+        para->type = "read";
+//        assert(pending_io_.find(para->id) == pending_io_.cend());
+        pending_io_[para->id] = para->type;
+        para->pending_io_ = &pending_io_;
+//        printf("%s to submit asynch read on %lld\n", context->get_name(), blk_addr);
+//        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
@@ -121,7 +133,17 @@ public:
 #endif
     }
 
+    static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
+        ostringstream ost;
+        for (auto it = pending_io_->begin(); it != pending_io_->end(); ++it) {
+            ost << it->first << "(" << it->second << ")" << " ";
+        }
+        return ost.str();
+    }
+
+
     int process_completion(int max = 1) {
+//        printf("process_completion is called!\n");
         int32_t status = qpair_->process_completions(max);
         if (status < 0) {
             printf("errors in process_completions!\n");
@@ -139,11 +161,18 @@ public:
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
         para->finished_context = &finished_contexts_;
         pending_commands_ ++;
         para->pending_command = &pending_commands_;
+        para->id = blk_addr;
+        para->type = "write";
+        para->pending_io_ = &pending_io_;
+        pending_io_[para->id] = para->type;
+//        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
+//        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
@@ -160,6 +189,10 @@ public:
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
         *para->pending_command -= 1;
         para->context->transition_to_next_state();
+        para->pending_io_->erase(para->id);
+//        printf("%d(%s) is completed!\n", para->id, para->type.c_str());
+//        printf("pending ios: %s\n", pending_ios_to_string(para->pending_io_).c_str());
+//        printf("to process context[%s]\n", para->context->get_name());
         if (para->context->run() == CONTEXT_TERMINATED) {
 //            *para->finished_context += 1;
             delete para->context;
@@ -172,6 +205,9 @@ public:
         call_back_context* context;
         volatile int32_t* finished_context;
         volatile int32_t* pending_command;
+        int64_t id;
+        string type;
+        unordered_map<int64_t, string> *pending_io_;
     };
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
@@ -183,6 +219,7 @@ private:
     uint64_t writes_;
     volatile int32_t finished_contexts_;
     volatile int32_t pending_commands_;
+    unordered_map<int64_t, string> pending_io_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

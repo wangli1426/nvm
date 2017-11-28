@@ -12,17 +12,17 @@ public:
     explicit my_context(const char* name): call_back_context(name) {};
     int run() {
         if (status == 0) {
-            printf("[%s]: status %d\n", name_, status);
+            printf("[%s]: status %d\n", name_.c_str(), status);
             add_to_queue(this);
             set_next_state(1);
             return CONTEXT_TRANSIT;
         } else if (status == 1) {
-            printf("[%s]: status %d\n", name_, status);
+            printf("[%s]: status %d\n", name_.c_str(), status);
             add_to_queue(this);
             set_next_state(2);
             return CONTEXT_TRANSIT;
         } else {
-            printf("[%s]: status %d, I am done!\n", name_, status);
+            printf("[%s]: status %d, I am done!\n", name_.c_str(), status);
             return CONTEXT_TERMINATED;
         }
     }

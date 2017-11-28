@@ -359,9 +359,10 @@ namespace tree {
         }
 
         const K get_leftmost_key() {
-            K ret = child_[0]->get(blk_accessor_)->get_leftmost_key();
-            child_[0]->close(blk_accessor_);
-            return ret;
+//            K ret = child_[0]->get(blk_accessor_)->get_leftmost_key();
+//            child_[0]->close(blk_accessor_);
+//            return ret;
+            return key_[0];
         }
 
         NodeType type() const {

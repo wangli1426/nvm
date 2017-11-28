@@ -6,93 +6,106 @@
 #include "tree/in_disk_b_plus_tree.h"
 #include "tree/vanilla_b_plus_tree.h"
 #include "tree/disk_optimized_b_plus_tree.h"
+#include "utils/generator.h"
 #include "tree/disk_optimized_tree_for_benchmark.h"
 #include "utils/sync.h"
 #include "utils/rdtsc.h"
 #include "tree/nvme_optimized_tree_for_benchmark.h"
+#include <set>
 
 using namespace tree;
 
+template <typename K, typename V>
+struct operation{
+    K key;
+    V val;
+    int type;
+};
+
+
+#define READ_OP 1
+#define WRITE_OP 2
+
 int main() {
 
-
-    const int tuples = 1000;
-    std::vector<int> keys;
-//
-    disk_optimized_tree_for_benchmark<int, int, 4> tree(32, "tmp.dat");
-//    in_nvme_b_plus_tree<int, int, 32> tree(512);
+    const int order = 32;
+    const int queue_length = 32;
+    nvme_optimized_tree_for_benchmark<int, int, order> tree(512, queue_length);
     tree.init();
-//    tree.clear();
 
-    for (int i = 0; i < tuples; i++) {
-        keys.push_back(tuples - i - 1);
+    double build_time = 0, search_time = 0, update_time = 0;
+    int runs = 1;
+    int run = 1;
+    int founds = 0;
+    int errors = 0;
+    int ntuples = 100000, noperations = 100000;
+    double skewness = 0.5;
+    const double write_rate = 0.5;
+    uint64_t search_cycles = 0;
+    ZipfGenerator generator(ntuples, skewness);
+
+//    int *tuples = new int[ntuples];
+
+    vector<pair<int, int>> tuples;
+    vector<operation<int, int>> operations;
+
+    for (int i = 0; i < ntuples; ++i) {
+        tuples.push_back(make_pair(i, i));
     }
-    srand(time(0));
-    std::random_shuffle(&keys[0], &keys[tuples]);
+    random_shuffle(tuples.begin(), tuples.end());
 
-//    std::reverse(&keys[0], &keys[tuples]);
-
-    for(auto it = keys.begin(); it != keys.end(); ++it) {
-
-        tree.insert(*it, *it);
-//        tree.sync();
-//        printf("inserted %d\n", *it);
+    for (int i = 0; i < noperations; ++i) {
+        const int key = generator.gen();
+        operation<int, int> op;
+        op.key = key;
+        op.val = key;
+        if (rand() / (double)RAND_MAX < write_rate) {
+            op.type = WRITE_OP;
+        } else {
+            op.type = READ_OP;
+        }
+        operations.push_back(op);
     }
 
+    printf("begin to run benchmark\n");
+    while (run--) {
+//        if (run != runs)
+        tree.clear();
+        std::set<int> s;
 
-    tree.sync();
+        uint64_t begin = ticks();
+        for (auto it = tuples.begin(); it != tuples.cend(); ++it) {
+            tree.insert(it->first, it->second);
+        }
+        uint64_t end = ticks();
+        double elapsed_secs = cycles_to_seconds(end - begin);
+        build_time += elapsed_secs;
 
-//    BTree<int, int>::Iterator* it =  tree.get_iterator();
-//    int k, v;
-//    while (it->next(k, v)) {
-//        printf("%d -----> %d \n", k, v);
-//    }
+        printf("inserted...\n");
 
 
-    printf("search begins!\n\n");
+        begin = ticks();
 
-    uint64_t start = ticks();
-    for (int i = 0; i < tuples; i++) {
-        int value = -1024;
-        tree.search(keys[i], value);
-//        printf("[%d]: search operator for %d is submitted\n", i, keys[i]);
+        for (int i = 0; i < noperations; ++i) {
+            operation<int ,int> op = operations[i];
+            if (op.type == WRITE_OP) {
+                tree.insert(op.key, op.val);
+            } else {
+                tree.search(op.key, op.val);
+            }
+        }
+        tree.sync();
+        end = ticks();
+        search_time += cycles_to_seconds(end - begin);;
+        printf("searched...\n");
+
     }
 
-//    while(tree.get_pending_requests()!=0){
-//        usleep(1);
-//    }
-    uint64_t end = ticks();
+    cout << ntuples << " tuples." << endl;
 
-    tree.close();
-    printf("search throughput: %.2f K tuples / s\n", tuples / cycles_to_seconds(end - start) / 1000);
+    cout << "[main]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
+         << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
+         << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
+         << endl;
 
-//    for (int i = 0; i < tuples; i++) {
-//        int value;
-//        bool found = tree.asynchronous_search(i, value);
-//        printf("%d -> %d (%d)\n", i, value, found);
-//    }
-
-
-
-//    Semaphore semaphore(4);
-//    for (int i = 0; i < tuples; i++) {
-//        search_callback_arg* arg = new search_callback_arg();
-//        arg->key = i;
-//        arg->value = -1;
-//        arg->sema = & semaphore;
-//        semaphore.wait();
-//        tree.asynchronous_search_with_callback(i, arg->value, update_concurrency, arg);
-//    }
-
-//    sleep(5);
-
-//    sleep(2);
-//    Semaphore s, s2;
-//    std::thread t = std::thread(dosometing, &s);
-//    std::thread t2 = std::thread(dosometing, &s2);
-//    printf("wait!\n");
-//    s.wait();
-//    printf("waited!\n");
-//    t.join();
-//    t2.join();
 }

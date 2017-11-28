@@ -27,11 +27,11 @@ public:
     };
 
     ~blk_cache() {
+        if (probes_)
+            printf("blk cache hit rates: %2.2f\n", double(hits_) / double(probes_));
         for(auto it = key_.begin(); it != key_.end(); ++it) {
             free(it->data);
         }
-        if (probes_)
-            printf("blk cache hit rates: %.3d\n", double(hits_) / double(probes_));
     }
 
 
