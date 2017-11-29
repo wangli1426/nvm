@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     const int size = 512;
     const int ntuples = 10000;
     const double write_rate = 0.5;
-    const double key_skewness = 0;
+    const double key_skewness = 0.5;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
 //    in_disk_tree.init();
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 //
 //    benchmark_mixed_workload(&tree_optimized, "disk-optimized-mixed", 1, ntuples, ntuples, 0.5, 0);
 
-//
+////
     in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
     in_nvme_tree.init();
     benchmark<int, int>(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0, key_skewness);
@@ -128,6 +128,7 @@ int main(int argc, char** argv) {
     benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.6, key_skewness);
     benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.8, key_skewness);
     benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 1, key_skewness);
+    printf("tree deeps: %d\n", nvme_optimized.get_height());
 //
 
 //    in_disk_b_plus_tree<int, int, 4> tree;

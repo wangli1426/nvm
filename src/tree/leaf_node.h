@@ -14,6 +14,7 @@
 #include "node_reference.h"
 #include "in_memory_node_reference.h"
 #include "../blk/blk.h"
+#include "../utils/rdtsc.h"
 
 namespace tree {
 
@@ -302,6 +303,7 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
+            uint64_t start = ticks();
             char* write_offset = static_cast<char*>(buffer);
 
             *(reinterpret_cast<uint32_t*>(write_offset)) = LEAF_NODE;
@@ -325,9 +327,12 @@ namespace tree {
             memcpy(write_offset, &entries_, size_ * sizeof(Entry));
             write_offset += size_ * sizeof(Entry);
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
+            printf("%.2f ns to serialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         void deserialize(void* buffer) {
+
+            uint64_t start = ticks();
 
             char* read_offset = static_cast<char*>(buffer);
 
@@ -351,7 +356,7 @@ namespace tree {
 
             // restore entries
             memcpy(&entries_, read_offset, size_ * sizeof(Entry));
-
+            printf("%.2f ns to deserialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         friend std::ostream &operator<<(std::ostream &os, LeafNode<K, V, CAPACITY> const &m) {

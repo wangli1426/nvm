@@ -29,83 +29,121 @@ struct operation{
 int main() {
 
     const int order = 32;
-    const int queue_length = 32;
-    nvme_optimized_tree_for_benchmark<int, int, order> tree(512, queue_length);
+    const int queue_length = 2;
+    const int tuples = 8000;
+    vector<int> keys;
+    disk_optimized_tree_for_benchmark<int, int, order> tree(queue_length);
     tree.init();
 
-    double build_time = 0, search_time = 0, update_time = 0;
-    int runs = 1;
-    int run = 1;
-    int founds = 0;
-    int errors = 0;
-    int ntuples = 100000, noperations = 100000;
-    double skewness = 0.5;
-    const double write_rate = 0.5;
-    uint64_t search_cycles = 0;
-    ZipfGenerator generator(ntuples, skewness);
-
-//    int *tuples = new int[ntuples];
-
-    vector<pair<int, int>> tuples;
-    vector<operation<int, int>> operations;
-
-    for (int i = 0; i < ntuples; ++i) {
-        tuples.push_back(make_pair(i, i));
-    }
-    random_shuffle(tuples.begin(), tuples.end());
-
-    for (int i = 0; i < noperations; ++i) {
-        const int key = generator.gen();
-        operation<int, int> op;
-        op.key = key;
-        op.val = key;
-        if (rand() / (double)RAND_MAX < write_rate) {
-            op.type = WRITE_OP;
-        } else {
-            op.type = READ_OP;
-        }
-        operations.push_back(op);
+    for (int i = 0; i < tuples; i++) {
+        keys.push_back(i);
     }
 
-    printf("begin to run benchmark\n");
-    while (run--) {
-//        if (run != runs)
-        tree.clear();
-        std::set<int> s;
+    std::random_shuffle(&keys[0], &keys[tuples]);
 
-        uint64_t begin = ticks();
-        for (auto it = tuples.begin(); it != tuples.cend(); ++it) {
-            tree.insert(it->first, it->second);
-        }
-        uint64_t end = ticks();
-        double elapsed_secs = cycles_to_seconds(end - begin);
-        build_time += elapsed_secs;
-
-        printf("inserted...\n");
-
-
-        begin = ticks();
-
-        for (int i = 0; i < noperations; ++i) {
-            operation<int ,int> op = operations[i];
-            if (op.type == WRITE_OP) {
-                tree.insert(op.key, op.val);
-            } else {
-                tree.search(op.key, op.val);
-            }
-        }
-        tree.sync();
-        end = ticks();
-        search_time += cycles_to_seconds(end - begin);;
-        printf("searched...\n");
-
+    for (auto it = keys.begin(); it != keys.cend(); ++it) {
+        tree.insert(*it, *it);
     }
 
-    cout << ntuples << " tuples." << endl;
+    tree.sync();
+//
+//    for (auto it = keys.begin(); it != keys.cend(); ++it) {
+//        int value;
+//        tree.search(*it, value);
+//    }
 
-    cout << "[main]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
-         << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
-         << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
-         << endl;
+
+
+
+    tree.sync();
+
+    printf("tree height is %d\n", tree.get_height());
+
+    tree.close();
+
+
+
+
+
+
+//    const int order = 16;
+//    const int queue_length = 32;
+//    nvme_optimized_tree_for_benchmark<int, int, order> tree(512, queue_length);
+//    tree.init();
+//
+//    double build_time = 0, search_time = 0, update_time = 0;
+//    int runs = 1;
+//    int run = 1;
+//    int founds = 0;
+//    int errors = 0;
+//    int ntuples = 10000, noperations = 10000;
+//    double skewness = 0.5;
+//    const double write_rate = 0.5;
+//    uint64_t search_cycles = 0;
+//    ZipfGenerator generator(ntuples, skewness);
+//
+////    int *tuples = new int[ntuples];
+//
+//    vector<pair<int, int>> tuples;
+//    vector<operation<int, int>> operations;
+//
+//    for (int i = 0; i < ntuples; ++i) {
+//        tuples.push_back(make_pair(i, i));
+//    }
+//    random_shuffle(tuples.begin(), tuples.end());
+//
+//    for (int i = 0; i < noperations; ++i) {
+//        const int key = generator.gen();
+//        operation<int, int> op;
+//        op.key = key;
+//        op.val = key;
+//        if (rand() / (double)RAND_MAX < write_rate) {
+//            op.type = WRITE_OP;
+//        } else {
+//            op.type = READ_OP;
+//        }
+//        operations.push_back(op);
+//    }
+//
+//    printf("begin to run benchmark\n");
+//    while (run--) {
+////        if (run != runs)
+//        tree.clear();
+//        std::set<int> s;
+//
+//        uint64_t begin = ticks();
+//        for (auto it = tuples.begin(); it != tuples.cend(); ++it) {
+//            tree.insert(it->first, it->second);
+//        }
+//        uint64_t end = ticks();
+//        double elapsed_secs = cycles_to_seconds(end - begin);
+//        build_time += elapsed_secs;
+//
+//        printf("inserted...\n");
+//
+//
+//        begin = ticks();
+//
+//        for (int i = 0; i < noperations; ++i) {
+//            operation<int ,int> op = operations[i];
+//            if (op.type == WRITE_OP) {
+//                tree.insert(op.key, op.val);
+//            } else {
+//                tree.search(op.key, op.val);
+//            }
+//        }
+//        tree.sync();
+//        end = ticks();
+//        search_time += cycles_to_seconds(end - begin);;
+//        printf("searched...\n");
+//
+//    }
+//
+//    cout << ntuples << " tuples." << endl;
+//
+//    cout << "[main]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
+//         << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
+//         << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
+//         << endl;
 
 }

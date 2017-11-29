@@ -12,6 +12,7 @@
 #include "leaf_node.h"
 #include "in_memory_node_reference.h"
 #include "../blk/blk.h"
+#include "../utils/rdtsc.h"
 
 namespace tree {
 
@@ -384,6 +385,9 @@ namespace tree {
         }
 
         void serialize(void* buffer) {
+
+            uint64_t start = ticks();
+
             char* write_offset = static_cast<char*>(buffer);
 
             // write node type info
@@ -409,9 +413,11 @@ namespace tree {
                 write_offset += sizeof(int64_t);
             }
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
+            printf("%.2f ns to serialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         void deserialize(void* buffer) {
+            uint64_t start = ticks();
             char* read_offset = static_cast<char*>(buffer);
 
             // skip type
@@ -438,7 +444,7 @@ namespace tree {
                 child_[i] = blk_accessor_->create_null_ref();
                 child_[i]->restore_by_unified_representation(value);
             }
-
+            printf("%.2f ns to deserialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         node_reference<K, V>* get_self_ref() const {

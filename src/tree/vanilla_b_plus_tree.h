@@ -36,6 +36,10 @@ namespace tree {
             init();
         }
 
+        int32_t get_height() const{
+            return depth_;
+        }
+
         virtual void close() {
             if (root_) {
                 Node<K, V> *root_instance = root_->get(blk_accessor_);

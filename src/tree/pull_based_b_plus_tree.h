@@ -247,6 +247,9 @@ namespace tree {
                 split_=  new Split<K, V>();
                 free_slot_available_in_parent_ = false;
                 refer_to_root_ = false;
+                optimistic_ = true;
+                next_visit_is_leaf_node_ = tree_->depth_ == 1;
+                current_node_level_ = tree_->get_height();
             }
 
             ~insert_context() {
@@ -270,13 +273,13 @@ namespace tree {
                         }
                         set_next_state(10001);
 //                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
-                        tree_->manager.request_write_barrier(node_ref_->get_unified_representation(), this);
+                        if (optimistic_ && !next_visit_is_leaf_node_)
+                            tree_->manager.request_read_barrier(node_ref_->get_unified_representation(), this);
+                        else
+                            tree_->manager.request_write_barrier(node_ref_->get_unified_representation(), this);
                         return CONTEXT_TRANSIT;
                     }
                     case 10001: {
-                        if (request_->key == 6) {
-//                            printf("breakpoint!\n");
-                        }
                         if (refer_to_root_) {
                             if (obtained_barriers_.back()->barrier_id_ != tree_->root_->get_unified_representation()) {
                                 // root was updated
@@ -295,7 +298,12 @@ namespace tree {
 //                            printf("[%d] ooo <%lld> (root)\n", request_->key, obtained_barriers_.back()->barrier_id_);
 //                        } else
 //                            printf("[%d] ooo <%lld>\n", request_->key, obtained_barriers_.back()->barrier_id_);
-                        if (free_slot_available_in_parent_ && !parent_boundary_update_) {
+                        if (optimistic_) {
+                            barrier_token* latest_token = obtained_barriers_.back();
+                            obtained_barriers_.pop_back();
+                            release_all_barriers();
+                            obtained_barriers_.push_back(latest_token);
+                        } else if ( free_slot_available_in_parent_ && !parent_boundary_update_) {
                             //TODO release all the
                             barrier_token* latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
@@ -321,6 +329,12 @@ namespace tree {
                             case LEAF_NODE: {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
+                                if (optimistic_ && current_node_->size() == CAPACITY) {
+                                    // leaf node is full, so the optimistic update fails.
+                                    set_next_state(13);
+                                    transition_to_next_state();
+                                    return run();
+                                }
                                 child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, *split_);
                                 if (!child_node_split_) {
                                     // the leaf node does not split, so we only need to flush the leaf node
@@ -353,6 +367,12 @@ namespace tree {
                                 InnerNode<K, V, CAPACITY>* inner_node = dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
                                 int target_node_index = inner_node->locate_child_index(request_->key);
                                 const bool exceed_left_boundary = target_node_index < 0;
+                                if (exceed_left_boundary && optimistic_) {
+                                    // the insertion needs to update the inner node, so the optimistic insertion fails.
+                                    set_next_state(13);
+                                    transition_to_next_state();
+                                    return run();
+                                }
                                 target_node_index = target_node_index < 0 ? 0 : target_node_index;
                                 if (exceed_left_boundary) {
                                     inner_node->key_[0] = request_->key;
@@ -365,6 +385,8 @@ namespace tree {
                                 node_ref_->copy(child_node_ref);
                                 free_slot_available_in_parent_ = inner_node->has_free_slot();
                                 parent_boundary_update_ = exceed_left_boundary;
+                                next_visit_is_leaf_node_ = current_node_level_ == 2;
+                                current_node_level_ --;
                                 set_next_state(0);
                                 transition_to_next_state();
                                 return run();
@@ -529,6 +551,20 @@ namespace tree {
                         return CONTEXT_TRANSIT;
                     }
 
+                    case 13: {
+                        optimistic_ = false;
+                        free_slot_available_in_parent_ = false;
+                        refer_to_root_ = false;
+                        next_visit_is_leaf_node_ = tree_->depth_ == 1;
+                        current_node_level_ = tree_->get_height();
+                        release_all_barriers();
+                        set_next_state(0);
+                        transition_to_next_state();
+                        delete node_ref_;
+                        node_ref_ = nullptr;
+                        return run();
+                    }
+
                 }
             }
 
@@ -575,6 +611,10 @@ namespace tree {
             bool free_slot_available_in_parent_;
             bool parent_boundary_update_;
             bool refer_to_root_;
+
+            bool optimistic_;
+            bool next_visit_is_leaf_node_;
+            int current_node_level_;
         };
 
 
