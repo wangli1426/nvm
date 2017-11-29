@@ -327,7 +327,7 @@ namespace tree {
             memcpy(write_offset, &entries_, size_ * sizeof(Entry));
             write_offset += size_ * sizeof(Entry);
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
-            printf("%.2f ns to serialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
+//            printf("%.2f ns to serialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         void deserialize(void* buffer) {
@@ -356,7 +356,7 @@ namespace tree {
 
             // restore entries
             memcpy(&entries_, read_offset, size_ * sizeof(Entry));
-            printf("%.2f ns to deserialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
+//            printf("%.2f ns to deserialize leaf node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         friend std::ostream &operator<<(std::ostream &os, LeafNode<K, V, CAPACITY> const &m) {
@@ -385,7 +385,7 @@ namespace tree {
                 right_sibling_->copy(new_ref);
         }
 
-        node_reference<K, V>* get_self_ref() const {
+        node_reference<K, V>* get_self_ref() {
             return self_ref_;
         };
 

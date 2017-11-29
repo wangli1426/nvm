@@ -444,7 +444,7 @@ namespace tree {
                                     // move the keys and children to the right node
                                     for (int i = start_index_for_right, j = 0; i < left->size_; ++i, ++j) {
                                         right->key_[j] = left->key_[i];
-                                        right->child_[j] = left->child_[i];
+                                        right->child_rep_[j] = left->child_rep_[i];
                                     }
 
                                     const int moved = left->size_ - start_index_for_right;

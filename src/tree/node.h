@@ -95,7 +95,7 @@ namespace tree {
 
         virtual void deserialize(void* buffer) {};
 
-        virtual node_reference<K, V>* get_self_ref() const {};
+        virtual node_reference<K, V>* get_self_ref() {};
 
         virtual void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {};
 

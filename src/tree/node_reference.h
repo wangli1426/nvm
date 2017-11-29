@@ -10,6 +10,8 @@
 #include "../blk/blk.h"
 namespace tree {
 
+    typedef int64_t blk_address;
+
 #define READONLY true
 
     template<typename K, typename V>
@@ -39,7 +41,7 @@ namespace tree {
         // bind this reference to a particular node
         virtual void bind(Node<K, V>* node) = 0;
 
-        virtual int64_t get_unified_representation() = 0;
+        virtual blk_address get_unified_representation() = 0;
 
         virtual void restore_by_unified_representation(int64_t value) = 0;
 //    private:

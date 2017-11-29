@@ -26,7 +26,45 @@ struct operation{
 #define READ_OP 1
 #define WRITE_OP 2
 
+struct char512 {
+//    int32_t i1[32];
+//    int32_t i2[32];
+//    double d[32];
+    char data[8];
+};
+
+
 int main() {
+    {
+        const int number_of_tuples = 20;
+        std::vector<int> tuples;
+        for (int i = 0; i < number_of_tuples; ++i) {
+            tuples.push_back(i);
+        }
+        std::random_shuffle(tuples.begin(), tuples.end());
+
+
+        VanillaBPlusTree<int, int, 4> tree;
+        tree.init();
+        for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
+            tree.insert(*it, *it);
+        }
+
+        printf("tree: %s\n", tree.toString().c_str());
+
+
+        std::random_shuffle(tuples.begin(), tuples.end());
+        for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
+            if (*it == 0) {
+                printf("0!\n");
+            }
+            tree.delete_key(*it);
+            printf("tree: %s after deleting %d\n", tree.toString().c_str(), *it);
+        }
+        printf("%s\n", tree.toString().c_str());
+        exit(0);
+    }
+
 
     const int order = 32;
     const int queue_length = 2;

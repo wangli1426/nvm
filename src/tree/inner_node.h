@@ -27,10 +27,13 @@ namespace tree {
         InnerNode(blk_accessor<K, V>* blk_accessor = 0, bool allocate_blk_ref = true) : size_(0), blk_accessor_(blk_accessor) {
             initialize_child_refs();
             if (blk_accessor_) {
-                if (allocate_blk_ref)
+                if (allocate_blk_ref) {
                     self_ref_ = blk_accessor_->allocate_ref();
-                else
+                    self_rep_ = self_ref_->get_unified_representation();
+                } else {
                     self_ref_ = blk_accessor_->create_null_ref();
+                    self_rep_ = self_ref_->get_unified_representation();
+                }
                 self_ref_->bind(this);
             } else {
                 self_ref_ = 0;
@@ -41,9 +44,11 @@ namespace tree {
             initialize_child_refs();
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
+                self_rep_ = self_ref_->get_unified_representation();
                 self_ref_->bind(this);
             } else {
                 self_ref_ = 0;
+                self_rep_ = -1;
             }
 
 
@@ -51,32 +56,37 @@ namespace tree {
             key_[0] = left->get_leftmost_key();
             child_[0] = blk_accessor_->create_null_ref();
             child_[0]->copy(left->get_self_ref());
+            child_rep_[0] = child_[0]->get_unified_representation();
             key_[1] = right->get_leftmost_key();
             child_[1] = blk_accessor_->create_null_ref();
             child_[1]->copy(right->get_self_ref());
+            child_rep_[1] = child_[1]->get_unified_representation();
         }
 
         ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
-                delete child_[i]->get(blk_accessor_);
+                delete get_child_reference(i)->get(blk_accessor_);
                 child_[i]->remove(blk_accessor_);
                 delete child_[i];
+                child_[i] = 0;
+                child_rep_[i] = -1;
             }
             delete self_ref_;
+            self_rep_ = -1;
         }
 
         bool insert(const K &key, const V &val) {
             const int insert_position = locate_child_index(key);
-            Node<K, V> *targetNode = child_[insert_position]->get(blk_accessor_);
+            Node<K, V> *targetNode = get_child_reference(insert_position)->get(blk_accessor_);
             bool ret = targetNode->insert(key, val);
-            child_[locate_child_index(key)]->close(blk_accessor_);
+            get_child_reference(locate_child_index(key))->close(blk_accessor_);
             return ret;
         }
 
         bool search(const K &k, V &v) {
             const int index = locate_child_index(k);
             if (index < 0) return false;
-            Node<K, V> *targeNode = child_[index]->get(blk_accessor_);
+            Node<K, V> *targeNode = get_child_reference(index)->get(blk_accessor_);
             bool ret = targeNode->search(k, v);
             child_[index]->close(blk_accessor_, READONLY);
             return ret;
@@ -86,7 +96,7 @@ namespace tree {
         bool locate_key(const K &k, node_reference<K, V> *&child, int &index) {
             int local_index = locate_child_index(k);
             if (local_index < 0) return false;
-            Node<K, V> *targeNode = child_[local_index]->get(blk_accessor_);
+            Node<K, V> *targeNode = get_child_reference(local_index)->get(blk_accessor_);
             bool ret = targeNode->locate_key(k, child, index);
             child_[local_index]->close(blk_accessor_);
             return ret;
@@ -105,7 +115,7 @@ namespace tree {
             if (child_index < 0)
                 return false;
 
-            Node<K, V> *child = child_[child_index]->get(blk_accessor_);
+            Node<K, V> *child = get_child_reference(child_index)->get(blk_accessor_);
             bool deleted = child->delete_key(k, underflow);
             if (!deleted) {
                 child_[child_index]->close(blk_accessor_);
@@ -128,8 +138,8 @@ namespace tree {
                 left_child_index = child_index;
                 right_child_index = child_index + 1;
             }
-            left_child = child_[left_child_index]->get(blk_accessor_);
-            right_child = child_[right_child_index]->get(blk_accessor_);
+            left_child = get_child_ref(left_child_index)->get(blk_accessor_);
+            right_child = get_child_ref(right_child_index)->get(blk_accessor_);
 
 
             // try to borrow an entry from the left. If no additional entry is available in the left, the two nodes will
@@ -141,23 +151,25 @@ namespace tree {
                 // if borrowed (not merged), update the boundary
                 key_[right_child_index] = boundary;
                 underflow = false;
-                child_[left_child_index]->close(blk_accessor_);
-                child_[right_child_index]->close(blk_accessor_);
+                get_child_reference(left_child_index)->close(blk_accessor_);
+                get_child_reference(right_child_index)->close(blk_accessor_);
                 return true;
             }
 
             // merged
-            child_[left_child_index]->close(blk_accessor_);
+            get_child_reference(left_child_index)->close(blk_accessor_);
 
             child_[right_child_index]->close(blk_accessor_);
             child_[right_child_index]->remove(blk_accessor_); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             delete child_[right_child_index];
             child_[right_child_index] = 0;
+            child_rep_[right_child_index] = -1;
 
 
             // remove the reference to the deleted child, i.e., right_child
             for (int i = right_child_index + 1; i < size_; ++i) {
                 this->key_[i - 1] = this->key_[i];
+                this->child_rep_[i - 1] = this->child_rep_[i];
                 this->child_[i - 1] = this->child_[i];
             }
             --this->size_;
@@ -176,12 +188,14 @@ namespace tree {
                 if (right->size_ > underflow_bound) {
                     // this node will borrow one child node from the right sibling node.
                     this->key_[this->size_] = right->key_[0];
-                    this->child_[this->size_] = right->child_[0];
+                    this->child_rep_[this->size_] = right->child_rep_[0];
+                    this->child_[this->size_] = nullptr;
                     ++this->size_;
 
                     // remove the involved child in the right sibling node
                     for (int i = 0; i < right->size_; ++i) {
                         right->key_[i] = right->key_[i + 1];
+                        right->child_rep_[i] = right->child_rep_[i + 1];
                         right->child_[i] = right->child_[i + 1];
                     }
                     --right->size_;
@@ -197,13 +211,15 @@ namespace tree {
                     // make an empty slot for the entry to borrow.
                     for (int i = right->size_; i >= 0; --i) {
                         right->key_[i + 1] = right->key_[i];
+                        right->child_rep_[i + 1] = right->child_rep_[i];
                         right->child_[i + 1] = right->child_[i];
                     }
                     ++right->size_;
 
                     // copy the entry
                     right->key_[0] = this->key_[this->size_ - 1];
-                    right->child_[0] = this->child_[this->size_ - 1];
+                    right->child_rep_[0] = this->child_rep_[this->size_ - 1];
+                    right->child_[0] = nullptr;
 
                     --this->size_;
 
@@ -216,6 +232,7 @@ namespace tree {
             // otherwise, two nodes get merged.
             for (int l = this->size_, r = 0; r < right->size_; ++l, ++r) {
                 this->key_[l] = right->key_[r];
+                this->child_rep_[l] = right->child_rep_[r];
                 this->child_[l] = right->child_[r];
             }
             this->size_ += right->size_;
@@ -229,6 +246,7 @@ namespace tree {
             // make room for insertion.
             for (int i = size_ - 1; i >= insert_position; --i) {
                 key_[i + 1] = key_[i];
+                child_rep_[i + 1] = child_rep_[i];
                 child_[i + 1] = child_[i];
             }
 
@@ -238,6 +256,8 @@ namespace tree {
 
             child_[insert_position] = blk_accessor_->create_null_ref();
             child_[insert_position]->copy(innerNode->get_self_ref());
+            child_rep_[insert_position] = innerNode->get_self_ref()->get_unified_representation();
+            child_[insert_position] = nullptr;
 
             ++size_;
         }
@@ -257,7 +277,7 @@ namespace tree {
                 key_[0] = key;
                 this->mark_modified();
             }
-            node_ref = child_[target_node_index];
+            node_ref = get_child_reference(target_node_index);
             target_child_instance = node_ref->get(blk_accessor_);
             is_split = target_child_instance->insert_with_split_support(key, val, local_split);
 
@@ -291,7 +311,7 @@ namespace tree {
             // move the keys and children to the right node
             for (int i = start_index_for_right, j = 0; i < size_; ++i, ++j) {
                 right->key_[j] = key_[i];
-                right->child_[j] = child_[i];
+                right->child_rep_[j] = child_rep_[i];
             }
 
             const int moved = size_ - start_index_for_right;
@@ -317,7 +337,7 @@ namespace tree {
         }
 
         node_reference<K, V> *get_leftmost_leaf_node() {
-            node_reference<K, V> * ret = child_[0]->get(blk_accessor_)->get_leftmost_leaf_node();
+            node_reference<K, V> * ret = get_child_reference(0)->get(blk_accessor_)->get_leftmost_leaf_node();
             child_[0]->close(blk_accessor_);
             return ret;
         }
@@ -350,7 +370,7 @@ namespace tree {
         std::string nodes_to_string() const {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
-                ss << "[" << child_[i]->get(blk_accessor_)->toString() << "]";
+                ss << "[" << get_child_reference(i)->get(blk_accessor_)->toString() << "]";
                 child_[i]->close(blk_accessor_);
                 if (i != size_ - 1) {
                     ss << " ";
@@ -376,7 +396,7 @@ namespace tree {
 
         friend std::ostream &operator<<(std::ostream &os, InnerNode<K, V, CAPACITY> const &m) {
             for (int i = 0; i < m.size_; ++i) {
-                os << "[" << m.child_[i]->toString() << "]";
+                os << "[" << m.get_child_reference(i)->toString() << "]";
                 m.child_[i].close();
                 if (i != m.size_ - 1)
                     os << " ";
@@ -399,7 +419,7 @@ namespace tree {
             write_offset += sizeof(uint32_t);
 
             // write self_ref_
-            *(reinterpret_cast<int64_t*>(write_offset)) = self_ref_->get_unified_representation();
+            *(reinterpret_cast<int64_t*>(write_offset)) = self_rep_;
             write_offset += sizeof(int64_t);
 
             // write valid keys
@@ -408,8 +428,9 @@ namespace tree {
 
             // write valid child references.
             for (int i = 0; i < size_; i++) {
-                int64_t value = child_[i]->get_unified_representation();
-                * reinterpret_cast<int64_t*>(write_offset) = value;
+//                int64_t value = child_[i]->get_unified_representation();
+//                * reinterpret_cast<int64_t*>(write_offset) = value;
+                * reinterpret_cast<int64_t*>(write_offset) = child_rep_[i];
                 write_offset += sizeof(int64_t);
             }
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
@@ -430,8 +451,10 @@ namespace tree {
             // restore self_ref_
             int64_t value = * reinterpret_cast<int64_t*>(read_offset);
             read_offset += sizeof(int64_t);
-            self_ref_->restore_by_unified_representation(value);
-            self_ref_->bind(this);
+//            self_ref_->restore_by_unified_representation(value);
+//            self_ref_->bind(this);
+            self_rep_ = value;
+            self_ref_ = nullptr;
 
             // restore valid keys
             memcpy(&key_, read_offset, size_ * sizeof(K));
@@ -441,14 +464,28 @@ namespace tree {
             for (int i = 0; i < size_; i++) {
                 int64_t value = * reinterpret_cast<int64_t*>(read_offset);
                 read_offset += sizeof(int64_t);
-                child_[i] = blk_accessor_->create_null_ref();
-                child_[i]->restore_by_unified_representation(value);
+//                get_child_reference(i) = blk_accessor_->create_null_ref();
+//                child_[i]->restore_by_unified_representation(value);
+                child_rep_[i] = value;
             }
             printf("%.2f ns to deserialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
-        node_reference<K, V>* get_self_ref() const {
+        node_reference<K, V>* get_self_ref() {
+            if (!self_ref_) {
+                self_ref_ = blk_accessor_->create_null_ref();
+                self_ref_->restore_by_unified_representation(self_rep_);
+                self_ref_->bind(this);
+            }
             return self_ref_;
+        };
+
+        node_reference<K, V>* get_child_ref(int i) {
+            if (!child_[i]) {
+                child_[i] = blk_accessor_->create_null_ref();
+                child_[i]->restore_by_unified_representation(child_rep_[i]);
+            }
+            return child_[i];
         };
 
         void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {
@@ -482,55 +519,29 @@ namespace tree {
         }
 
         node_reference<K, V>* get_child_reference(int index) {
-            return child_[index];
+            return get_child_ref(index);
         };
 
     public:
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
-        node_reference<K, V>* child_[CAPACITY];
         int size_;
+        blk_address child_rep_[CAPACITY];
 
     protected:
-//        Node<K, V> *child_[CAPACITY];
-        node_reference<K, V>* self_ref_;
+        blk_address self_rep_;
         blk_accessor<K, V>* blk_accessor_;
+    private:
+        node_reference<K, V>* child_[CAPACITY];
+        node_reference<K, V>* self_ref_;
 
     private:
         void initialize_child_refs() {
             for (int i = 0 ; i < CAPACITY; i++) {
                 child_[i] = nullptr;
+                child_rep_[i] = -1;
             }
         }
 
-//    private:
-//        friend class boost::serialization::access;
-////        template<class Archive>
-////        void serialize(Archive & ar, const unsigned int version) {
-////            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
-////            for (int i = 0; i < size_; i++) {
-////                ar & child_[i];
-////            }
-//////            child_;
-////        }
-//
-//        template<class Archive>
-//        void save(Archive & ar, const unsigned int version) const
-//        {
-//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
-//            for (int i = 0; i < size_; i++) {
-//                ar & child_[i];
-//            }
-//        }
-//        template<class Archive>
-//        void load(Archive & ar, const unsigned int version)
-//        {
-//            ar & boost::serialization::base_object<Node<K, V>>(*this) & size_ & key_ & self_ref_ ;
-//            for (int i = 0; i < size_; i++) {
-//                ar & child_[i];
-//            }
-//            self_ref_->bind(this);
-//        }
-//        BOOST_SERIALIZATION_SPLIT_MEMBER()
     };
 }
 #endif //B_TREE_INNER_NODE_H
