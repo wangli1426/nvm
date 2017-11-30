@@ -83,7 +83,7 @@ namespace tree {
         virtual int size() const {};
 
         // Return the string representation of this node.
-        virtual std::string toString() const {};
+        virtual std::string toString() {};
 
         virtual node_reference<K, V> *get_leftmost_leaf_node() {};
 

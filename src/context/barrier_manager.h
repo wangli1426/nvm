@@ -22,7 +22,7 @@ public:
         for (auto it = barriers_.begin(); it != barriers_.end(); ++it) {
             if (!it->second->is_clear()) {
                 all_cleared = false;
-                printf("[%lld]: %s\n", it->first, it->second->to_string().c_str());
+                printf("[%ld]: %s\n", it->first, it->second->to_string().c_str());
             }
         }
         if (all_cleared) {

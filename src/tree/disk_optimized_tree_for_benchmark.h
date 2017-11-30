@@ -52,9 +52,9 @@ namespace tree{
         }
 
         static void insert_callback(void* args) {
-            search_request<K,V>* context =
-                    reinterpret_cast<search_request<K,V>*>(args);
-                printf("[%d,%d] is inserted!\n", context->key, context->value);
+//            search_request<K,V>* context =
+//                    reinterpret_cast<search_request<K,V>*>(args);
+//                printf("[%d,%d] is inserted!\n", context->key, context->value);
         }
 //    struct search_context {
 //        K key;

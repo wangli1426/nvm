@@ -352,7 +352,7 @@ namespace tree {
             return size_ < CAPACITY;
         }
 
-        std::string toString() const {
+        std::string toString() {
 //        return std::to_string(this->id) + ": " + keys_to_string() + " " + nodes_to_string(); // for debug
             return keys_to_string() + " " + nodes_to_string();
         }
@@ -367,7 +367,7 @@ namespace tree {
             return ss.str();
         }
 
-        std::string nodes_to_string() const {
+        std::string nodes_to_string() {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
                 ss << "[" << get_child_reference(i)->get(blk_accessor_)->toString() << "]";
@@ -427,14 +427,16 @@ namespace tree {
             write_offset += size_ * sizeof(K);
 
             // write valid child references.
-            for (int i = 0; i < size_; i++) {
-//                int64_t value = child_[i]->get_unified_representation();
-//                * reinterpret_cast<int64_t*>(write_offset) = value;
-                * reinterpret_cast<int64_t*>(write_offset) = child_rep_[i];
-                write_offset += sizeof(int64_t);
-            }
+            memcpy(write_offset, &child_rep_[0], size_ * sizeof(blk_address));
+            write_offset += size_ * sizeof(blk_address);
+//            for (int i = 0; i < size_; i++) {
+////                int64_t value = child_[i]->get_unified_representation();
+////                * reinterpret_cast<int64_t*>(write_offset) = value;
+//                * reinterpret_cast<int64_t*>(write_offset) = child_rep_[i];
+//                write_offset += sizeof(int64_t);
+//            }
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
-            printf("%.2f ns to serialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
+//            printf("%.2f ns to serialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         void deserialize(void* buffer) {
@@ -461,14 +463,16 @@ namespace tree {
             read_offset += size_ * sizeof(K);
 
             // restore valid child references
-            for (int i = 0; i < size_; i++) {
-                int64_t value = * reinterpret_cast<int64_t*>(read_offset);
-                read_offset += sizeof(int64_t);
-//                get_child_reference(i) = blk_accessor_->create_null_ref();
-//                child_[i]->restore_by_unified_representation(value);
-                child_rep_[i] = value;
-            }
-            printf("%.2f ns to deserialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
+            memcpy(child_rep_, read_offset, size_ * sizeof(blk_address));
+            read_offset += size_ * sizeof(blk_address);
+//            for (int i = 0; i < size_; i++) {
+//                int64_t value = * reinterpret_cast<int64_t*>(read_offset);
+//                read_offset += sizeof(int64_t);
+////                get_child_reference(i) = blk_accessor_->create_null_ref();
+////                child_[i]->restore_by_unified_representation(value);
+//                child_rep_[i] = value;
+//            }
+//            printf("%.2f ns to deserialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
         node_reference<K, V>* get_self_ref() {
@@ -526,12 +530,12 @@ namespace tree {
         K key_[CAPACITY]; // key_[0] is the smallest key for this inner node. The key boundaries start from index 1.
         int size_;
         blk_address child_rep_[CAPACITY];
+        node_reference<K, V>* child_[CAPACITY];
 
     protected:
         blk_address self_rep_;
         blk_accessor<K, V>* blk_accessor_;
     private:
-        node_reference<K, V>* child_[CAPACITY];
         node_reference<K, V>* self_ref_;
 
     private:

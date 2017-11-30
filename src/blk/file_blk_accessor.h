@@ -31,8 +31,8 @@ public:
         write_cycles_ = 0;
         reads_ = 0;
         read_cycles_ = 0;
-//        cache_ = new blk_cache(block_size, 100);
-        cache_ = 0;
+//        cache_ = new blk_cache(block_size, 10000);
+        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {
@@ -92,7 +92,10 @@ public:
             blk_cache::cache_unit unit;
             bool evicted = cache_->write(address, buffer, unit);
             if (evicted) {
-                ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                if (write_status) {
+                    printf("write error: %s\n", strerror(errno));
+                }
                 free(unit.data);
             }
         }
@@ -107,7 +110,10 @@ public:
         if (cache_) {
             blk_cache::cache_unit unit;
             if (cache_->write(address, buffer, unit)) {
-                ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                if (write_status < 0) {
+                    printf("error in write: %s\n", strerror(errno));
+                }
                 free(unit.data);
             }
             return this->block_size;
@@ -124,9 +130,9 @@ public:
 
     int close() override {
         if (reads_ > 0)
-            printf("[DISK:] total reads: %llu, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
+            printf("[DISK:] total reads: %ld, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
         if (writes_ > 0)
-            printf("[DISK:] total writes: %llu, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
+            printf("[DISK:] total writes: %ld, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
         return ::close(fd_);
     }
 

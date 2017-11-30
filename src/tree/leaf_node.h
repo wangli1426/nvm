@@ -206,7 +206,7 @@ namespace tree {
             return true;
         }
 
-        std::string toString() const {
+        std::string toString() {
             std::string ret;
             std::stringstream ss;
             for (int i = 0; i < size_; i++) {

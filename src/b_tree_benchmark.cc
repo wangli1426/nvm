@@ -84,17 +84,23 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 1000;
+    const int ntuples = 10000;
     const double write_rate = 0.5;
-    const double key_skewness = 0.5;
+    const double key_skewness = 0;
 
-//    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
-//    in_disk_tree.init();
-//    benchmark<int, int>(&in_disk_tree, "in-disk", 1, ntuples, ntuples, ntuples, 1);
+    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
+    in_disk_tree.init();
+    benchmark<int, int>(&in_disk_tree, "in-disk", 1, ntuples, ntuples, ntuples, 1);
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree2("/media/nvme/tree.dat1", size);
 //    in_disk_tree2.init();
 //    benchmark<int, int>(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, ntuples, 1);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 0, key_skewness);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 0.2, key_skewness);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 0.4, key_skewness);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 0.6, key_skewness);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 0.8, key_skewness);
+//    benchmark_mixed_workload(&in_disk_tree2, "in-disk (nvme)", 1, ntuples, ntuples, 1, key_skewness);
 ////
 //
 ////
