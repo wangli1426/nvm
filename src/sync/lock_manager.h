@@ -15,7 +15,7 @@ using namespace boost;
 #define WRITE_LOCK 1
 
 
-struct lock {
+struct lock_descriptor {
     int64_t id;
     uint8_t type;
 };
@@ -29,15 +29,15 @@ public:
         }
     }
 
-    lock get_read_lock(int64_t id) {
-        lock l;
+    lock_descriptor get_read_lock(int64_t id) {
+        lock_descriptor l;
         l.type = READ_LOCK;
         l.id = id;
         get_or_create(id)->lock_shared();
         return l;
     }
 
-    bool try_get_read_lock(int64_t id, lock &l) {
+    bool try_get_read_lock(int64_t id, lock_descriptor &l) {
         bool ret = get_or_create(id)->try_lock_shared();
         if (!ret)
             return false;
@@ -46,15 +46,15 @@ public:
         return true;
     }
 
-    lock get_write_lock(int64_t id) {
-        lock l;
+    lock_descriptor get_write_lock(int64_t id) {
+        lock_descriptor l;
         l.type = WRITE_LOCK;
         l.id = id;
         get_or_create(id)->lock();
         return l;
     }
 
-    bool try_get_write_lock(int64_t id, lock& l) {
+    bool try_get_write_lock(int64_t id, lock_descriptor& l) {
         bool ret = get_or_create(id)->try_lock();
         if (!ret)
             return false;
@@ -63,7 +63,7 @@ public:
         return true;
     }
 
-    void release_lock(lock& lock) {
+    void release_lock(lock_descriptor& lock) {
         if (lock.type == WRITE_LOCK) {
             get_or_create(lock.id)->unlock();
         } else if (lock.type == READ_LOCK) {

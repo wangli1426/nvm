@@ -389,6 +389,10 @@ namespace tree {
             return self_ref_;
         };
 
+        int64_t get_self_rep() {
+            return self_ref_->get_unified_representation();
+        }
+
         void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {
             this->blk_accessor_ = blk_accessor;
         }

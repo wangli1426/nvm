@@ -484,6 +484,10 @@ namespace tree {
             return self_ref_;
         };
 
+        int64_t get_self_rep() const {
+            return self_rep_;
+        }
+
         node_reference<K, V>* get_child_ref(int i) {
             if (!child_[i]) {
                 child_[i] = blk_accessor_->create_null_ref();
