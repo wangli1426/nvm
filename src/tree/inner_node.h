@@ -484,7 +484,7 @@ namespace tree {
             return self_ref_;
         };
 
-        int64_t get_self_rep() const {
+        int64_t get_self_rep() {
             return self_rep_;
         }
 

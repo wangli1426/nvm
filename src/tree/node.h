@@ -97,6 +97,8 @@ namespace tree {
 
         virtual node_reference<K, V>* get_self_ref() {};
 
+        virtual int64_t get_self_rep() {};
+
         virtual void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {};
 
         bool is_modified() const {

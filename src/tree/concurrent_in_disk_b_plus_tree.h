@@ -73,6 +73,23 @@ namespace tree{
                     is_split = leaf->insert_with_split_support(key, value, split);
                     leaf->serialize(buffer);
                     this->blk_accessor_->write(leaf->get_self_rep(), buffer);
+                    if (is_split) {
+                        split.right->serialize(buffer);
+                        this->blk_accessor_->write(split.right->get_self_rep(), buffer);
+                        if (is_current_node_root) {
+                            // the root node was split.
+                            InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, this->blk_accessor_);
+                            new_inner_node->mark_modified();
+//                            printf("root update: %lld --> %lld\n", this->root_->get_unified_representation(),
+//                                   new_inner_node->get_self_ref()->get_unified_representation());
+                            new_inner_node->serialize(buffer);
+                            this->blk_accessor_->write(new_inner_node->get_self_rep(), buffer);
+                            update_root_node_id_and_increase_tree_height(new_inner_node->get_self_rep());
+                            // a leaf will refer to a inner node now. TODO: release the old root_
+                            // reference and create a new one.
+//                            tree_->root_->bind(new_inner_node);
+                        }
+                    }
                     manager.release_lock(l);
                     obtained_locks.pop_back();
                     return;
@@ -87,11 +104,11 @@ namespace tree{
                         inner_node->key_[0] = key;
                         inner_node->mark_modified();
                     }
-                    current_node_id = inner_node->child_rep_[target_node_index];
+                    blk_address child_node_id = inner_node->child_rep_[target_node_index];
                     parent_nodes.push(inner_node);
                     bool is_child_split;
                     Split<K, V> child_split;
-                    insert_with_pessimistic_concurrency_control(key, value, obtained_locks, parent_nodes, current_node_id, false, is_child_split, child_split);
+                    insert_with_pessimistic_concurrency_control(key, value, obtained_locks, parent_nodes, child_node_id, false, is_child_split, child_split);
 
                     // the key value pair was inserted.
                     if (is_child_split) {
@@ -185,8 +202,10 @@ namespace tree{
                         }
                     }
                 }
-                if (obtained_locks.size() > 0 && current_node_id == obtained_locks.back().id)
+                if (obtained_locks.size() > 0 && current_node_id == obtained_locks.back().id) {
+                    manager.release_lock(obtained_locks.back());
                     obtained_locks.pop_back();
+                }
                 this->blk_accessor_->free_buffer(buffer);
             }
         }

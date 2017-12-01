@@ -21,12 +21,13 @@ using namespace tree;
 int main() {
 
     vector<int> keys;
-    const int tuples = 5;
+    const int tuples = 50;
 
     for(int i = 0; i < tuples; ++i) {
         keys.push_back(i);
     }
 
+    std::random_shuffle(&keys[0], &keys[tuples]);
 
     concurrent_in_disk_b_plus_tree<int, int, 4> tree;
     tree.init();
