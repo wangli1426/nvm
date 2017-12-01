@@ -11,32 +11,20 @@
 #include "utils/sync.h"
 #include "utils/rdtsc.h"
 #include "tree/nvme_optimized_tree_for_benchmark.h"
+#include "sync/rwlock.h"
 #include <set>
 
 using namespace tree;
-
-template <typename K, typename V>
-struct operation{
-    K key;
-    V val;
-    int type;
-};
-
-
-#define READ_OP 1
-#define WRITE_OP 2
-
-struct char512 {
-//    int32_t i1[32];
-//    int32_t i2[32];
-//    double d[32];
-    char data[8];
-};
 
 
 int main() {
 
 
+    rwlock lock;
+    lock.read_lock();
+    lock.read_lock();
+    assert(!lock.try_write_lock());
+    exit(0);
 
     const int order = 32;
     const int queue_length = 2;
