@@ -14,6 +14,7 @@
 #include "../accessor/ns_entry.h"
 #include "../accessor/qpair_context.h"
 #include "../utils/rdtsc.h"
+#include "../utils/sync.h"
 #include "../context/call_back.h"
 #include "asynchronous_accessor.h"
 
@@ -86,13 +87,17 @@ public:
     }
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
+        spin_lock_.acquire();
         qpair_->synchronous_read(buffer, this->block_size, blk_addr);
+        spin_lock_.release();
         read_cycles_ += ticks() - start;
         reads_++;
     }
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
+        spin_lock_.acquire();
         qpair_->synchronous_write(buffer, this->block_size, blk_addr);
+        spin_lock_.release();
         write_cycles_ += ticks() - start;
         writes_++;
     }
@@ -220,6 +225,7 @@ private:
     volatile int32_t finished_contexts_;
     volatile int32_t pending_commands_;
     unordered_map<int64_t, string> pending_io_;
+    SpinLock spin_lock_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

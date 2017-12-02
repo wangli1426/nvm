@@ -12,6 +12,7 @@
 #include "tree/nvme_optimized_tree_for_benchmark.h"
 #include "tree/disk_optimized_tree_for_benchmark.h"
 #include "tree/concurrent_in_disk_b_plus_tree.h"
+#include "tree/concurrent_in_nvme_b_plus_tree.h"
 #include "utils/rdtsc.h"
 
 #include <list>
@@ -146,5 +147,15 @@ int main(int argc, char** argv) {
     multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
     multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
     multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+
+    concurrent_in_nvme_b_plus_tree<int, int, order> concurrent_in_nvme_tree;
+    concurrent_in_nvme_tree.init();
+    benchmark<int, int>(&concurrent_in_nvme_tree, "concurrent-in-nvme-tree", 1, ntuples, nopertions, 0, key_skewness);
+    multithread_benchmark_mixed_workload(&concurrent_in_nvme_tree, "concurrent-in-nvme-tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
+    multithread_benchmark_mixed_workload(&concurrent_in_nvme_tree, "concurrent-in-nvme-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+    multithread_benchmark_mixed_workload(&concurrent_in_nvme_tree, "concurrent-in-nvme-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+    multithread_benchmark_mixed_workload(&concurrent_in_nvme_tree, "concurrent-in-nvme-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+
+
 
 }
