@@ -87,3 +87,53 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
 
     tree.close();
 }
+
+TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertionAndSearch) {
+    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    tree.init();
+    vector<int> keys;
+    vector<operation<int, int> > operations;
+    const int tuples = 1000;
+    const int searches = 1000;
+    const int threads = 4;
+    std::thread tid[threads];
+
+    for(int i = 0; i < tuples; i++) {
+        keys.push_back(i);
+    }
+
+    std::random_shuffle(&keys[0], &keys[tuples]);
+
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        operation<int, int> op;
+        op.key = *it;
+        op.val = *it;
+        op.type = WRITE_OP;
+        operations.push_back(op);
+    }
+
+    // add search operations
+    for (int i = 0; i < searches; i++) {
+        operation<int, int> op;
+        op.key = i;
+        op.type = READ_OP;
+        operations.push_back(op);
+    }
+
+    const int tuples_per_thread = operations.size() / threads;
+    for (int i = 0; i < threads; i++) {
+        tid[i] = std::thread(&execute_operations<int, int>, &tree, operations.begin() + i * tuples_per_thread, operations.begin() + (i + 1) * tuples_per_thread);
+    }
+
+    for (int i = 0; i < threads; i++) {
+        tid[i].join();
+    }
+
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        int value;
+        tree.search(*it, value);
+        ASSERT_EQ(*it, value);
+    }
+
+    tree.close();
+}

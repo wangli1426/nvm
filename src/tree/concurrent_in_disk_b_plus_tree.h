@@ -32,6 +32,10 @@ namespace tree{
             concurrent_insert(key, value);
         }
 
+        bool search(const K &key, V &value) {
+            return concurrent_search(key, value);
+        }
+
         virtual void clear() {
             VanillaBPlusTree<K, V, CAPACITY>::close();
             set_blk_accessor(block_size_);
@@ -39,8 +43,74 @@ namespace tree{
         }
     private:
 
+        bool concurrent_search(const K &key, V & value) {
+            deque<lock_descriptor> obtained_locks;
+            bool found = search_with_concurrency_control(key, value, obtained_locks, get_root_id(), true);
+            assert(obtained_locks.size() == 0);
+            return found;
+        }
+
+        bool search_with_concurrency_control(const K &key, V &value, deque<lock_descriptor> &obtained_locks, blk_address current_node_id, bool is_current_node_root = false) {
+            bool is_found;
+            lock_descriptor l = manager.get_read_lock(current_node_id);
+            if (is_current_node_root && get_root_id() != current_node_id) {
+                // root node has been split
+                manager.release_lock(l);
+                return search_with_concurrency_control(key, value, obtained_locks, get_root_id(), true);
+            }
+
+            if (obtained_locks.size() > 0) {
+                assert(obtained_locks.size() == 1);
+                lock_descriptor parent_lock = obtained_locks.back();
+                obtained_locks.pop_back();
+                manager.release_lock(parent_lock);
+            }
+
+            obtained_locks.push_back(l);
+
+            void* buffer = this->blk_accessor_->malloc_buffer();
+            this->blk_accessor_->read(current_node_id, buffer);
+            int32_t node_type = *reinterpret_cast<int32_t*>(buffer);
+            switch (node_type) {
+                case LEAF_NODE: {
+                    LeafNode<K, V, CAPACITY> *leaf = new LeafNode<K, V, CAPACITY>(this->blk_accessor_, false);
+                    leaf->deserialize(buffer);
+                    is_found = leaf->search(key, value);
+                    manager.release_lock(l);
+                    obtained_locks.pop_back();
+                    delete leaf;
+                    this->blk_accessor_->free_buffer(buffer);
+                    return is_found;
+                }
+                case INNER_NODE: {
+                    InnerNode<K, V, CAPACITY> *inner_node = new InnerNode<K, V, CAPACITY>(this->blk_accessor_, false);
+                    inner_node->deserialize(buffer);
+                    int target_node_index = inner_node->locate_child_index(key);
+//                    const bool exceed_left_boundary = target_node_index < 0;
+//                    target_node_index = target_node_index < 0 ? 0 : target_node_index;
+                    if (target_node_index < 0) {
+                        manager.release_lock(l);
+                        obtained_locks.pop_back();
+                        return false;
+                    }
+                    blk_address child = inner_node->child_rep_[target_node_index];
+                    is_found = search_with_concurrency_control(key, value, obtained_locks, child);
+                    delete inner_node;
+                    if (obtained_locks.size() > 0 && current_node_id == obtained_locks.back().id) {
+                        manager.release_lock(obtained_locks.back());
+                        obtained_locks.pop_back();
+                    }
+                    this->blk_accessor_->free_buffer(buffer);
+                    return is_found;
+                }
+                default: {
+                    assert(false);
+                }
+            }
+        }
+
         void concurrent_insert(const K &key, const V &value) {
-            int current_node_id = this->root_->get_unified_representation();
+            int current_node_id = get_root_id();
             deque<lock_descriptor> obtained_locks;
             stack<InnerNode<K, V, CAPACITY>*> parent_nodes;
             bool is_split;
