@@ -47,7 +47,7 @@ namespace tree{
             return reinterpret_cast<int64_t>(ref_);
         }
 
-        void restore_by_unified_representation(int64_t value) {
+        void restore_by_unified_representation(int64_t value) override {
             ref_ = reinterpret_cast<Node<K, V>*>(value);
         }
     private:

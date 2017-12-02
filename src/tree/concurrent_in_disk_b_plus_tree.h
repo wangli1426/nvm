@@ -11,6 +11,7 @@
 #include "leaf_node.h"
 #include "vanilla_b_plus_tree.h"
 #include "../sync/lock_manager.h"
+#include "../blk/file_blk_accessor.h"
 #include "../utils/sync.h"
 
 using namespace std;

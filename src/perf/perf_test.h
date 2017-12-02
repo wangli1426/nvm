@@ -10,6 +10,7 @@
 #include "../utils/rdtsc.h"
 #include "insert.h"
 #include "update.h"
+#include "operation.h"
 
 using namespace std;
 template <typename K, typename V>
@@ -100,15 +101,6 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
 }
 
 
-#define READ_OP 1
-#define WRITE_OP 2
-
-template <typename K, typename V>
-struct operation{
-    K key;
-    V val;
-    int type;
-};
 
 template <typename K, typename V>
 void benchmark_mixed_workload(BTree<K, V> *tree, const string name, const int runs, const int ntuples, const int noperations,

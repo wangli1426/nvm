@@ -87,7 +87,7 @@ namespace tree {
             return reinterpret_cast<int64_t>(blk_address_);
         }
 
-        void restore_by_unified_representation(int64_t value) {
+        void restore_by_unified_representation(int64_t value) override {
             instance_ = nullptr;
             blk_address_ = value;
         }

@@ -111,12 +111,13 @@ set(TEST_FILES
 		test/disk_based_b_plus_tree_test.cc test/lru_cache_test.cc
 		test/utils/rwlock_test.cc
 		test/sync/lock_manager_test.cc
-		)
+        test/concurrent_tree_test.cc)
 
 add_executable(unittest ${TEST_FILES})
 target_link_libraries(unittest libgtest ${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_serialization.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_system.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_thread.a
+		-lpthread
 )
 add_dependencies(unittest Boost)
 
