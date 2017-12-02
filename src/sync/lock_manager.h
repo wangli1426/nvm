@@ -25,6 +25,13 @@ public:
 
     ~lock_manager() {
         for (auto it = id_to_mutex_.cbegin(); it != id_to_mutex_.cend(); ++it) {
+            if(!it->second->try_lock()) {
+                if (it->second->try_lock_shared()) {
+                    printf("warning: mutex [%d] is not fully released (shared)!\n", it->first);
+                } else {
+                    printf("warning: mutex [%d] is not fully released (write)!\n", it->first);
+                }
+            }
             delete it->second;
         }
     }
@@ -61,6 +68,14 @@ public:
         l.id = id;
         l.type = WRITE_LOCK;
         return true;
+    }
+
+    void promote_to_write_lock(lock_descriptor &l) {
+        shared_mutex* lock = get_or_create(l.id);
+        lock->lock_upgrade();
+        lock->unlock_shared();
+        lock->unlock_upgrade_and_lock();
+        l.type = WRITE_LOCK;
     }
 
     void release_lock(lock_descriptor& lock) {

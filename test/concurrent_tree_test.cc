@@ -53,7 +53,7 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
     vector<int> keys;
     vector<operation<int, int> > operations;
     const int tuples = 1000;
-    const int threads = 4;
+    const int threads = 2;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {
@@ -95,7 +95,7 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertionAndSearch) {
     vector<operation<int, int> > operations;
     const int tuples = 1000;
     const int searches = 1000;
-    const int threads = 4;
+    const int threads = 2;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {

@@ -115,8 +115,87 @@ namespace tree{
             stack<InnerNode<K, V, CAPACITY>*> parent_nodes;
             bool is_split;
             Split<K, V> split;
-            insert_with_pessimistic_concurrency_control(key, value, obtained_locks, parent_nodes, get_root_id(), true, is_split, split);
-            assert(obtained_locks.size() == 0);
+
+            if (!insert_with_optimistic_concurrency_control(key, value, obtained_locks, get_root_id(), this->get_height(), true)) {
+                assert(obtained_locks.size() == 0);
+                insert_with_pessimistic_concurrency_control(key, value, obtained_locks, parent_nodes, get_root_id(),
+                                                            true, is_split, split);
+                assert(obtained_locks.size() == 0);
+            }
+        }
+
+        bool insert_with_optimistic_concurrency_control(const K &key, const V &value, std::deque<lock_descriptor> &obtained_locks, blk_address current_node_id, int current_depth, bool is_current_node_root) {
+            lock_descriptor l;
+            if (current_depth == 1)
+                l = manager.get_write_lock(current_node_id);
+            else
+                l = manager.get_read_lock(current_node_id);
+            if (is_current_node_root && get_root_id() != current_node_id) {
+                // root has been updated
+                manager.release_lock(l);
+                return insert_with_optimistic_concurrency_control(key, value, obtained_locks, get_root_id(), this->get_height(), true);
+            }
+
+            if (obtained_locks.size() > 0) {
+                assert(obtained_locks.size() == 1);
+                lock_descriptor parent_lock = obtained_locks.back();
+                obtained_locks.pop_back();
+                manager.release_lock(parent_lock);
+            }
+
+            obtained_locks.push_back(l);
+
+            void* buffer = this->blk_accessor_->malloc_buffer();
+            this->blk_accessor_->read(current_node_id, buffer);
+            int32_t node_type = *reinterpret_cast<int32_t*>(buffer);
+            switch (node_type) {
+                case LEAF_NODE: {
+                    LeafNode<K, V, CAPACITY> *leaf = new LeafNode<K, V, CAPACITY>(this->blk_accessor_, false);
+                    leaf->deserialize(buffer);
+                    if (leaf->size() == CAPACITY) {
+                        manager.release_lock(l);
+                        obtained_locks.pop_back();
+                        this->blk_accessor_->free_buffer(buffer);
+                        delete leaf;
+                        return false;
+                    }
+
+//                    lock_descriptor& lock = obtained_locks.back();
+//                    manager.promote_to_write_lock(lock);
+//                    assert(lock.type == WRITE_LOCK);
+                    leaf->insert(key, value);
+                    leaf->serialize(buffer);
+                    this->blk_accessor_->write(current_node_id, buffer);
+                    manager.release_lock(l);
+                    obtained_locks.pop_back();
+                    delete leaf;
+                    this->blk_accessor_->free_buffer(buffer);
+                    return true;
+                }
+                case INNER_NODE: {
+                    InnerNode<K, V, CAPACITY> *inner_node = new InnerNode<K, V, CAPACITY>(this->blk_accessor_, false);
+                    inner_node->deserialize(buffer);
+                    int target_node_index = inner_node->locate_child_index(key);
+                    const bool exceed_left_boundary = target_node_index < 0;
+                    bool is_succeed = false;
+                    if (!exceed_left_boundary) {
+                        target_node_index = target_node_index < 0 ? 0 : target_node_index;
+                        blk_address child = inner_node->child_rep_[target_node_index];
+                        is_succeed = insert_with_optimistic_concurrency_control(key, value, obtained_locks, child, current_depth - 1, false);
+                    }
+                    delete inner_node;
+                    if (obtained_locks.size() > 0 && current_node_id == obtained_locks.back().id) {
+                        manager.release_lock(obtained_locks.back());
+                        obtained_locks.pop_back();
+                    }
+                    this->blk_accessor_->free_buffer(buffer);
+                    return is_succeed;
+                }
+                default: {
+                    assert(false);
+                }
+            }
+
         }
 
         void insert_with_pessimistic_concurrency_control(const K &key, const V &value, std::deque<lock_descriptor> &obtained_locks,
@@ -170,11 +249,11 @@ namespace tree{
                     inner_node->deserialize(buffer);
                     int target_node_index = inner_node->locate_child_index(key);
                     const bool exceed_left_boundary = target_node_index < 0;
-                    target_node_index = target_node_index < 0 ? 0 : target_node_index;
                     if (exceed_left_boundary) {
                         inner_node->key_[0] = key;
                         inner_node->mark_modified();
                     }
+                    target_node_index = target_node_index < 0 ? 0 : target_node_index;
                     blk_address child_node_id = inner_node->child_rep_[target_node_index];
                     parent_nodes.push(inner_node);
                     bool is_child_split;
