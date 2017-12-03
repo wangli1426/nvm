@@ -65,7 +65,7 @@ namespace tree {
 
         ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
-                delete get_child_reference(i)->get(blk_accessor_);
+//                delete get_child_reference(i)->get(blk_accessor_);
 //                child_[i]->remove(blk_accessor_);
                 delete child_[i];
                 child_[i] = 0;

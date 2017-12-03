@@ -39,13 +39,19 @@ public:
         read_cycles_ = 0;
         cursor_ = 0;
         pending_commands_ = 0;
+        qpair_ = 0;
     };
-    virtual node_reference<K, V>* allocate_ref() {
+
+    ~nvme_blk_accessor() {
+        delete qpair_;
+    }
+
+    node_reference<K, V>* allocate_ref() override {
         blk_address addr = allocate();
         return new blk_node_reference<K, V, CAPACITY>(addr);
     };
 
-    virtual node_reference<K, V>* create_null_ref() {
+    node_reference<K, V>* create_null_ref() override {
         return new blk_node_reference<K, V, CAPACITY>(-1);
     };
 
@@ -121,11 +127,8 @@ public:
         para->pending_command = &pending_commands_;
         para->id = blk_addr;
         para->type = "read";
-//        assert(pending_io_.find(para->id) == pending_io_.cend());
         pending_io_[para->id] = para->type;
         para->pending_io_ = &pending_io_;
-//        printf("%s to submit asynch read on %lld\n", context->get_name(), blk_addr);
-//        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
@@ -146,23 +149,8 @@ public:
         return ost.str();
     }
 
-
     int process_completion(int max = 1) {
-//        printf("process_completion is called!\n");
-        int32_t status = qpair_->process_completions(max);
-        if (status < 0) {
-            printf("errors in process_completions!\n");
-            return status;
-        }
-#ifdef __NVME_ACCESSOR_LOG__
-        printf("%d commands left.\n", pending_commands_);
-        if (pending_commands_ < 0) {
-            sleep(1);
-        }
-#endif
-        int processed = finished_contexts_;
-        finished_contexts_ = 0;
-        return processed;
+        return process_completion(qpair_, max);
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
@@ -214,6 +202,26 @@ public:
         string type;
         unordered_map<int64_t, string> *pending_io_;
     };
+
+protected:
+    int process_completion(QPair* qpair, int max = 1) {
+//        printf("process_completion is called!\n");
+        int32_t status = qpair->process_completions(max);
+        if (status < 0) {
+            printf("errors in process_completions!\n");
+            return status;
+        }
+#ifdef __NVME_ACCESSOR_LOG__
+        printf("%d commands left.\n", pending_commands_);
+        if (pending_commands_ < 0) {
+            sleep(1);
+        }
+#endif
+        int processed = finished_contexts_;
+        finished_contexts_ = 0;
+        return processed;
+    }
+
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint64_t cursor_;

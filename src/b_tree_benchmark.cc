@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     const int order = 32;
     const int size = 512;
     const int ntuples = 1000;
-    const int nopertions = 10000;
+    const int nopertions = 1000;
     const double write_rate = 0.5;
     const double key_skewness = 0;
 
@@ -140,13 +140,13 @@ int main(int argc, char** argv) {
 //    printf("tree deeps: %d\n", nvme_optimized.get_height());
 //
 
-    concurrent_in_disk_b_plus_tree<int, int, order> concurrent_in_disk_tree;
-    concurrent_in_disk_tree.init();
-    benchmark<int, int>(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, 0, key_skewness);
-    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
-    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
-    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+//    concurrent_in_disk_b_plus_tree<int, int, order> concurrent_in_disk_tree;
+//    concurrent_in_disk_tree.init();
+//    benchmark<int, int>(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, 0, key_skewness);
+//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
 
     concurrent_in_nvme_b_plus_tree<int, int, order> concurrent_in_nvme_tree;
     concurrent_in_nvme_tree.init();
