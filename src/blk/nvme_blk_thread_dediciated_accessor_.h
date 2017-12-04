@@ -28,8 +28,6 @@ namespace tree {
 
 using namespace nvm;
 
-//#define __NVME_ACCESSOR_LOG__
-
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_thread_dedicated_accessor: public nvme_blk_accessor<K, V, CAPACITY> {
 public:
@@ -37,9 +35,10 @@ public:
     };
 
     ~nvme_blk_thread_dedicated_accessor() {
-
+        for(auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
+            delete it->second;
+        }
     }
-
 
     virtual int open() {
         int status = nvm::nvm_utility::initialize_namespace();
@@ -51,52 +50,31 @@ public:
         }
     }
 
-    virtual blk_address allocate() {
-        this->spin_lock_.acquire();
-        if (!freed_blk_addresses_.empty()) {
-            auto it = freed_blk_addresses_.begin();
-            blk_address blk_addr = *it;
-            freed_blk_addresses_.erase(it);
-            this->spin_lock_.release();
-            return blk_addr;
-        } else {
-            this->spin_lock_.release();
-            return blk_address(cursor_++);
-        }
-    }
-    virtual void deallocate(const blk_address& address) {
-        this->spin_lock_.acquire();
-        if (cursor_ == address - 1)
-            cursor_ --;
-        else {
-            freed_blk_addresses_.insert(address);
-        }
-        this->spin_lock_.release();
-    }
-    virtual int close() {
-        qpair_->free_qpair();
+   virtual int close() {
 
-        if (reads_ > 0)
-            printf("[NVM:] total reads: %ld, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
-        if (writes_ > 0)
-            printf("[NVM:] total writes: %ld, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
+       for(auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
+           it->second->free_qpair();
+       }
+
+        if (this->reads_ > 0)
+            printf("[NVM:] total reads: %ld, average: %.2f us\n", this->reads_, cycles_to_microseconds(this->read_cycles_ / this->reads_));
+        if (this->writes_ > 0)
+            printf("[NVM:] total writes: %ld, average: %.2f us\n", this->writes_, cycles_to_microseconds(this->write_cycles_ / this->writes_));
     }
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_read(buffer, this->block_size, blk_addr);
-        read_cycles_ += ticks() - start;
-        reads_++;
+        this->read_cycles_ += ticks() - start;
+        this->reads_++;
     }
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_write(buffer, this->block_size, blk_addr);
-        write_cycles_ += ticks() - start;
-        writes_++;
+        this->write_cycles_ += ticks() - start;
+        this->writes_++;
     }
-
-    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) = delete;
 
     static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
         ostringstream ost;
@@ -106,26 +84,22 @@ public:
         return ost.str();
     }
 
-    int process_completion(int max = 1) = delete;
-
-    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = delete;
-
 private:
-    QPair* get_or_create_qpair(pthread_t& tid) {
+    QPair* get_or_create_qpair(const pthread_t& tid) {
         qpairs_lock_.acquire();
         QPair* qp;
         if (dedicated_qpairs_.find(tid) == dedicated_qpairs_.cend()) {
             qp = nvm_utility::allocateQPair(1);
             dedicated_qpairs_[tid] = qp;
         } else {
-            qp = nvm_utility::allocateQPair(1);
+            qp = dedicated_qpairs_[tid];
         }
         qpairs_lock_.release();
         return qp;
     }
 
 private:
-    unordered_map<pthread_t, Qpair*> dedicated_qpairs_;
+    unordered_map<pthread_t, QPair*> dedicated_qpairs_;
     SpinLock qpairs_lock_;
 };
 

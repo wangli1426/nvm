@@ -118,7 +118,7 @@ public:
     void flush() {
     }
 
-    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+    virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
         assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
@@ -153,7 +153,7 @@ public:
         return process_completion(qpair_, max);
     }
 
-    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+    virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
         assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->context = context;
@@ -222,14 +222,17 @@ protected:
         return processed;
     }
 
-private:
-    std::unordered_set<blk_address> freed_blk_addresses_;
-    uint64_t cursor_;
-    QPair* qpair_;
+protected:
+
     uint64_t read_cycles_;
     uint64_t write_cycles_;
     uint64_t reads_;
     uint64_t writes_;
+    QPair* qpair_;
+
+private:
+    std::unordered_set<blk_address> freed_blk_addresses_;
+    uint64_t cursor_;
     volatile int32_t finished_contexts_;
     volatile int32_t pending_commands_;
     unordered_map<int64_t, string> pending_io_;
