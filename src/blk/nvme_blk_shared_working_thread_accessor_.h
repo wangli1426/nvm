@@ -156,7 +156,7 @@ public:
         blk_address addr;
     };
 
-    static void *callback_function(void *arg, const struct spdk_nvme_cpl *) {
+    static void callback_function(void *arg, const struct spdk_nvme_cpl *) {
         callback_para *para = static_cast<callback_para *>(arg);
         para->pending_requests->fetch_sub(1);
         para->semaphore->post();

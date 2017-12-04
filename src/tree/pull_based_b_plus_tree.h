@@ -110,13 +110,26 @@ namespace tree {
             pending_request_ ++;
             request_queue_.push(&request);
             lock_.release();
-            request.semaphore.wait();
+            request.semaphore->wait();
             queue_free_slots_.post();
             if (request.found) {
                 value = request.value;
                 return true;
             } else
                 return false;
+        }
+
+        void asynchronous_insert(const K &key, const V &value) {
+            queue_free_slots_.wait();
+            insert_request<K, V> request;
+            request.key = key;
+            request.value = value;
+            lock_.acquire();
+            pending_request_++;
+            request_queue_.push(&request);
+            lock_.release();
+            request.semaphore->wait();
+            queue_free_slots_.post();
         }
 
         // the logic of this function is identical to of asynchronous_search, except for calling callback function before
