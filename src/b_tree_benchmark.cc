@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 10000;
-    const int nopertions = 10000;
+    const int ntuples = 1000;
+    const int nopertions = 1000;
     const double write_rate = 0.5;
     const double key_skewness = 0;
 
@@ -111,12 +111,18 @@ int main(int argc, char** argv) {
 //    tree.init();
 //    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
 //
-//    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(256);
-//    tree_optimized.init();
-//    benchmark<int, int>(&tree_optimized, "disk-optimized", 1, ntuples, ntuples, ntuples, 0);
-//
-//    benchmark_mixed_workload(&tree_optimized, "disk-optimized-mixed", 1, ntuples, ntuples, 0.5, 0);
+    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(256);
+    tree_optimized.init();
+    benchmark<int, int>(&tree_optimized, "disk-optimized", 1, ntuples, ntuples, ntuples, 0);
+    benchmark_mixed_workload(&tree_optimized, "disk-optimized-mixed", 1, ntuples, ntuples, 0.5, 0);
 
+
+//    disk_optimized_b_plus_tree<int, int, order> disk_optimized("tree.dat", 256);
+//    disk_optimized.init();
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
 ////
 //    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
 //    in_nvme_tree.init();
@@ -165,18 +171,19 @@ int main(int argc, char** argv) {
 //    multithread_benchmark_mixed_workload(&concurrent_dedicated_in_nvme_tree, "concurrent-dedicated-in-nvme-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
 //    concurrent_dedicated_in_nvme_tree.close();
 
-    concurrent_in_nvme_b_plus_tree<int, int, order> concurrent_shared_io_thread_in_nvme_tree(SHARED_IO_THREAD);
-    concurrent_shared_io_thread_in_nvme_tree.init();
-    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
-    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
-    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
-    concurrent_shared_io_thread_in_nvme_tree.close();
-
-    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
-    concurrent_nvme_optimized.init();
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+//    concurrent_in_nvme_b_plus_tree<int, int, order> concurrent_shared_io_thread_in_nvme_tree(SHARED_IO_THREAD);
+//    concurrent_shared_io_thread_in_nvme_tree.init();
+//    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+//    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&concurrent_shared_io_thread_in_nvme_tree, "concurrent-shared-io-thread-in-nvme-tree (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+//    concurrent_shared_io_thread_in_nvme_tree.close();
+//
+//    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
+//    concurrent_nvme_optimized.init();
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (1)", 1, ntuples, nopertions, 0.5, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (2)", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (3)", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (4)", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized (8)", 1, ntuples, nopertions, 0.5, key_skewness, 8);
 }

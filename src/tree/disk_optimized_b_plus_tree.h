@@ -31,6 +31,31 @@ namespace tree {
             this->blk_accessor_ = new file_blk_accessor<K, V, CAPACITY>(path, 512);
             this->blk_accessor_->open();
         }
+
+        virtual bool search(const K &key, V &value) {
+            search_request<K,V>* request = new search_request<K,V>;
+            Semaphore semaphore;
+            request->key = key;
+            request->value = value;
+            request->semaphore = &semaphore;
+            request->cb_f = nullptr;
+            request->args = 0;
+            this->asynchronous_search_with_callback(request);
+            semaphore.wait();
+        }
+
+        virtual void insert(const K &key, const V &value) {
+            insert_request<K,V>* request = new insert_request<K,V>;
+            Semaphore semaphore;
+            request->key = key;
+            request->value = value;
+            request->semaphore = &semaphore;
+            request->cb_f = nullptr;
+            request->args = 0;
+            this->asynchronous_insert_with_callback(request);
+            semaphore.wait();
+        }
+
     private:
         const char* path;
     };

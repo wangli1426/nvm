@@ -32,14 +32,30 @@ namespace tree {
             this->blk_accessor_->open();
         }
 
-        bool search(const K &key, V &value) {
-            return this->asynchronous_search(key, value);
+
+        virtual bool search(const K &key, V &value) {
+            search_request<K,V>* request = new search_request<K,V>;
+            Semaphore semaphore;
+            request->key = key;
+            request->value = value;
+            request->semaphore = &semaphore;
+            request->cb_f = nullptr;
+            request->args = 0;
+            this->asynchronous_search_with_callback(request);
+            semaphore.wait();
         }
 
-        void insert(const K &key, const V &value) {
-            this->asynchronous_insert(key, value);
+        virtual void insert(const K &key, const V &value) {
+            insert_request<K,V>* request = new insert_request<K,V>;
+            Semaphore semaphore;
+            request->key = key;
+            request->value = value;
+            request->semaphore = &semaphore;
+            request->cb_f = nullptr;
+            request->args = 0;
+            this->asynchronous_insert_with_callback(request);
+            semaphore.wait();
         }
-
 
     private:
         int block_size_;
