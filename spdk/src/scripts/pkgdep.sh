@@ -3,7 +3,7 @@
 
 SYSTEM=`uname -s`
 
-if [ -s /etc/redhat-release ]; then
+if [ -s /etc/redhat-release ] || [ -s /etc/amazon ]; then
 	# Includes Fedora, CentOS
 	if [ -f /etc/centos-release ]; then
 		# Add EPEL repository for CUnit-devel
