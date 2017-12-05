@@ -313,7 +313,7 @@ namespace tree {
             write_offset += sizeof(uint32_t);
 
             // write self_ref_
-            *(reinterpret_cast<int64_t*>(write_offset)) = self_ref_->get_unified_representation();
+            *(reinterpret_cast<int64_t*>(write_offset)) = get_self_rep();
             write_offset += sizeof(int64_t);
 
             // write right_sibling_ref_;

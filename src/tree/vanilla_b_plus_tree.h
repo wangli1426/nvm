@@ -113,7 +113,7 @@ namespace tree {
 
         // Search for the value associated with the given key. If the key was found, return true and the value is stored
         // in v.
-        virtual bool search(const K &k, V &v) {
+        virtual bool search(const K &k, V &v) override {
             bool ret = root_->get(blk_accessor_)->search(k, v);
             root_->close(blk_accessor_, READONLY);
             return ret;

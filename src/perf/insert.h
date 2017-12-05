@@ -34,7 +34,7 @@ void* insert_worker(void* arg) {
 }
 
 template <typename K, typename V>
-void insert(BTree<K, V> *tree, vector<pair<K, V>> tuples, int number_of_threads) {
+void insert(BTree<K, V> *tree, vector<pair<K, V>> &tuples, int number_of_threads) {
 
     pthread_t * pids = new pthread_t[number_of_threads];
     insert_context<K, V> * context = new insert_context<K, V>[number_of_threads];

@@ -17,7 +17,7 @@ namespace tree{
             semaphore = new Semaphore(queue_length);
         }
 
-        bool search(const K& key, V & value) {
+        bool search(const K& key, V & value) override {
 //            search_context* context = new search_context();
 //            context->key = key;
 //            context->sema = semaphore;
@@ -33,8 +33,11 @@ namespace tree{
             this->asynchronous_search_with_callback(request);
         }
 
-        void insert(const K& key, const V & value) {
+        void insert(const K& key, const V & value) override {
             insert_request<K, V>* request = new insert_request<K, V>;
+            if (key == 5151) {
+                printf("get %d, %d\n", key, value);
+            }
             request->key = key;
             request->value = value;
             request->semaphore = semaphore;

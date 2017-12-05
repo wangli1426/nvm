@@ -206,10 +206,14 @@ namespace tree {
                     ost << "context for " << request->key;
                     call_back_context* context;
                     std::string name = ost.str();
-                    if (request->type == SEARCH_REQUEST)
-                        context = new search_context(name, tree, static_cast<search_request<K, V>*>(request));
-                    else
-                        context = new insert_context(name, tree, static_cast<insert_request<K, V>*>(request));
+                    if (request->type == SEARCH_REQUEST) {
+                        context = new search_context(name, tree, static_cast<search_request<K, V> *>(request));
+                    } else {
+                        if (request->key == 5151) {
+                            printf("context: %d\n", request->key);
+                        }
+                        context = new insert_context(name, tree, static_cast<insert_request<K, V> *>(request));
+                    }
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
@@ -268,6 +272,7 @@ namespace tree {
                             refer_to_root_ = true;
                             node_ref_ = static_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
                             node_ref_->copy(tree_->root_);
+                            current_node_level_ = tree_->get_height();
 //                            printf("begin to insert [%d], root is %lld\n", request_->key,
 //                                   tree_->root_->get_unified_representation());
                         }
@@ -327,6 +332,9 @@ namespace tree {
                         uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
+                                if (optimistic_) {
+                                    assert(obtained_barriers_.back()->type_ == WRITE_BARRIER);
+                                }
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 if (optimistic_ && current_node_->size() == CAPACITY) {

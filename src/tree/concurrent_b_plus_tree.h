@@ -344,6 +344,7 @@ namespace tree{
                             manager.release_lock(self_lock);
                         }
                     } else {
+                        is_split = false;
                         // close the parent nodes and flush the update if any.
                         if (inner_node->is_modified()) {
                             inner_node->serialize(buffer);

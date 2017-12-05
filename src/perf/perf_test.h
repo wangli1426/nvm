@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <thread>
+#include <unordered_map>
 #include "../tree/vanilla_b_plus_tree.h"
 #include "../utils/generator.h"
 #include "../utils/rdtsc.h"
@@ -65,13 +66,12 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
         update<K, V>(tree, updates, 1);
         end = ticks();
         update_time += cycles_to_seconds(end - begin);;
-
         printf("updated...\n");
 //        sleep(1);
 
         begin = ticks();
         for (int i = 0; i < reads; ++i) {
-            int value;
+            int value = -1;
             const K key = search_keys[i];
             const bool is_found = tree->search(key, value);
             founds += is_found;
@@ -88,7 +88,6 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
     }
     delete[] search_keys;
 
-    cout << ntuples << " tuples." << endl;
 
     cout << "[" << name.c_str() << "]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
          << " reads: " << reads * runs <<" found: " << founds

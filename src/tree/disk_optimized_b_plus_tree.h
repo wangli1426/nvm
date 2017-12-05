@@ -32,7 +32,7 @@ namespace tree {
             this->blk_accessor_->open();
         }
 
-        virtual bool search(const K &key, V &value) {
+        virtual bool search(const K &key, V &value) override {
             search_request<K,V>* request = new search_request<K,V>;
             Semaphore semaphore;
             request->key = key;
@@ -44,7 +44,7 @@ namespace tree {
             semaphore.wait();
         }
 
-        virtual void insert(const K &key, const V &value) {
+        virtual void insert(const K &key, const V &value) override {
             insert_request<K,V>* request = new insert_request<K,V>;
             Semaphore semaphore;
             request->key = key;
