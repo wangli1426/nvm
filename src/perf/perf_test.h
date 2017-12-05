@@ -47,7 +47,6 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
         search_keys[i] = generator.gen();
     }
 
-    printf("begin to run benchmark\n");
     while (run--) {
 //        if (run != runs)
         tree->clear();
@@ -98,7 +97,6 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
          << endl;
 
     uint64_t total_end = ticks();
-    cout << "total execution time: " << cycles_to_seconds(total_end - total_start) << endl;
 }
 
 
@@ -225,7 +223,6 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         operations.push_back(op);
     }
 
-    printf("begin to run benchmark\n");
     while (run--) {
 //        if (run != runs)
         tree->clear();
@@ -268,7 +265,6 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
 
     }
 
-    cout << ntuples << " tuples." << endl;
 
     cout << "[" << name.c_str() << "]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
          << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
@@ -276,6 +272,5 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
          << endl;
 
     uint64_t total_end = ticks();
-    cout << "total execution time: " << cycles_to_seconds(total_end - total_start) << endl;
     delete[] tid;
 }

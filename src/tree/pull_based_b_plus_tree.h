@@ -150,32 +150,6 @@ namespace tree {
             return pending_request_.load();
         }
 
-        static void *worker_thread_logic(void *para) {
-            pull_based_b_plus_tree *tree = reinterpret_cast<pull_based_b_plus_tree *>(para);
-            while (!tree->working_thread_terminate_flag_) {
-                search_request<K, V> *request;
-                while (!tree->lock_.try_lock()) {
-                    if (tree->working_thread_terminate_flag_)
-                        return nullptr;
-                }
-                if (tree->request_queue_.size() > 0) {
-                    request = tree->request_queue_.front();
-                    tree->request_queue_.pop();
-                    tree->lock_.release();
-
-                    // we get a new search request.
-                    printf("search key: %d\n", request->key);
-                    request->found = tree->search(request->key, request->value);
-                    request->semaphore.post();
-                } else {
-                    tree->lock_.release();
-                    continue;
-                }
-
-
-            }
-        }
-
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
@@ -209,9 +183,6 @@ namespace tree {
                     if (request->type == SEARCH_REQUEST) {
                         context = new search_context(name, tree, static_cast<search_request<K, V> *>(request));
                     } else {
-                        if (request->key == 5151) {
-                            printf("context: %d\n", request->key);
-                        }
                         context = new insert_context(name, tree, static_cast<insert_request<K, V> *>(request));
                     }
                     tree->free_context_slots_ --;
