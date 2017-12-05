@@ -266,7 +266,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
     }
 
 
-    cout << "[" << name.c_str() << "]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
+    cout << "[" << name.c_str() << "(" << threads << ")" << "]: " << "#. of runs: " << runs << ", #. of tuples: " << ntuples
          << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
          << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
          << endl;

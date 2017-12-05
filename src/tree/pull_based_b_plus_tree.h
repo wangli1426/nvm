@@ -101,23 +101,23 @@ namespace tree {
             VanillaBPlusTree<K, V, CAPACITY>::close();
         }
 
-        bool asynchronous_search(K key, V &value) {
-            queue_free_slots_.wait();
-            search_request<K, V> request;
-            request.found = false;
-            request.key = key;
-            lock_.acquire();
-            pending_request_ ++;
-            request_queue_.push(&request);
-            lock_.release();
-            request.semaphore.wait();
-            queue_free_slots_.post();
-            if (request.found) {
-                value = request.value;
-                return true;
-            } else
-                return false;
-        }
+//        bool asynchronous_search(K key, V &value) {
+//            queue_free_slots_.wait();
+//            search_request<K, V> request;
+//            request.found = false;
+//            request.key = key;
+//            lock_.acquire();
+//            pending_request_ ++;
+//            request_queue_.push(&request);
+//            lock_.release();
+//            request.semaphore.wait();
+//            queue_free_slots_.post();
+//            if (request.found) {
+//                value = request.value;
+//                return true;
+//            } else
+//                return false;
+//        }
 
         // the logic of this function is identical to of asynchronous_search, except for calling callback function before
         // return
@@ -125,9 +125,9 @@ namespace tree {
 //            queue_free_slots_.wait();
 //            printf("cb: %llx, arg: %llx\n", cb_f, args);
             lock_.acquire();
-            pending_request_ ++;
             request_queue_.push(request);
             lock_.release();
+            pending_request_ ++;
 //            request.semaphore.wait();
 //            queue_free_slots_.post();
 //            if (request.found) {
@@ -141,13 +141,24 @@ namespace tree {
 
         bool asynchronous_insert_with_callback(insert_request<K, V>* request) {
             lock_.acquire();
-            pending_request_++;
             request_queue_.push(request);
             lock_.release();
+            pending_request_++;
         }
 
         int get_pending_requests() const {
             return pending_request_.load();
+        }
+
+        request<K, V>* atomic_dequeue_request() {
+            request<K, V>* ret = nullptr;
+            lock_.acquire();
+            if (request_queue_.size() > 0) {
+                ret = request_queue_.front();
+                request_queue_.pop();
+            }
+            lock_.release();
+            return ret;
         }
 
         static void *context_based_process(void* para) {
@@ -155,12 +166,12 @@ namespace tree {
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
 //                usleep(100000);
                 request<K, V>* request;
-                while (!tree->lock_.try_lock()) {
-                    if (tree->working_thread_terminate_flag_ && tree->pending_request_.load() == 0) {
-                        printf("context based process thread terminates!\n");
-                        return nullptr;
-                    }
-                }
+//                while (!tree->lock_.try_lock()) {
+//                    if (tree->working_thread_terminate_flag_ && tree->pending_request_.load() == 0) {
+//                        printf("context based process thread terminates!\n");
+//                        return nullptr;
+//                    }
+//                }
 
                 /**
                  TODO 1: if all the incoming operations can be completed by calling context->run only once, the pending
@@ -172,10 +183,11 @@ namespace tree {
 
                  **/
 
-                if (tree->request_queue_.size() > 0 && tree->free_context_slots_.load() > 0) {
-                    request = tree->request_queue_.front();
-                    tree->request_queue_.pop();
-                    tree->lock_.release();
+//                if (tree->request_queue_.size() > 0 && tree->free_context_slots_.load() > 0) {
+//                    request = tree->request_queue_queue_.front();
+//                    tree->request_queue_.pop();
+//                    tree->lock_.release();
+                if (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
                     ostringstream ost;
                     ost << "context for " << request->key;
                     call_back_context* context;
@@ -189,7 +201,7 @@ namespace tree {
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
                 } else {
-                    tree->lock_.release();
+//                    tree->lock_.release();
                     if (tree->pending_request_.load() > 0) {
                         const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
                         if (processed > 0) {
