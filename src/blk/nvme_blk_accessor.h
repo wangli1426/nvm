@@ -37,10 +37,6 @@ template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
     nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
-        writes_ = 0;
-        write_cycles_ = 0;
-        reads_ = 0;
-        read_cycles_ = 0;
         cursor_ = 0;
         pending_commands_ = 0;
         qpair_ = 0;
@@ -68,7 +64,6 @@ public:
             cout << "namespace is initialized." << endl;
         }
         qpair_ = nvm_utility::allocateQPair(1);
-        open_time_ = ticks();
         closed_ = false;
     }
 
@@ -92,7 +87,6 @@ public:
     virtual int close() {
         if (!closed_) {
             qpair_->free_qpair();
-            print_metrics();
             closed_ = true;
         }
     }
@@ -101,16 +95,16 @@ public:
         spin_lock_.acquire();
         qpair_->synchronous_read(buffer, this->block_size, blk_addr);
         spin_lock_.release();
-        read_cycles_ += ticks() - start;
-        reads_++;
+        this->metrics_.read_cycles_ += ticks() - start;
+        this->metrics_.reads_++;
     }
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         spin_lock_.acquire();
         qpair_->synchronous_write(buffer, this->block_size, blk_addr);
         spin_lock_.release();
-        write_cycles_ += ticks() - start;
-        writes_++;
+        this->metrics_.write_cycles_ += ticks() - start;
+        this->metrics_.writes_++;
     }
 
     virtual void* malloc_buffer() const {
@@ -187,11 +181,11 @@ public:
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
         *para->pending_command -= 1;
         if (para->type == NVM_READ) {
-            para->accessor->read_cycles_ += ticks() - para->start_time;
-            para->accessor->reads_.fetch_add(1);
+            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
+            para->accessor->metrics_.reads_.fetch_add(1);
         } else {
-            para->accessor->write_cycles_ += ticks() - para->start_time;
-            para->accessor->writes_.fetch_add(1);
+            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
+            para->accessor->metrics_.writes_.fetch_add(1);
         }
         para->context->transition_to_next_state();
 //        printf("%d(%s) is completed!\n", para->id, para->type.c_str());
@@ -214,6 +208,9 @@ public:
         nvme_blk_accessor* accessor;
         int32_t type;
     };
+    std::string get_name() const {
+        return std::string("NVM");
+    }
 
 protected:
     int process_completion(QPair* qpair, int max = 1) {
@@ -234,29 +231,29 @@ protected:
         return processed;
     }
 
-protected:
-    void print_metrics(const char* name = "NVM") {
-        double duration_in_seconds = cycles_to_seconds(ticks() - open_time_);
-        if (reads_ > 0)
-            printf("[%s:] total reads: %ld, average: %.2f us, IOPS: %.0f\n", name, reads_.load(),
-                   cycles_to_microseconds(read_cycles_.load() / reads_.load()), reads_.load() / duration_in_seconds);
-        if (writes_ > 0)
-            printf("[%s:] total writes: %ld, average: %.2f us, IOPS %.0f\n", name, writes_.load(),
-                   cycles_to_microseconds(write_cycles_.load() / writes_.load()), writes_.load() / duration_in_seconds);
-        if (writes_ || reads_)
-            printf("[%s:] total IO: %ld, average: %.2f us, IOPS %.0f\n", name, reads_.load() + writes_.load(),
-                   cycles_to_microseconds((read_cycles_.load() + write_cycles_.load()) / (reads_.load() + writes_.load())),
-                   (reads_.load() + writes_.load()) / duration_in_seconds);
-    }
+//    void print_metrics() {
+//        double duration_in_seconds = cycles_to_seconds(ticks() - open_time_);
+//        if (reads_ > 0)
+//            printf("[nvm:] total reads: %ld, average: %.2f us, IOPS: %.0f\n",  reads_.load(),
+//                   cycles_to_microseconds(read_cycles_.load() / reads_.load()), reads_.load() / duration_in_seconds);
+//        if (writes_ > 0)
+//            printf("[nvm:] total writes: %ld, average: %.2f us, IOPS %.0f\n",  writes_.load(),
+//                   cycles_to_microseconds(write_cycles_.load() / writes_.load()), writes_.load() / duration_in_seconds);
+//        if (writes_ || reads_)
+//            printf("[nvm:] total IO: %ld, average: %.2f us, IOPS %.0f\n", reads_.load() + writes_.load(),
+//                   cycles_to_microseconds((read_cycles_.load() + write_cycles_.load()) / (reads_.load() + writes_.load())),
+//                   (reads_.load() + writes_.load()) / duration_in_seconds);
+//    }
+//
+//protected:
+//
+//    atomic<uint64_t> read_cycles_;
+//    atomic<uint64_t> write_cycles_;
+//    atomic<uint64_t> reads_;
+//    atomic<uint64_t> writes_;
+//    int64_t open_time_;
 
-protected:
-
-    atomic<uint64_t> read_cycles_;
-    atomic<uint64_t> write_cycles_;
-    atomic<uint64_t> reads_;
-    atomic<uint64_t> writes_;
     QPair* qpair_;
-    int64_t open_time_;
     bool closed_;
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;

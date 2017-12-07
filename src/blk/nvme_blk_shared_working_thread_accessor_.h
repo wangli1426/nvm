@@ -80,7 +80,6 @@ public:
 
         if (!this->closed_) {
             terminate_io_thread();
-            this->print_metrics("NVM(io)");
             this->closed_ = true;
         }
     }
@@ -95,8 +94,8 @@ public:
         request.type = read_request;
         enqueue_io_request(request);
         semaphore.wait();
-        this->read_cycles_ += ticks() - start;
-        this->reads_++;
+        this->metrics_.read_cycles_ += ticks() - start;
+        this->metrics_.reads_++;
         return this->block_size;
     }
 
@@ -112,9 +111,13 @@ public:
         enqueue_io_request(request);
         semaphore.wait();
 
-        this->write_cycles_ += ticks() - start;
-        this->writes_++;
+        this->metrics_.write_cycles_ += ticks() - start;
+        this->metrics_.writes_++;
         return this->block_size;
+    }
+
+    std::string get_name() const {
+        return std::string("NVM(io)");
     }
 
     static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {

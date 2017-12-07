@@ -223,10 +223,13 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         operations.push_back(op);
     }
 
+    blk_metrics total_blk_metrics;
+
     while (run--) {
 //        if (run != runs)
         tree->clear();
         std::set<int> s;
+        blk_accessor<K, V>* accessor = tree->get_accessor();
 
         uint64_t begin = ticks();
         insert<K, V>(tree, tuples, 1);
@@ -237,6 +240,10 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         printf("inserted...\n");
 
 //        sleep(1);
+
+        blk_metrics metrics;
+        if(accessor)
+            accessor->start_measurement();
 
         begin = ticks();
 //        for (int i = 0; i < reads; ++i) {
@@ -259,6 +266,10 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
             tid[i].join();
         }
         tree->sync();
+        if(accessor) {
+            metrics = accessor->end_and_get_measurement();
+            total_blk_metrics.merge(metrics);
+        }
         end = ticks();
         search_time += cycles_to_seconds(end - begin);
         printf("searched...\n");
@@ -271,6 +282,8 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
          << ", Insert: " << ntuples * runs / build_time / 1000 << " K tuples / s"
          << ", Mix(" << write_rate * 100 <<"% write): " << noperations * runs / search_time / 1000 << " K tuples / s"
          << endl;
+
+    total_blk_metrics.print();
 
     uint64_t total_end = ticks();
     delete[] tid;

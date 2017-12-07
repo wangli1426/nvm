@@ -27,10 +27,6 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0) {
-        writes_ = 0;
-        write_cycles_ = 0;
-        reads_ = 0;
-        read_cycles_ = 0;
 //        cache_ = new blk_cache(block_size, 10000);
         cache_ = nullptr;
     }
@@ -76,8 +72,8 @@ public:
             return 0;
 
         if (cache_ && cache_->read(address, buffer)) {
-            read_cycles_ += ticks() - start;
-            reads_++;
+            this->metrics_.read_cycles_ += ticks() - start;
+            this->metrics_.reads_++;
             return this->block_size;
         }
 
@@ -85,8 +81,8 @@ public:
         if (status < 0) {
             printf("read error: %s\n", strerror(errno));
         }
-        read_cycles_ += ticks() - start;
-        reads_++;
+        this->metrics_.read_cycles_ += ticks() - start;
+        this->metrics_.reads_++;
 
         if (cache_) {
             blk_cache::cache_unit unit;
@@ -123,16 +119,12 @@ public:
         if (status < 0) {
             printf("write error: %s\n", strerror(errno));
         }
-        write_cycles_ += ticks() - start;
-        writes_++;
+        this->metrics_.write_cycles_ += ticks() - start;
+        this->metrics_.writes_++;
         return status;
     }
 
     int close() override {
-        if (reads_ > 0)
-            printf("[DISK:] total reads: %ld, average: %.2f us\n", reads_, cycles_to_microseconds(read_cycles_ / reads_));
-        if (writes_ > 0)
-            printf("[DISK:] total writes: %ld, average: %.2f us\n", writes_, cycles_to_microseconds(write_cycles_ / writes_));
         return ::close(fd_);
     }
 
@@ -172,6 +164,10 @@ public:
         }
         return processed;
     }
+
+    std::string get_name() const {
+        return std::string("Disk");
+    }
 private:
     bool is_address_valid(const blk_address& address) const {
         return address < cursor_ && freed_blk_addresses_.find(address) == freed_blk_addresses_.cend();
@@ -182,10 +178,6 @@ private:
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
-    uint64_t read_cycles_;
-    uint64_t write_cycles_;
-    uint64_t reads_;
-    uint64_t writes_;
     std::queue<call_back_context*> completed_callbacks_;
     blk_cache *cache_;
 };

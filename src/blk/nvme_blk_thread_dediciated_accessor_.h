@@ -58,7 +58,6 @@ public:
            for (auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
                it->second->free_qpair();
            }
-           this->print_metrics("NVM(dedicated)");
            this->closed_ = true;
        }
     }
@@ -66,15 +65,15 @@ public:
         uint64_t start = ticks();
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_read(buffer, this->block_size, blk_addr);
-        this->read_cycles_ += ticks() - start;
-        this->reads_++;
+        this->metrics_.read_cycles_ += ticks() - start;
+        this->metrics_.reads_++;
     }
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_write(buffer, this->block_size, blk_addr);
-        this->write_cycles_ += ticks() - start;
-        this->writes_++;
+        this->metrics_.write_cycles_ += ticks() - start;
+        this->metrics_.writes_++;
     }
 
     static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
@@ -85,18 +84,24 @@ public:
         return ost.str();
     }
 
+    std::string get_name() const {
+        return std::string("NVM(dedicated)");
+    }
+
 private:
     QPair* get_or_create_qpair(const pthread_t& tid) {
-        qpairs_lock_.acquire();
         QPair* qp;
-        unordered_map<pthread_t, QPair*>::const_iterator it;
-        if ((it = dedicated_qpairs_.find(tid)) == dedicated_qpairs_.cend()) {
+        qpairs_lock_.acquire();
+        unordered_map<pthread_t, QPair*>::const_iterator it = dedicated_qpairs_.find(tid);
+        qpairs_lock_.release();
+        if (it == dedicated_qpairs_.cend()) {
             qp = nvm_utility::allocateQPair(1);
+            qpairs_lock_.acquire();
             dedicated_qpairs_[tid] = qp;
+            qpairs_lock_.release();
         } else {
             qp = it->second;
         }
-        qpairs_lock_.release();
         return qp;
     }
 

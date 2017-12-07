@@ -161,6 +161,10 @@ namespace tree {
             return ret;
         };
 
+        virtual blk_accessor<K, V>* get_accessor() {
+            return this->blk_accessor_;
+        }
+
         class Iterator : public BTree<K, V>::Iterator {
         public:
             Iterator(node_reference<K, V> *leaf_node_ref, int offset, blk_accessor<K, V>* blk_accessor):

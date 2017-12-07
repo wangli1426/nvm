@@ -5,8 +5,12 @@
 #ifndef NVM_BLK_H
 #define NVM_BLK_H
 
-#include <stdint.h>
+#include <atomic>
 #include <list>
+#include <stdint.h>
+#include <string>
+#include "blk_metrics.h"
+#include "../utils/rdtsc.h"
 #include "../tree/node_reference.h"
 #include "../context/call_back.h"
 
@@ -43,6 +47,10 @@ public:
     virtual int write(const blk_address &, void* buffer) = 0;
     virtual void flush() = 0;
 
+    virtual std::string get_name() const {
+        return std::string("Undefined");
+    };
+
     virtual void* malloc_buffer() const {
         void* buffer;
         int status = posix_memalign(&buffer, block_size, block_size);
@@ -58,6 +66,24 @@ public:
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual int process_completion(int max = 1) = 0;
     const uint32_t block_size;
+
+    virtual void start_measurement() {
+        metrics_.writes_ = 0;
+        metrics_.write_cycles_ = 0;
+        metrics_.reads_ = 0;
+        metrics_.read_cycles_ = 0;
+        open_time_ = ticks();
+    };
+
+    virtual blk_metrics end_and_get_measurement() {
+        metrics_.total_cycles_ = ticks() - open_time_;
+        metrics_.name_ = get_name();
+        return metrics_;
+    }
+
+protected:
+    int64_t open_time_;
+    blk_metrics metrics_;
 };
 
 #endif //NVM_BLK_H

@@ -5,6 +5,9 @@
 #ifndef B_TREE_B_TREE_H
 #define B_TREE_B_TREE_H
 
+template <typename K, typename V>
+class blk_accessor;
+
 namespace tree {
     template<typename K, typename V>
     class BTree {
@@ -30,6 +33,8 @@ namespace tree {
         };
 
         virtual Iterator *range_search(const K &key_low, const K &key_high) = 0;
+
+        virtual blk_accessor<K, V>* get_accessor() {};
     };
 }
 #endif //B_TREE_B_TREE_H

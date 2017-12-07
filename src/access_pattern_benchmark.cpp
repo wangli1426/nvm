@@ -27,7 +27,6 @@ int main() {
     run_multiple_threads_benchmark(4, 100000, 512, 16, rand_access, read_load, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
 
-    exit(0);
 
     sleep(1);
 
