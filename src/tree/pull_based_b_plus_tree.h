@@ -212,7 +212,7 @@ namespace tree {
                     continue;
                 }
             }
-            printf("context based process thread terminates!\n");
+//            printf("context based process thread terminates!\n");
         }
 
         void sync() {
@@ -315,9 +315,7 @@ namespace tree {
                         uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
-                                if (optimistic_) {
-                                    assert(obtained_barriers_.back()->type_ == WRITE_BARRIER);
-                                }
+                                assert(obtained_barriers_.back()->type_ == WRITE_BARRIER);
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 if (optimistic_ && current_node_->size() == CAPACITY) {

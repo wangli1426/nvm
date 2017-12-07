@@ -25,9 +25,6 @@ public:
                 printf("[%ld]: %s\n", it->first, it->second->to_string().c_str());
             }
         }
-        if (all_cleared) {
-            printf("all barriers are cleared!\n");
-        }
     }
     void request_write_barrier(int64_t node_id, call_back_context* context) {
         context_barrier* barrier = get_or_create_barrier(node_id);

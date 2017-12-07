@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O3 -fpermissive -std=c++11")
 #SET(CMAKE_CXX_FLAGS "-O3 -g  -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
@@ -109,11 +109,12 @@ add_dependencies(tree_benchmark Boost)
 #
 #
 set(TEST_FILES
-		test/test.cc test/leaf_node_test.cc test/inner_node_test.cc test/b_plus_tree_test.cc test/blk_test.cc
-		test/disk_based_b_plus_tree_test.cc test/lru_cache_test.cc
+		test/test.cc test/tree/leaf_node_test.cc test/tree/inner_node_test.cc test/tree/b_plus_tree_test.cc test/blk_test.cc
+		test/tree/disk_based_b_plus_tree_test.cc test/lru_cache_test.cc
 		test/utils/rwlock_test.cc
 		test/sync/lock_manager_test.cc
-        test/concurrent_tree_test.cc)
+		test/tree/concurrent_tree_test.cc
+		test/tree/concurrent_disk_optimized_tree_test.cc)
 
 add_executable(unittest ${TEST_FILES})
 target_link_libraries(unittest libgtest

@@ -20,6 +20,8 @@ TEST(LOCK_MANAGER, SHARED_WRITE) {
     ASSERT_TRUE(manager.try_get_write_lock(0, w1));
     ASSERT_FALSE(manager.try_get_read_lock(0, s1));
 
+    manager.release_lock(w1);
+
 }
 
 

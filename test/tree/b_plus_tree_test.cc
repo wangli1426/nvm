@@ -7,7 +7,7 @@
 #include <vector>
 #include <iostream>
 #include <set>
-#include "../src/tree/vanilla_b_plus_tree.h"
+#include "../../src/tree/vanilla_b_plus_tree.h"
 
 using namespace tree;
 
@@ -174,7 +174,6 @@ TEST(BPlusTree, DeleteWithLeafNodeRebalancedAndMerged) {
     EXPECT_EQ("6 [(2,2) (5,5)] [(6,6) (7,7) (8,8)]", tree.toString());
 
     tree.delete_key(5);
-    printf("%s\n", tree.toString().c_str());
     tree.delete_key(6);
 
     tree.delete_key(2);

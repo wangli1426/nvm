@@ -8,19 +8,19 @@
 #include <iostream>
 #include <thread>
 #include <set>
-#include "../src/tree/concurrent_in_disk_b_plus_tree.h"
-#include "../src/perf/operation.h"
-#include "../src/perf/tree_operation_executor.h"
+#include "../../src/tree/disk_optimized_b_plus_tree.h"
+#include "../../src/perf/operation.h"
+#include "../../src/perf/tree_operation_executor.h"
 
 using namespace tree;
 using namespace std;
 
-TEST(ConcurrentInDiskBPlusTree, SingleThreadedInsertion) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+TEST(ConcurrentDiskOptimizedBPlusTree, SingleThreadedInsertion) {
+    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
-    const int tuples = 1000;
+    const int tuples = 10000;
 
     for(int i = 0; i < tuples; i++) {
         keys.push_back(i);
@@ -38,6 +38,8 @@ TEST(ConcurrentInDiskBPlusTree, SingleThreadedInsertion) {
 
     execute_operations<int, int>(&tree, operations.begin(), operations.end());
 
+    tree.sync();
+
     for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
         int value;
         tree.search(*it, value);
@@ -47,13 +49,13 @@ TEST(ConcurrentInDiskBPlusTree, SingleThreadedInsertion) {
     tree.close();
 }
 
-TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertion) {
+    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
-    const int tuples = 1000;
-    const int threads = 2;
+    const int tuples = 10000;
+    const int threads = 8;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {
@@ -79,6 +81,8 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
         tid[i].join();
     }
 
+    tree.sync();
+
     for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
         int value;
         tree.search(*it, value);
@@ -88,14 +92,14 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
     tree.close();
 }
 
-TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertionAndSearch) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearch) {
+    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
-    const int tuples = 1000;
-    const int searches = 1000;
-    const int threads = 2;
+    const int tuples = 10000;
+    const int searches = 10000;
+    const int threads = 8;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {
@@ -128,6 +132,8 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertionAndSearch) {
     for (int i = 0; i < threads; i++) {
         tid[i].join();
     }
+
+    tree.sync();
 
     for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
         int value;

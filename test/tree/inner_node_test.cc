@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include "../src/tree/inner_node.h"
-#include "../src/tree/leaf_node.h"
-#include "../src/blk/void_blk_accessor.h"
+#include "../../src/tree/inner_node.h"
+#include "../../src/tree/leaf_node.h"
+#include "../../src/blk/void_blk_accessor.h"
 using namespace tree;
 
 TEST(InnerNodeTest, InsertWithoutSplit) {

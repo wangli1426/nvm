@@ -37,12 +37,12 @@ namespace tree {
             search_request<K,V>* request = new search_request<K,V>;
             Semaphore semaphore;
             request->key = key;
-            request->value = value;
             request->semaphore = &semaphore;
             request->cb_f = nullptr;
             request->args = 0;
             this->asynchronous_search_with_callback(request);
             semaphore.wait();
+            value = request->value;
         }
 
         virtual void insert(const K &key, const V &value) {
