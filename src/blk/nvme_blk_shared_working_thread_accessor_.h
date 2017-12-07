@@ -72,18 +72,17 @@ public:
         this->qpair_ = nvm_utility::allocateQPair(1);
         terminiating_flag_ = false;
         tid = std::thread(working_thread, this);
+        this->open_time_ = ticks();
+        this->closed_ = false;
     }
 
     virtual int close() {
 
-        terminate_io_thread();
-
-        if (this->reads_ > 0)
-            printf("[NVM:] total reads: %ld, average: %.2f us\n", this->reads_,
-                   cycles_to_microseconds(this->read_cycles_ / this->reads_));
-        if (this->writes_ > 0)
-            printf("[NVM:] total writes: %ld, average: %.2f us\n", this->writes_,
-                   cycles_to_microseconds(this->write_cycles_ / this->writes_));
+        if (!this->closed_) {
+            terminate_io_thread();
+            this->print_metrics("NVM(io)");
+            this->closed_ = true;
+        }
     }
 
     virtual int read(const blk_address &blk_addr, void *buffer) {

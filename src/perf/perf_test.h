@@ -260,8 +260,9 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         }
         tree->sync();
         end = ticks();
-        search_time += cycles_to_seconds(end - begin);;
+        search_time += cycles_to_seconds(end - begin);
         printf("searched...\n");
+        printf("time: %f\n", cycles_to_seconds(end - begin));
 
     }
 

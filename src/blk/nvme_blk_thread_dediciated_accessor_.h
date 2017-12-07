@@ -48,18 +48,19 @@ public:
         } else {
             cout << "namespace is initialized." << endl;
         }
+        this->open_time_ = ticks();
+        this->closed_ = false;
     }
 
    virtual int close() {
 
-       for(auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
-           it->second->free_qpair();
+       if (!this->closed_) {
+           for (auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
+               it->second->free_qpair();
+           }
+           this->print_metrics("NVM(dedicated)");
+           this->closed_ = true;
        }
-
-        if (this->reads_ > 0)
-            printf("[NVM:] total reads: %ld, average: %.2f us\n", this->reads_, cycles_to_microseconds(this->read_cycles_ / this->reads_));
-        if (this->writes_ > 0)
-            printf("[NVM:] total writes: %ld, average: %.2f us\n", this->writes_, cycles_to_microseconds(this->write_cycles_ / this->writes_));
     }
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
@@ -88,11 +89,12 @@ private:
     QPair* get_or_create_qpair(const pthread_t& tid) {
         qpairs_lock_.acquire();
         QPair* qp;
-        if (dedicated_qpairs_.find(tid) == dedicated_qpairs_.cend()) {
+        unordered_map<pthread_t, QPair*>::const_iterator it;
+        if ((it = dedicated_qpairs_.find(tid)) == dedicated_qpairs_.cend()) {
             qp = nvm_utility::allocateQPair(1);
             dedicated_qpairs_[tid] = qp;
         } else {
-            qp = dedicated_qpairs_[tid];
+            qp = it->second;
         }
         qpairs_lock_.release();
         return qp;
