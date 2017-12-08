@@ -63,6 +63,8 @@ namespace tree {
         ~LeafNode() {
             delete right_sibling_;
             delete self_ref_;
+            right_sibling_ = nullptr;
+            self_ref_ = nullptr;
         }
 
         bool insert(const K &key, const V &val) {
@@ -112,6 +114,7 @@ namespace tree {
                 // insert the new entry.
                 entries_[insert_position] = Entry(key, val);
                 size_++;
+//                get_self_ref()->close(blk_accessor_);
                 return false;
             } else {
 
@@ -146,6 +149,7 @@ namespace tree {
                 split.left = left;
                 split.right = right;
                 split.boundary_key = right->entries_[0].key;
+//                get_self_ref()->close(blk_accessor_);
 //                right_ref->close(blk_accessor_);
                 return true;
             }
@@ -162,7 +166,8 @@ namespace tree {
 
         bool locate_key(const K &k, node_reference<K, V> *&child, int &position) {
             const bool found = search_key_position(k, position);
-            child = self_ref_;
+            child = blk_accessor_->create_null_ref();
+            child->copy(self_ref_);
             return found;
         };
 
@@ -300,6 +305,10 @@ namespace tree {
 
         int size() const {
             return size_;
+        }
+
+        void close() {
+
         }
 
         void serialize(void* buffer) {

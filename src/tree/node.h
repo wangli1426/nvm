@@ -109,6 +109,8 @@ namespace tree {
             modified_ = true;
         };
 
+        virtual void close() = 0;
+
         // Indicate if the node is a leaf node. This flag is used to avoid the overhead of virtual function call.
 #ifdef VIRTUAL_FUNCTION_OPTIMIZATION
         bool is_leaf_;

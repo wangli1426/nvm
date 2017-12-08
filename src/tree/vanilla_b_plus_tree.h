@@ -43,8 +43,9 @@ namespace tree {
         virtual void close() {
             if (root_) {
                 Node<K, V> *root_instance = root_->get(blk_accessor_);
-                root_->close(blk_accessor_);
-//            delete root_instance;
+//                root_->close(blk_accessor_);
+                root_->remove(blk_accessor_);
+//                delete root_instance;
                 delete root_;
                 root_ = 0;
             }
@@ -100,7 +101,8 @@ namespace tree {
                 node_reference<K, V>* single_child_ref = blk_accessor_->create_null_ref();
                 single_child_ref->copy(static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]);
                 static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]->copy(0);
-                root_->remove(blk_accessor_);
+                delete root_->get(this->blk_accessor_);
+                root_->close(blk_accessor_);
                 delete root_;
                 root_ = single_child_ref;
                 --depth_;
@@ -130,11 +132,6 @@ namespace tree {
             return os << m.root_->toString();
         }
 
-        typename BTree<K, V>::Iterator *get_iterator() {
-            node_reference<K, V> *leftmost_leaf_node = root_->get(blk_accessor_)->get_leftmost_leaf_node();
-
-            return new Iterator(leftmost_leaf_node, 0, blk_accessor_);
-        }
 
         virtual void init() {
             if (!blk_accessor_)
@@ -145,17 +142,27 @@ namespace tree {
             root_ = blk_accessor_->create_null_ref();
             root_->copy(leaf_node_ref);
 
-            leaf_node_ref->close(blk_accessor_);
+            root_->close(blk_accessor_);
             blk_accessor_->flush();
 //            root_ = leaf_node->get_self_ref();
-            root_->close(blk_accessor_);
+//            root_->close(blk_accessor_);
+//            delete leaf_node_ref;
             depth_ = 1;
+        }
+
+        typename BTree<K, V>::Iterator *get_iterator() {
+            node_reference<K, V> *leftmost_leaf_node = root_->get(blk_accessor_)->get_leftmost_leaf_node();
+            root_->close(blk_accessor_);
+            leftmost_leaf_node->bind(nullptr);
+            Iterator * iterator = new Iterator(leftmost_leaf_node, 0, blk_accessor_);
+            return iterator;
         }
 
         typename BTree<K, V>::Iterator *range_search(const K &key_low, const K &key_high) {
             node_reference<K, V> *leaf_node_ref;
             int offset;
             root_->get(blk_accessor_)->locate_key(key_low, leaf_node_ref, offset);
+            leaf_node_ref->bind(nullptr);
             typename BTree<K, V>::Iterator * ret =  new Iterator(leaf_node_ref, offset, key_high, blk_accessor_);
             root_->close(blk_accessor_);
             return ret;
@@ -189,9 +196,11 @@ namespace tree {
                     leaf_node_ref_->close(blk_accessor_);
                     return upper_bound_ ? key < key_high_ || key == key_high_ : true;
                 } else if (leaf_node->right_sibling_ != 0 && !leaf_node->right_sibling_->is_null_ptr()) {
+                    node_reference<K, V> *right_sibling = leaf_node->right_sibling_;
+                    blk_address right_sibling_rep = right_sibling->get_unified_representation();
                     leaf_node_ref_->close(blk_accessor_);
-//                    delete leaf_node_ref_;
-                    leaf_node_ref_->copy(leaf_node->right_sibling_);
+//                    leaf_node_ref_->copy(right_sibling);
+                    leaf_node_ref_->restore_by_unified_representation(right_sibling_rep);
                     offset_ = 0;
                     return next(key, val);
                 } else {

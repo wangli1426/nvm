@@ -55,10 +55,12 @@ namespace tree {
                 blk_accessor->write(blk_address_, write_buffer);
                 blk_accessor->free_buffer(write_buffer);
             }
+            delete instance_;
             instance_ = 0;
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) {
+            instance_->close();
             delete instance_;
             instance_ = 0;
             blk_accessor->deallocate(blk_address_);

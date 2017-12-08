@@ -127,7 +127,10 @@ TEST(DiskBasedBPlusTreeTest, MassiveRandomInsertionAndQuery) {
     for (int i = 0; i < tuples; ++i) {
         const int r = std::rand() % range;
         s.insert(r);
-        tree.insert(r, r);
+    }
+
+    for (auto it = s.cbegin(); it != s.cend(); ++it) {
+        tree.insert(*it, *it);
     }
 
     for (int i = 0; i < range; ++i) {

@@ -30,13 +30,15 @@ namespace tree {
                 if (allocate_blk_ref) {
                     self_ref_ = blk_accessor_->allocate_ref();
                     self_rep_ = self_ref_->get_unified_representation();
+                    self_ref_->bind(this);
                 } else {
-                    self_ref_ = blk_accessor_->create_null_ref();
-                    self_rep_ = self_ref_->get_unified_representation();
+//                    self_ref_ = blk_accessor_->create_null_ref();
+//                    self_rep_ = self_ref_->get_unified_representation();
+                    self_ref_ = nullptr;
+                    self_rep_ = -1;
                 }
-                self_ref_->bind(this);
             } else {
-                self_ref_ = 0;
+                self_ref_ = nullptr;
             }
         };
 
@@ -63,7 +65,7 @@ namespace tree {
             child_rep_[1] = child_[1]->get_unified_representation();
         }
 
-        ~InnerNode() {
+        virtual ~InnerNode() {
             for (int i = 0; i < size_; ++i) {
 //                delete get_child_reference(i)->get(blk_accessor_);
 //                child_[i]->remove(blk_accessor_);
@@ -159,7 +161,7 @@ namespace tree {
             // merged
             get_child_reference(left_child_index)->close(blk_accessor_);
 
-            child_[right_child_index]->close(blk_accessor_);
+//            child_[right_child_index]->close(blk_accessor_);
             child_[right_child_index]->remove(blk_accessor_); // a potential bug here, because the instance of the right node may be freed, in the balance function.
             delete child_[right_child_index];
             child_[right_child_index] = 0;
@@ -193,6 +195,7 @@ namespace tree {
                     ++this->size_;
 
                     // remove the involved child in the right sibling node
+                    delete right->child_[0];
                     for (int i = 0; i < right->size_; ++i) {
                         right->key_[i] = right->key_[i + 1];
                         right->child_rep_[i] = right->child_rep_[i + 1];
@@ -214,12 +217,15 @@ namespace tree {
                         right->child_rep_[i + 1] = right->child_rep_[i];
                         right->child_[i + 1] = right->child_[i];
                     }
+//                    delete right->child_[0];
                     ++right->size_;
 
                     // copy the entry
                     right->key_[0] = this->key_[this->size_ - 1];
                     right->child_rep_[0] = this->child_rep_[this->size_ - 1];
-                    right->child_[0] = nullptr;
+                    right->child_[0] = this->child_[this->size_ - 1];;
+                    this->child_rep_[this->size_ - 1] = -1;
+                    this->child_[this->size_ - 1] = nullptr;
 
                     --this->size_;
 
@@ -254,8 +260,8 @@ namespace tree {
 //            child_[insert_position] = new in_memory_node_ref<K, V>();
 //            child_[insert_position]->copy(innerNode->get_self_ref());
 
-            child_[insert_position] = blk_accessor_->create_null_ref();
-            child_[insert_position]->copy(innerNode->get_self_ref());
+//            child_[insert_position] = blk_accessor_->create_null_ref();
+//            child_[insert_position]->copy(innerNode->get_self_ref());
             child_rep_[insert_position] = innerNode->get_self_ref()->get_unified_representation();
             child_[insert_position] = nullptr;
 
@@ -312,6 +318,8 @@ namespace tree {
             for (int i = start_index_for_right, j = 0; i < size_; ++i, ++j) {
                 right->key_[j] = key_[i];
                 right->child_rep_[j] = child_rep_[i];
+                delete left->child_[i];
+                left->child_[i] = 0;
             }
 
             const int moved = size_ - start_index_for_right;
@@ -354,7 +362,9 @@ namespace tree {
 
         std::string toString() {
 //        return std::to_string(this->id) + ": " + keys_to_string() + " " + nodes_to_string(); // for debug
-            return keys_to_string() + " " + nodes_to_string();
+            std::string key_string = keys_to_string();
+            std::string node_string = nodes_to_string();
+            return key_string + " " + node_string;
         }
 
         std::string keys_to_string() const {
@@ -370,8 +380,10 @@ namespace tree {
         std::string nodes_to_string() {
             std::stringstream ss;
             for (int i = 0; i < size_; ++i) {
-                ss << "[" << get_child_reference(i)->get(blk_accessor_)->toString() << "]";
-                child_[i]->close(blk_accessor_);
+                node_reference<K, V>* node_reference = get_child_reference(i);
+                Node<K, V> *node = node_reference->get(blk_accessor_);
+                ss << "[" << node->toString() << "]";
+                get_child_reference(i)->close(blk_accessor_);
                 if (i != size_ - 1) {
                     ss << " ";
                 }
@@ -392,6 +404,13 @@ namespace tree {
 
         int size() const {
             return size_;
+        }
+
+        void close() {
+            for (int i = 0; i < size_; i++) {
+                get_child_ref(i)->get(this->blk_accessor_);
+                get_child_ref(i)->remove(this->blk_accessor_);
+            }
         }
 
         friend std::ostream &operator<<(std::ostream &os, InnerNode<K, V, CAPACITY> const &m) {

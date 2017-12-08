@@ -16,6 +16,7 @@ TEST(FILE_BLK_ACCESSOR, ALLOCAT_WRITE_AND_READ) {
     accessor.open();
     blk_address addr = accessor.allocate();
     void* write_buffer = accessor.malloc_buffer();
+    memset(write_buffer, 512, 1);
     void* read_buffer = accessor.malloc_buffer();
 
     ASSERT_EQ(512, accessor.write(addr, write_buffer));
@@ -24,8 +25,8 @@ TEST(FILE_BLK_ACCESSOR, ALLOCAT_WRITE_AND_READ) {
     ASSERT_TRUE(memcmp(write_buffer, read_buffer, 512) == 0);
 
     ASSERT_EQ(0, accessor.close());
-    free(write_buffer);
-    free(read_buffer);
+    accessor.free_buffer(write_buffer);
+    accessor.free_buffer(read_buffer);
 }
 
 TEST(FILE_BLK_ACCESSOR, INVALID_ACCESS) {
@@ -42,7 +43,7 @@ TEST(FILE_BLK_ACCESSOR, INVALID_ACCESS) {
     ASSERT_EQ(0, accessor.write(address1, write_buffer));
 
     accessor.close();
-    free(write_buffer);
+    accessor.free_buffer(write_buffer);
 }
 
 TEST(FILE_BLK_ACCESSOR, CONTEXT_VALIDATION) {
@@ -51,6 +52,7 @@ TEST(FILE_BLK_ACCESSOR, CONTEXT_VALIDATION) {
     blk_address  address = accessor.allocate();
 
     void* write_buffer = accessor.malloc_buffer();
+    memset(write_buffer, 512, 1);
     void* read_buffer = accessor.malloc_buffer();
     * static_cast<uint32_t*>(write_buffer) = 100;
 
@@ -59,7 +61,7 @@ TEST(FILE_BLK_ACCESSOR, CONTEXT_VALIDATION) {
 
     ASSERT_EQ(100, * static_cast<uint32_t*>(read_buffer));
 
-    free(write_buffer);
-    free(read_buffer);
+    accessor.free_buffer(write_buffer);
+    accessor.free_buffer(read_buffer);
 
 }

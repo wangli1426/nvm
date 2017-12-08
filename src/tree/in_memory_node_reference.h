@@ -10,48 +10,66 @@ namespace tree{
     class in_memory_node_ref: public node_reference<K, V> {
     public:
 
-        in_memory_node_ref(): ref_(0) {}
+        in_memory_node_ref(): rep_(-1), instance_(0) {}
 
-        in_memory_node_ref(Node<K, V>* ref): ref_(ref) {
+        in_memory_node_ref(Node<K, V>* ref): instance_(ref) {
+            if (ref)
+                rep_ = reinterpret_cast<blk_address>(ref);
+            else
+                rep_ = -1;
 
         }
         Node<K, V>* get(blk_accessor<K, V>* blk_accessor) override {
-            return ref_;
+            if (!instance_) {
+                instance_ = reinterpret_cast<Node<K, V>*>(rep_);
+            }
+            return instance_;
         }
 
         void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) override{
-
+            instance_ = nullptr;
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) override {
+            instance_->close();
+            delete instance_;
+            instance_ = 0;
+            rep_ = -1;
 //            delete ref_;
 //            ref_ = 0;
         }
 
         void copy(node_reference<K, V>* ref) {
-            if (ref)
-                this->ref_ = dynamic_cast<in_memory_node_ref<K, V>*>(ref)->ref_;
-            else
-                this->ref_ = nullptr;
+            if (ref) {
+                this->instance_ = dynamic_cast<in_memory_node_ref<K, V> *>(ref)->instance_;
+                this->rep_ = dynamic_cast<in_memory_node_ref<K, V> *>(ref)->rep_;
+            } else {
+                this->instance_ = nullptr;
+                this->rep_ = -1;
+            }
         }
 
         bool is_null_ptr() const override {
-            return !ref_;
+            return rep_ == -1;
         };
 
         void bind(Node<K, V>* node) {
-            ref_ = node;
+            instance_ = node;
+            if (node)
+                rep_ = reinterpret_cast<blk_address>(node);
         }
 
         int64_t get_unified_representation() {
-            return reinterpret_cast<int64_t>(ref_);
+            return rep_;
         }
 
         void restore_by_unified_representation(int64_t value) override {
-            ref_ = reinterpret_cast<Node<K, V>*>(value);
+            rep_ = value;
+            instance_ = 0;
         }
     private:
-        Node<K, V> *ref_;
+        Node<K, V> *instance_;
+        blk_address rep_;
     private:
 //    private:
 //        friend class boost::serialization::access;

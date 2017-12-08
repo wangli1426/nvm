@@ -16,7 +16,7 @@ using namespace tree;
 using namespace std;
 
 TEST(ConcurrentInDiskBPlusTree, SingleThreadedInsertion) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    concurrent_in_disk_b_plus_tree<int, int, 16> tree;
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
@@ -48,7 +48,7 @@ TEST(ConcurrentInDiskBPlusTree, SingleThreadedInsertion) {
 }
 
 TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    concurrent_in_disk_b_plus_tree<int, int, 16> tree;
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
@@ -89,7 +89,7 @@ TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertion) {
 }
 
 TEST(ConcurrentInDiskBPlusTree, MultipleThreadedInsertionAndSearch) {
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    concurrent_in_disk_b_plus_tree<int, int, 16> tree;
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;

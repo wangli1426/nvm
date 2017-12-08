@@ -20,27 +20,24 @@ using namespace tree;
 
 int main() {
 
-    vector<int> keys;
-    const int tuples = 50;
-
-    for(int i = 0; i < tuples; ++i) {
-        keys.push_back(i);
+    const int number_of_tuples = 15;
+    std::vector<int> tuples;
+    for (int i = 0; i < number_of_tuples; ++i) {
+        tuples.push_back(i);
     }
+//    std::random_shuffle(tuples.begin(), tuples.end());
 
-    std::random_shuffle(&keys[0], &keys[tuples]);
-
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    std::reverse(tuples.begin(), tuples.end());
+    VanillaBPlusTree<int, int, 4> tree;
     tree.init();
-
-    for(auto it = keys.cbegin(); it != keys.cend(); ++it) {
+    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
         tree.insert(*it, *it);
     }
 
-
-    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
-        int value = -1;
-        tree.search(*it, value);
-        printf("%d: %d\n", *it, value);
+    std::random_shuffle(tuples.begin(), tuples.end());
+    for (std::vector<int>::const_iterator it = tuples.cbegin(); it != tuples.cend(); ++it) {
+        printf("%d\n", *it);
+        tree.delete_key(*it);
+        printf("tree: %s\n", tree.toString().c_str());
     }
-
 }
