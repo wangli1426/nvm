@@ -53,11 +53,11 @@ public:
 
     void* malloc_buffer() const {
         void* buffer;
-//        int status = posix_memalign(&buffer, block_size, block_size);
-//        if (status != 0) {
-//            printf("error in posix_memalign()\n");
-//        }
-        buffer = malloc(block_size);
+        int status = posix_memalign(&buffer, block_size, block_size);
+        if (status != 0) {
+            printf("error in posix_memalign()\n");
+        }
+//        buffer = malloc(block_size);
         return buffer;
     }
     void free_buffer(void* buffer) const {

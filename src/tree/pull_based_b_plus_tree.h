@@ -218,7 +218,7 @@ namespace tree {
 
         void sync() {
             while(pending_request_.load()> 0) {
-                usleep(1);
+                usleep(1000);
             }
         }
 
@@ -611,10 +611,15 @@ namespace tree {
 
         class search_context : public call_back_context {
         public:
+
+            uint64_t last;
             search_context(std::string name, pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(name.c_str()),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
+                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->blk_accessor_->create_null_ref());
+                node_ref_->copy(tree->root_);
+                last = ticks();
+//                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);
@@ -622,6 +627,11 @@ namespace tree {
             }
 
             int run() {
+                int64_t duration = ticks() - last;
+                if (duration > 10000) {
+                    printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(duration), current_state);
+                }
+                last = ticks();
                 switch (this->current_state) {
                     case 0:
                         int64_t node_id;
@@ -686,11 +696,12 @@ namespace tree {
                                     obtained_barriers_.clear();
                                     return CONTEXT_TERMINATED;
                                 } else {
+                                    delete node_ref_;
                                     node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY> *>(tree_->blk_accessor_->create_null_ref());
                                     node_ref_->copy(
                                             dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->get_child_reference(
                                                     child_index));
-//                                    delete current_node_;
+                                    delete current_node_;
                                     current_node_ = 0;
                                     set_next_state(0);
                                     transition_to_next_state();

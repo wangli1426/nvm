@@ -158,8 +158,11 @@ public:
                 call_back_context* callback = completed_callbacks_.front();
                 completed_callbacks_.pop();
                 callback->transition_to_next_state();
-                if (callback->run() == CONTEXT_TERMINATED)
+//                printf("[blk:] before\n");
+                if (callback->run() == CONTEXT_TERMINATED) {
                     processed++;
+                }
+//                printf("[blk:] after\n");
             }
         }
         return processed;

@@ -113,6 +113,7 @@ public:
 //        printf("sema is closed!\n");
 #else
         sem_destroy(sem);
+//        delete sem;
 #endif
     }
 

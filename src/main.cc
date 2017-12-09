@@ -13,6 +13,8 @@
 #include "utils/rdtsc.h"
 #include "tree/nvme_optimized_tree_for_benchmark.h"
 #include "sync/rwlock.h"
+#include "perf/operation.h"
+#include "perf/tree_operation_executor.h"
 #include <set>
 
 using namespace tree;
@@ -20,30 +22,33 @@ using namespace tree;
 
 int main() {
 
-    concurrent_in_disk_b_plus_tree<int, int, 4> tree;
+    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 8);
     tree.init();
-    tree.insert(1, 1);
-    tree.insert(3, 3);
-    tree.insert(2, 2);
-    tree.insert(6, 6);
+    vector<int> keys;
+    vector<operation<int, int> > operations;
+    const int tuples = 500;
 
-//    printf("%s\n", tree.toString().c_str());
+    for(int i = 0; i < tuples; i++) {
+        keys.push_back(i);
+    }
 
-    tree.insert(10, 10);
-//    printf("%s", tree.toString().c_str());
+    std::random_shuffle(&keys[0], &keys[tuples]);
 
-    tree.insert(9, 9);
-//    printf("%s", tree.toString().c_str());
+    printf("start insertion\n");
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        tree.insert(*it, *it);
+    }
 
-    tree.insert(8, 8);
-//    printf("%s", tree.toString().c_str());
+    printf("all insertion commands are submitted!\n");
 
-    tree.insert(7, 7);
-    tree.insert(4, 4);
-    tree.insert(5, 5);
-//    printf("%s", tree.toString().c_str());
+    printf("insertion finished!\n");
 
-    tree.insert(11, 11);
-    tree.insert(12, 12);
-    printf("%s", tree.toString().c_str());
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        int value;
+        tree.search(*it, value);
+    }
+    printf("all search commands are submitted!\n");
+
+    tree.close();
+    printf("done!\n");
 }
