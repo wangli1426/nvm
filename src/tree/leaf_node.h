@@ -60,7 +60,7 @@ namespace tree {
             }
         };
 
-        ~LeafNode() {
+        virtual ~LeafNode() {
             delete right_sibling_;
             delete self_ref_;
             right_sibling_ = nullptr;

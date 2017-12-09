@@ -55,7 +55,7 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertion) {
     vector<int> keys;
     vector<operation<int, int> > operations;
     const int tuples = 2000;
-    const int threads = 8;
+    const int threads = 2;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {

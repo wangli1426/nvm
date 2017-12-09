@@ -133,25 +133,25 @@ public:
         return new blk_node_reference<K, V, CAPACITY>(addr);
     }
 
-    node_reference<K, V>* create_null_ref() {
+    node_reference<K, V>* create_null_ref() override {
         return new blk_node_reference<K, V, CAPACITY>(-1);
     };
 
-    void flush() {
+    void flush() override {
 //        fsync(fd_);
     }
 
-    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+    void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         read(blk_addr, buffer);
         completed_callbacks_.push(context);
     }
 
-    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+    void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         write(blk_addr, buffer);
         completed_callbacks_.push(context);
     }
 
-    int process_completion(int max = 1) {
+    int process_completion(int max = 1) override {
         int processed = 0;
         for (int i = 0; i < max; i++) {
             if (completed_callbacks_.size() > 0) {
@@ -165,7 +165,7 @@ public:
         return processed;
     }
 
-    std::string get_name() const {
+    std::string get_name() const override {
         return std::string("Disk");
     }
 private:

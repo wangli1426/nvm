@@ -27,9 +27,9 @@ public:
         for (auto it = id_to_mutex_.cbegin(); it != id_to_mutex_.cend(); ++it) {
             if(!it->second->try_lock()) {
                 if (it->second->try_lock_shared()) {
-                    printf("warning: mutex [%ld] is not fully released (shared)!\n", it->first);
+                    printf("warning: mutex [%lld] is not fully released (shared)!\n", it->first);
                 } else {
-                    printf("warning: mutex [%ld] is not fully released (write)!\n", it->first);
+                    printf("warning: mutex [%lld] is not fully released (write)!\n", it->first);
                 }
             }
             delete it->second;

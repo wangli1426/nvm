@@ -84,12 +84,14 @@ namespace tree{
                 case INNER_NODE: {
                     InnerNode<K, V, CAPACITY> *inner_node = new InnerNode<K, V, CAPACITY>(this->blk_accessor_, false);
                     inner_node->deserialize(buffer);
+                    this->blk_accessor_->free_buffer(buffer);
                     int target_node_index = inner_node->locate_child_index(key);
 //                    const bool exceed_left_boundary = target_node_index < 0;
 //                    target_node_index = target_node_index < 0 ? 0 : target_node_index;
                     if (target_node_index < 0) {
                         manager.release_lock(l);
                         obtained_locks.pop_back();
+                        delete inner_node;
                         return false;
                     }
                     blk_address child = inner_node->child_rep_[target_node_index];
@@ -99,7 +101,6 @@ namespace tree{
                         manager.release_lock(obtained_locks.back());
                         obtained_locks.pop_back();
                     }
-                    this->blk_accessor_->free_buffer(buffer);
                     return is_found;
                 }
                 default: {
@@ -174,6 +175,7 @@ namespace tree{
                 case INNER_NODE: {
                     InnerNode<K, V, CAPACITY> *inner_node = new InnerNode<K, V, CAPACITY>(this->blk_accessor_, false);
                     inner_node->deserialize(buffer);
+                    this->blk_accessor_->free_buffer(buffer);
                     int target_node_index = inner_node->locate_child_index(key);
                     const bool exceed_left_boundary = target_node_index < 0;
                     bool is_succeed = false;
@@ -187,7 +189,6 @@ namespace tree{
                         manager.release_lock(obtained_locks.back());
                         obtained_locks.pop_back();
                     }
-                    this->blk_accessor_->free_buffer(buffer);
                     return is_succeed;
                 }
                 default: {
@@ -234,13 +235,20 @@ namespace tree{
                             new_inner_node->serialize(buffer);
                             this->blk_accessor_->write(new_inner_node->get_self_rep(), buffer);
                             update_root_node_id_and_increase_tree_height(new_inner_node->get_self_rep());
+                            delete new_inner_node;
+                            delete split.left;
+                            delete split.right;
                             // a leaf will refer to a inner node now. TODO: release the old root_
                             // reference and create a new one.
 //                            tree_->root_->bind(new_inner_node);
                         }
+//                        delete split.right;
+                    } else {
+                        delete leaf;
                     }
                     manager.release_lock(l);
                     obtained_locks.pop_back();
+                    this->blk_accessor_->free_buffer(buffer);
                     return;
                 }
                 case INNER_NODE: {
@@ -275,6 +283,7 @@ namespace tree{
                             obtained_locks.pop_back();
                             assert(self_lock.id == current_node_id);
                             manager.release_lock(self_lock);
+                            delete inner_node;
                         } else {
                             // the inner node need to split to accommodate the new child node.
                             bool insert_to_first_half = target_node_index < CAPACITY / 2;
@@ -326,23 +335,26 @@ namespace tree{
                                 // the root node was split.
                                 InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split.left, split.right, this->blk_accessor_);
                                 new_inner_node->mark_modified();
-//                            printf("root update: %lld --> %lld\n", this->root_->get_unified_representation(),
-//                                   new_inner_node->get_self_ref()->get_unified_representation());
                                 new_inner_node->serialize(buffer);
                                 this->blk_accessor_->write(new_inner_node->get_self_rep(), buffer);
                                 update_root_node_id_and_increase_tree_height(new_inner_node->get_self_rep());
-                                // a leaf will refer to a inner node now. TODO: release the old root_
-                                // reference and create a new one.
-//                            tree_->root_->bind(new_inner_node);
+                                delete new_inner_node;
+                                delete left;
+                                delete right;
                             }
 
-
+//                            delete child_split.left;
+//                            delete child_split.right;
+                            // We do not need to delete child_split.left, because it is identical to inner_node, which
+                            // will be deleted shortly.
 
                             lock_descriptor self_lock = obtained_locks.back();
                             obtained_locks.pop_back();
                             assert(self_lock.id == current_node_id);
                             manager.release_lock(self_lock);
                         }
+                        delete child_split.left;
+                        delete child_split.right;
                     } else {
                         is_split = false;
                         // close the parent nodes and flush the update if any.
@@ -350,6 +362,7 @@ namespace tree{
                             inner_node->serialize(buffer);
                             this->blk_accessor_->write(current_node_id, buffer);
                         }
+                        delete inner_node;
                     }
                 }
                 if (obtained_locks.size() > 0 && current_node_id == obtained_locks.back().id) {
@@ -357,6 +370,7 @@ namespace tree{
                     obtained_locks.pop_back();
                 }
                 this->blk_accessor_->free_buffer(buffer);
+                return;
             }
         }
 

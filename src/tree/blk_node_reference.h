@@ -31,7 +31,7 @@ namespace tree {
         blk_node_reference(blk_address blk_address) : blk_address_(blk_address), instance_(0) {
         };
 
-        ~blk_node_reference(){
+        virtual ~blk_node_reference(){
         }
 
         Node<K, V> *get(blk_accessor<K, V>* blk_accessor) {
@@ -55,15 +55,17 @@ namespace tree {
                 blk_accessor->write(blk_address_, write_buffer);
                 blk_accessor->free_buffer(write_buffer);
             }
-            delete instance_;
+            Node<K, V>* instance = instance_;
             instance_ = 0;
+            delete instance;
         }
 
         void remove(blk_accessor<K, V>* blk_accessor) {
             instance_->close();
-            delete instance_;
-            instance_ = 0;
             blk_accessor->deallocate(blk_address_);
+            Node<K, V>* instance = instance_;
+            instance_ = 0;
+            delete instance;
         }
 
         void copy(node_reference<K, V>* ref) {

@@ -43,7 +43,7 @@ namespace tree {
     public:
         search_request(): request<K, V>(SEARCH_REQUEST) {};
     public:
-        V value;
+        V *value;
         bool found;
         Semaphore *semaphore;
         callback_function cb_f;
@@ -144,6 +144,7 @@ namespace tree {
             request_queue_.push(request);
             lock_.release();
             pending_request_++;
+            return true;
         }
 
         int get_pending_requests() const {
@@ -644,7 +645,7 @@ namespace tree {
                             case LEAF_NODE: {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
-                                request_->found = current_node_->search(request_->key, request_->value);
+                                request_->found = current_node_->search(request_->key, *request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
                                 request_->semaphore->post();

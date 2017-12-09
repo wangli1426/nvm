@@ -116,6 +116,7 @@ namespace nvm {
                                    QPair::cb_function,
                                    cba,
                                    0);
+            return size;
         }
 
         int asynchronous_read(void* buffer, uint32_t size, uint64_t start_lba, bool *is_complete) {
@@ -135,6 +136,7 @@ namespace nvm {
                                   QPair::cb_function,
                                   cba,
                                   0);
+            return size;
         }
 
         inline int32_t process_completions(uint32_t max_completions = 0) {
@@ -160,6 +162,7 @@ namespace nvm {
                 spdk_nvme_ctrlr_free_io_qpair(qpair_);
                 qpair_ = 0;
             }
+            return 0;
         }
 
     private:

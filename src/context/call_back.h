@@ -21,7 +21,7 @@ static std::queue<call_back_context*> ready_queue;
 
 static volatile int pending_context = 0;
 
-static SpinLock lock;
+static SpinLock spin_lock;
 static void process_logic(volatile bool*);
 static void add_to_queue(call_back_context* context);
 
@@ -78,59 +78,59 @@ protected:
 static void process_logic(volatile bool *terminate) {
     printf("thread starts!\n");
     while (!*terminate) {
-        lock.acquire();
+        spin_lock.acquire();
         if (submission_queue.size() > 0) {
             call_back_context *context = submission_queue.front();
             submission_queue.pop();
             ready_queue.push(context);
-            lock.release();
+            spin_lock.release();
         } else {
-            lock.release();
+            spin_lock.release();
         }
     }
     printf("thread terminates!\n");
 }
 
 static void submit_context(call_back_context* context) {
-    lock.acquire();
+    spin_lock.acquire();
     submission_queue.push(context);
     pending_context ++;
-    lock.release();
+    spin_lock.release();
 }
 
 static void add_to_queue(call_back_context* context) {
-    lock.acquire();
+    spin_lock.acquire();
     submission_queue.push(context);
-    lock.release();
+    spin_lock.release();
 }
 
 static int process_completion(int max = 1) {
     int processed = 0;
     for(int i = 0; i < max; i++) {
-        lock.acquire();
+        spin_lock.acquire();
         if (ready_queue.size() > 0) {
             call_back_context* context = ready_queue.front();
             ready_queue.pop();
-            lock.release();
+            spin_lock.release();
             const int status = context->run();
             if (status == CONTEXT_TERMINATED) {
-                lock.acquire();
+                spin_lock.acquire();
                 pending_context--;
-                lock.release();
+                spin_lock.release();
                 printf("terminated: %d -> %d\n", pending_context + 1, pending_context);
             }
             processed++;
         } else {
-            lock.release();
+            spin_lock.release();
         }
     }
     return processed;
 }
 
 static int pending_context_size() {
-    lock.acquire();
+    spin_lock.acquire();
     int ret = pending_context;
-    lock.release();
+    spin_lock.release();
     return ret;
 }
 

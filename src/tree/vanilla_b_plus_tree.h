@@ -100,9 +100,11 @@ namespace tree {
 
                 node_reference<K, V>* single_child_ref = blk_accessor_->create_null_ref();
                 single_child_ref->copy(static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]);
-                static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]->copy(0);
-                delete root_->get(this->blk_accessor_);
-                root_->close(blk_accessor_);
+//                static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0]->copy(0);
+                delete static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->child_[0];
+                static_cast<InnerNode<K, V, CAPACITY> *>(root_node)->size_ = 0;
+//                delete root_->get(this->blk_accessor_);
+                root_->remove(blk_accessor_);
                 delete root_;
                 root_ = single_child_ref;
                 --depth_;

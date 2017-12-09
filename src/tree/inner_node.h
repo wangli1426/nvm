@@ -69,9 +69,11 @@ namespace tree {
             for (int i = 0; i < size_; ++i) {
 //                delete get_child_reference(i)->get(blk_accessor_);
 //                child_[i]->remove(blk_accessor_);
-                delete child_[i];
-                child_[i] = 0;
-                child_rep_[i] = -1;
+                if (child_[i]) {
+                    delete child_[i];
+                    child_[i] = 0;
+                    child_rep_[i] = -1;
+                }
             }
             delete self_ref_;
             self_rep_ = -1;
@@ -383,7 +385,7 @@ namespace tree {
                 node_reference<K, V>* node_reference = get_child_reference(i);
                 Node<K, V> *node = node_reference->get(blk_accessor_);
                 ss << "[" << node->toString() << "]";
-                get_child_reference(i)->close(blk_accessor_);
+                node_reference->close(blk_accessor_);
                 if (i != size_ - 1) {
                     ss << " ";
                 }

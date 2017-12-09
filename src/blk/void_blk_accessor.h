@@ -63,7 +63,7 @@ public:
     }
 
     int process_completion(int max = 1) {
-
+        return 0;
     }
 };
 
