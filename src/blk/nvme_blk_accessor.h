@@ -107,10 +107,10 @@ public:
         this->metrics_.writes_++;
     }
 
-    virtual void* malloc_buffer() const {
+    void* malloc_buffer() const override {
         return spdk_dma_zmalloc(this->block_size, this->block_size, NULL);
     }
-    virtual void free_buffer(void* buffer) const {
+    void free_buffer(void* buffer) const override {
         spdk_dma_free(buffer);
     }
 

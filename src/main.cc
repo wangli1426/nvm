@@ -22,11 +22,13 @@ using namespace tree;
 
 int main() {
 
-    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 8);
+    int64_t start = ticks();
+    nvme_optimized_b_plus_tree<int, int, 32> tree(512, 128);
     tree.init();
+
     vector<int> keys;
     vector<operation<int, int> > operations;
-    const int tuples = 500;
+    const int tuples = 10000;
 
     for(int i = 0; i < tuples; i++) {
         keys.push_back(i);
@@ -49,6 +51,9 @@ int main() {
     }
     printf("all search commands are submitted!\n");
 
+    tree.sync();
+
     tree.close();
     printf("done!\n");
+    printf("total time: %.2f ms\n", cycles_to_milliseconds(ticks() - start));
 }

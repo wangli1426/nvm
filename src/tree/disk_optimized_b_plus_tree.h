@@ -35,14 +35,16 @@ namespace tree {
         virtual bool search(const K &key, V &value) override {
             search_request<K,V>* request = new search_request<K,V>;
             Semaphore semaphore;
+            bool found;
             request->key = key;
             request->value = &value;
+            request->found = &found;
             request->semaphore = &semaphore;
             request->cb_f = nullptr;
             request->args = 0;
             this->asynchronous_search_with_callback(request);
             semaphore.wait();
-//            value = request->value;
+            return found;
         }
 
         virtual void insert(const K &key, const V &value) override {

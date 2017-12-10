@@ -161,6 +161,7 @@ public:
 //                printf("[blk:] before\n");
                 if (callback->run() == CONTEXT_TERMINATED) {
                     processed++;
+                    delete callback;
                 }
 //                printf("[blk:] after\n");
             }

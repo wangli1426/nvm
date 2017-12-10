@@ -25,13 +25,16 @@ namespace tree{
         bool search(const K& key, V & value) {
             search_request<K,V>* request =
                     new search_request<K,V>;
+            bool *found = new bool;
             request->key = key;
-            request->value = value;
+            request->value = &value;
+            request->found = found;
             request->semaphore = semaphore;
             request->cb_f = &callback;
             request->args = request;
             semaphore->wait();
             this->asynchronous_search_with_callback(request);
+            return *found;
         }
 
         void insert(const K& key, const V & value) {

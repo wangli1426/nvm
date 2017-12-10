@@ -20,6 +20,7 @@
 #include "../context/call_back.h"
 #include "../tree/blk_node_reference.h"
 #include "../context/barrier_manager.h"
+#include "../utils/concurrent_queue.h"
 
 #define SEARCH_REQUEST 1
 #define INSERT_REQUEST 2
@@ -44,7 +45,7 @@ namespace tree {
         search_request(): request<K, V>(SEARCH_REQUEST) {};
     public:
         V *value;
-        bool found;
+        bool *found;
         Semaphore *semaphore;
         callback_function cb_f;
         void* args;
@@ -101,48 +102,30 @@ namespace tree {
             VanillaBPlusTree<K, V, CAPACITY>::close();
         }
 
-//        bool asynchronous_search(K key, V &value) {
-//            queue_free_slots_.wait();
-//            search_request<K, V> request;
-//            request.found = false;
-//            request.key = key;
-//            lock_.acquire();
-//            pending_request_ ++;
-//            request_queue_.push(&request);
-//            lock_.release();
-//            request.semaphore.wait();
-//            queue_free_slots_.post();
-//            if (request.found) {
-//                value = request.value;
-//                return true;
-//            } else
-//                return false;
-//        }
-
-        // the logic of this function is identical to of asynchronous_search, except for calling callback function before
-        // return
         bool asynchronous_search_with_callback(search_request<K, V>* request) {
-//            queue_free_slots_.wait();
-//            printf("cb: %llx, arg: %llx\n", cb_f, args);
-            lock_.acquire();
-            request_queue_.push(request);
-            lock_.release();
-            pending_request_ ++;
-//            request.semaphore.wait();
-//            queue_free_slots_.post();
-//            if (request.found) {
-//                value = request.value;
-//                cb_f(args);
-//                return true;
-//            } else
-//                cb_f(args);
-//            return false;
+//            lock_.acquire();
+//            request_queue_.push(request);
+//            request_queue_size_++;
+//            lock_.release();
+//            pending_request_ ++;
+//            return true;
+
+            bool succeed = request_queue_.enqueue(request);
+            assert(succeed);
+            pending_request_++;
+            return true;
         }
 
         bool asynchronous_insert_with_callback(insert_request<K, V>* request) {
-            lock_.acquire();
-            request_queue_.push(request);
-            lock_.release();
+//            lock_.acquire();
+//            request_queue_.push(request);
+//            request_queue_size_++;
+//            lock_.release();
+//            pending_request_++;
+//            return true;
+
+            bool succeed = request_queue_.enqueue(request);
+            assert(succeed);
             pending_request_++;
             return true;
         }
@@ -152,14 +135,20 @@ namespace tree {
         }
 
         request<K, V>* atomic_dequeue_request() {
-            request<K, V>* ret = nullptr;
-            lock_.acquire();
-            if (request_queue_.size() > 0) {
-                ret = request_queue_.front();
-                request_queue_.pop();
-            }
-            lock_.release();
-            return ret;
+//            request<K, V>* ret = nullptr;
+//            lock_.acquire();
+//            if (request_queue_.size() > 0) {
+//                ret = request_queue_.front();
+//                request_queue_.pop();
+//                request_queue_size_--;
+//            }
+//            lock_.release();
+//            return ret;
+            request<K, V>* ret;
+            if (request_queue_.try_dequeue(ret))
+                return ret;
+            else
+                return nullptr;
         }
 
         static void *context_based_process(void* para) {
@@ -188,14 +177,21 @@ namespace tree {
 //                    request = tree->request_queue_queue_.front();
 //                    tree->request_queue_.pop();
 //                    tree->lock_.release();
+                int64_t last = ticks();
                 if (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-                    ostringstream ost;
-                    ost << "context for " << request->key;
+//                    ostringstream ost;
+//                    ost << "context for " << request->key;
                     call_back_context* context;
-                    std::string name = ost.str();
+//                    std::string name = ost.str();
                     if (request->type == SEARCH_REQUEST) {
+                        std::string name = "search";
+//                        static_cast<search_request<K, V> *>(request)->semaphore->post();
+//                        tree->pending_request_--;
+//                        delete request;
+//                        continue;
                         context = new search_context(name, tree, static_cast<search_request<K, V> *>(request));
                     } else {
+                        std::string name = "insert";
                         context = new insert_context(name, tree, static_cast<insert_request<K, V> *>(request));
                     }
                     tree->free_context_slots_ --;
@@ -210,7 +206,6 @@ namespace tree {
 //                        tree->pending_request_ -= processed;
                         }
                     }
-                    continue;
                 }
             }
 //            printf("context based process thread terminates!\n");
@@ -521,11 +516,8 @@ namespace tree {
                         // handle root node split
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
-//                            printf("handling root split, triggered by %d\n", request_->key);
                             InnerNode<K, V, CAPACITY> *new_inner_node = new InnerNode<K, V, CAPACITY>(split_->left, split_->right, tree_->blk_accessor_);
                             new_inner_node->mark_modified();
-//                            printf("root update: %lld --> %lld\n", tree_->root_->get_unified_representation(),
-//                                   new_inner_node->get_self_ref()->get_unified_representation());
                             tree_->root_->copy(new_inner_node->get_self_ref());// the root_ reference which originally referred to a
                             // a leaf will refer to a inner node now. TODO: release the old root_
                             // reference and create a new one.
@@ -569,10 +561,8 @@ namespace tree {
                     barrier_token* token = obtained_barriers_.back();
                     obtained_barriers_.pop_back();
                     if (token->type_ == READ_BARRIER) {
-//                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
                         tree_->manager.remove_read_barrier(token->barrier_id_);
                     } else {
-//                        printf("[%d] xxx <%lld>\n", request_->key, token->barrier_id_);
                         tree_->manager.remove_write_barrier(token->barrier_id_);
                     }
                 }
@@ -627,11 +617,11 @@ namespace tree {
             }
 
             int run() {
-                int64_t duration = ticks() - last;
-                if (duration > 10000) {
-                    printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(duration), current_state);
-                }
-                last = ticks();
+//                int64_t duration = ticks() - last;
+//                if (duration > 10000) {
+//                    printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(duration), current_state);
+//                }
+//                last = ticks();
                 switch (this->current_state) {
                     case 0:
                         int64_t node_id;
@@ -655,7 +645,7 @@ namespace tree {
                             case LEAF_NODE: {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
-                                request_->found = current_node_->search(request_->key, *request_->value);
+                                *request_->found = current_node_->search(request_->key, *request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
                                 request_->semaphore->post();
@@ -678,7 +668,7 @@ namespace tree {
                                 int child_index = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->locate_child_index(
                                         request_->key);
                                 if (child_index < 0) {
-                                    request_->found = false;
+                                    *request_->found = false;
                                     delete current_node_;
                                     current_node_ = 0;
                                     request_->semaphore->post();
@@ -727,7 +717,9 @@ namespace tree {
     private:
         SpinLock lock_;
         Semaphore queue_free_slots_;
-        queue<request<K, V> *> request_queue_;
+//        queue<request<K, V> *> request_queue_;
+        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
+        atomic<int> request_queue_size_;
         pthread_t thread_handle_;
         volatile bool working_thread_terminate_flag_;
         atomic<int> free_context_slots_;
