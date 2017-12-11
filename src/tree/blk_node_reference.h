@@ -31,10 +31,10 @@ namespace tree {
         blk_node_reference(blk_address blk_address) : blk_address_(blk_address), instance_(0) {
         };
 
-        virtual ~blk_node_reference(){
+        virtual ~blk_node_reference() override {
         }
 
-        Node<K, V> *get(blk_accessor<K, V>* blk_accessor) {
+        Node<K, V> *get(blk_accessor<K, V>* blk_accessor) override {
             if (blk_address_ < 0)
                 return nullptr;
             if (instance_)
@@ -46,7 +46,7 @@ namespace tree {
             return instance_;
         };
 
-        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) {
+        void close(blk_accessor<K, V>* blk_accessor, bool read_only = false) override {
             if (!instance_)
                 return;
             if (instance_->is_modified()) {
@@ -60,7 +60,7 @@ namespace tree {
             delete instance;
         }
 
-        void remove(blk_accessor<K, V>* blk_accessor) {
+        void remove(blk_accessor<K, V>* blk_accessor) override {
             instance_->close();
             blk_accessor->deallocate(blk_address_);
             Node<K, V>* instance = instance_;
@@ -68,7 +68,7 @@ namespace tree {
             delete instance;
         }
 
-        void copy(node_reference<K, V>* ref) {
+        void copy(node_reference<K, V>* ref) override {
 //            this->ref_ = dynamic_cast<blk_node_reference<K, V>*>(ref)->ref_;
             if (ref) {
                 this->blk_address_ = dynamic_cast<blk_node_reference<K, V, CAPACITY> *>(ref)->blk_address_;
@@ -79,15 +79,15 @@ namespace tree {
             }
 //            this->instance_ = 0;
         }
-        bool is_null_ptr() const {
+        bool is_null_ptr() const override {
             return blk_address_ == -1;
         }
 
-        void bind(Node<K, V>* node) {
+        void bind(Node<K, V>* node) override {
             instance_ = node;
         }
 
-        int64_t get_unified_representation() {
+        int64_t get_unified_representation() override {
             return reinterpret_cast<int64_t>(blk_address_);
         }
 
@@ -99,6 +99,7 @@ namespace tree {
     private:
         int specific_serialize(void* write_buffer, blk_accessor<K, V>* blk_accessor) {
             instance_->serialize(write_buffer);
+            return blk_accessor->block_size;
         }
 
         int specific_deserialize(void* read_buffer, blk_accessor<K, V>* blk_accessor) {
@@ -107,10 +108,12 @@ namespace tree {
                 case LEAF_NODE:
                     instance_ = new LeafNode<K, V, CAPACITY>(blk_accessor, false);
                     instance_->deserialize(read_buffer);
+                    return blk_accessor->block_size;
                     break;
                 case INNER_NODE:
                     instance_ = new InnerNode<K, V, CAPACITY>(blk_accessor, false);
                     instance_->deserialize(read_buffer);
+                    return blk_accessor->block_size;
                     break;
                 default:
                     assert(false); // unexpected point of execution.

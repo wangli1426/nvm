@@ -15,6 +15,7 @@
 #include "sync/rwlock.h"
 #include "perf/operation.h"
 #include "perf/tree_operation_executor.h"
+#include "perf/perf_test.h"
 #include <set>
 
 using namespace tree;
@@ -22,38 +23,9 @@ using namespace tree;
 
 int main() {
 
-    int64_t start = ticks();
-    nvme_optimized_b_plus_tree<int, int, 32> tree(512, 128);
-    tree.init();
-
-    vector<int> keys;
-    vector<operation<int, int> > operations;
-    const int tuples = 10000;
-
-    for(int i = 0; i < tuples; i++) {
-        keys.push_back(i);
-    }
-
-    std::random_shuffle(&keys[0], &keys[tuples]);
-
-    printf("start insertion\n");
-    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
-        tree.insert(*it, *it);
-    }
-
-    printf("all insertion commands are submitted!\n");
-
-    printf("insertion finished!\n");
-
-    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
-        int value;
-        tree.search(*it, value);
-    }
-    printf("all search commands are submitted!\n");
-
-    tree.sync();
-
-    tree.close();
-    printf("done!\n");
-    printf("total time: %.2f ms\n", cycles_to_milliseconds(ticks() - start));
+    disk_optimized_b_plus_tree<int, int, 32> disk_optimized("tree.dat", 256);
+    disk_optimized.init();
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 10000, 10000, 0.5, 0.5, 1);
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 10000, 10000, 0.5, 0.5, 2);
+    disk_optimized.close();
 }

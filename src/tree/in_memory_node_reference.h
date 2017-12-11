@@ -59,7 +59,7 @@ namespace tree{
                 rep_ = reinterpret_cast<blk_address>(node);
         }
 
-        int64_t get_unified_representation() {
+        int64_t get_unified_representation() override {
             return rep_;
         }
 

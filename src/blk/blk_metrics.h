@@ -57,13 +57,13 @@ public:
     void print() {
         double duration_in_seconds = cycles_to_seconds(total_cycles_);
         if (reads_ > 0)
-            printf("[%s:] total reads: %lld, average: %.2f us, IOPS: %.0f\n", name_.c_str(), reads_.load(),
+            printf("[%s:] total reads: %ld, average: %.2f us, IOPS: %.0f\n", name_.c_str(), reads_.load(),
                    cycles_to_microseconds(read_cycles_.load() / reads_.load()), reads_.load() / duration_in_seconds);
         if (writes_ > 0)
-            printf("[%s:] total writes: %lld, average: %.2f us, IOPS %.0f\n", name_.c_str(), writes_.load(),
+            printf("[%s:] total writes: %ld, average: %.2f us, IOPS %.0f\n", name_.c_str(), writes_.load(),
                    cycles_to_microseconds(write_cycles_.load() / writes_.load()), writes_.load() / duration_in_seconds);
         if (writes_ || reads_)
-            printf("[%s:] total IO: %lld, average: %.2f us, IOPS %.0f\n", name_.c_str(), reads_.load() + writes_.load(),
+            printf("[%s:] total IO: %ld, average: %.2f us, IOPS %.0f\n", name_.c_str(), reads_.load() + writes_.load(),
                    cycles_to_microseconds((read_cycles_.load() + write_cycles_.load()) / (reads_.load() + writes_.load())),
                    (reads_.load() + writes_.load()) / duration_in_seconds);
     }

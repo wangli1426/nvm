@@ -80,6 +80,7 @@ public:
         int status = (int)::pread(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
             printf("read error: %s\n", strerror(errno));
+            assert(false);
         }
         this->metrics_.read_cycles_ += ticks() - start;
         this->metrics_.reads_++;
@@ -125,7 +126,9 @@ public:
     }
 
     int close() override {
-        return ::close(fd_);
+        int fd = fd_;
+        fd_ = -1;
+        return ::close(fd);
     }
 
     node_reference<K, V>* allocate_ref() override {

@@ -14,6 +14,7 @@
 #include <thread>
 #include <pthread.h>
 #include <assert.h>
+#include <boost/lockfree/queue.hpp>
 //#include "in_nvme_b_plus_tree.h"
 #include "vanilla_b_plus_tree.h"
 #include "../utils/sync.h"
@@ -78,6 +79,7 @@ namespace tree {
             free_context_slots_ = queue_length;
             pending_request_ = 0;
             queue_length_ = queue_length;
+//            request_queue_ = moodycamel::ConcurrentQueue<request<K, V> *>(256);
         };
 
         ~pull_based_b_plus_tree() {
@@ -110,8 +112,11 @@ namespace tree {
 //            pending_request_ ++;
 //            return true;
 
-            bool succeed = request_queue_.enqueue(request);
-            assert(succeed);
+//            bool succeed = request_queue_.enqueue(request);
+//            assert(succeed);
+//            pending_request_++;
+//            return true;
+            request_queue_.push(request);
             pending_request_++;
             return true;
         }
@@ -124,8 +129,11 @@ namespace tree {
 //            pending_request_++;
 //            return true;
 
-            bool succeed = request_queue_.enqueue(request);
-            assert(succeed);
+//            bool succeed = request_queue_.enqueue(request);
+//            assert(succeed);
+//            pending_request_++;
+//            return true;
+            request_queue_.push(request);
             pending_request_++;
             return true;
         }
@@ -144,8 +152,13 @@ namespace tree {
 //            }
 //            lock_.release();
 //            return ret;
+//            request<K, V>* ret;
+//            if (request_queue_.try_dequeue(ret))
+//                return ret;
+//            else
+//                return nullptr;
             request<K, V>* ret;
-            if (request_queue_.try_dequeue(ret))
+            if (request_queue_.pop(ret))
                 return ret;
             else
                 return nullptr;
@@ -209,9 +222,10 @@ namespace tree {
                 }
             }
 //            printf("context based process thread terminates!\n");
+            return nullptr;
         }
 
-        void sync() {
+        void sync() override {
             while(pending_request_.load()> 0) {
                 usleep(1000);
             }
@@ -549,6 +563,8 @@ namespace tree {
                     }
 
                 }
+                assert(false);
+                return CONTEXT_TERMINATED;
             }
 
         private:
@@ -704,6 +720,8 @@ namespace tree {
                     }
 
                 }
+                assert(false);
+                return CONTEXT_TERMINATED;
             }
 
         private:
@@ -718,7 +736,10 @@ namespace tree {
         SpinLock lock_;
         Semaphore queue_free_slots_;
 //        queue<request<K, V> *> request_queue_;
-        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
+//        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
+
+        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<256> > request_queue_;
+
         atomic<int> request_queue_size_;
         pthread_t thread_handle_;
         volatile bool working_thread_terminate_flag_;

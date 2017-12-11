@@ -31,6 +31,7 @@ template <typename K, typename V>
 void* update_worker(void* arg) {
     update_context<K, V> *context = static_cast<update_context<K, V>*>(arg);
     update_building_block(context->tree, context->it_start, context->it_end);
+    return nullptr;
 }
 
 template <typename K, typename V>

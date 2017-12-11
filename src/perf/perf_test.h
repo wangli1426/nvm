@@ -227,7 +227,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
 
     while (run--) {
 //        if (run != runs)
-        tree->clear();
+//        tree->clear();
         std::set<int> s;
         blk_accessor<K, V>* accessor = tree->get_accessor();
 
@@ -236,7 +236,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         uint64_t end = ticks();
         double elapsed_secs = cycles_to_seconds(end - begin);
         build_time += elapsed_secs;
-
+        tree->sync();
         printf("inserted...\n");
 
 //        sleep(1);

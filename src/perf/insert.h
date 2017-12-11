@@ -31,6 +31,7 @@ template <typename K, typename V>
 void* insert_worker(void* arg) {
     insert_context<K, V> *context = static_cast<insert_context<K, V>*>(arg);
     insert_building_block(context->tree, context->it_start, context->it_end);
+    return nullptr;
 }
 
 template <typename K, typename V>

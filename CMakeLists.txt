@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O0 -g -fpermissive -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O0 -g -std=c++11")
 #SET(CMAKE_CXX_FLAGS "-O3 -g  -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)
@@ -66,9 +66,9 @@ add_executable(main src/main.cc)
 target_link_libraries(main -lpthread
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_system.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_thread.a
-#	${spdk/lib/libspdk.a}
-#	${spdk/lib/librte.a}
-#	-L${CMAKE_SOURCE_DIR}/spdk/lib
+	${spdk/lib/libspdk.a}
+	${spdk/lib/librte.a}
+	-L${CMAKE_SOURCE_DIR}/spdk/lib
 #  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt
 		)
 add_dependencies(main Boost)
@@ -125,8 +125,6 @@ target_link_libraries(unittest
 add_dependencies(unittest Boost)
 
 
-add_executable(context src/context/call_back_main.cpp)
-target_link_libraries(context -lpthread)
 
 
 
