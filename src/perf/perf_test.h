@@ -214,11 +214,12 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         const int key = generator.gen();
         operation<K, V> op;
         op.key = key;
-        op.val = key;
         if (rand() / (double)RAND_MAX < write_rate) {
             op.type = WRITE_OP;
+            op.val = key;
         } else {
             op.type = READ_OP;
+            op.val = -1;
         }
         operations.push_back(op);
     }
@@ -259,7 +260,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         int ops_per_thread = noperations / threads;
         for (int i = 0; i < threads; i++) {
             tid[i] = std::thread(&execute_operations<K, V>, tree, operations.begin() + i * ops_per_thread,
-            operations.begin() + (1 + i) * ops_per_thread);
+            i == threads - 1 ? operations.end() : operations.begin() + (1 + i) * ops_per_thread);
         }
 
         for (int i = 0; i < threads; i++) {

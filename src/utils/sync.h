@@ -16,6 +16,9 @@
 #include <string>
 #include <pthread.h>
 #include <stdio.h>
+#include <atomic>
+
+using namespace std;
 
 class Lock {
     pthread_mutex_t m;
@@ -80,7 +83,7 @@ private:
     volatile char _l;  //__attribute__((aligned(64)))
 };
 
-static long sema_id = 0;
+static atomic<long> sema_id;
 class Semaphore {
 private:
     sem_t* sem;

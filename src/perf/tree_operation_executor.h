@@ -14,6 +14,7 @@ using namespace std;
 
 template<typename K, typename V>
 void execute_operations(BTree<K, V> *tree, typename vector<operation<K, V> >::iterator begin_iterator, typename vector<operation<K,V> >::iterator end_iterator) {
+    int count = 0;
     for (auto it = begin_iterator; it != end_iterator; ++it) {
         switch(it->type) {
             case READ_OP:
@@ -23,6 +24,7 @@ void execute_operations(BTree<K, V> *tree, typename vector<operation<K, V> >::it
                 tree->insert(it->key, it->val);
                 break;
         }
+        count ++;
     }
 }
 

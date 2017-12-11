@@ -35,15 +35,17 @@ namespace tree {
         virtual bool search(const K &key, V &value) override {
             search_request<K,V>* request = new search_request<K,V>;
             Semaphore semaphore;
-            bool found;
+            bool found = true;
             request->key = key;
             request->value = &value;
             request->found = &found;
             request->semaphore = &semaphore;
             request->cb_f = nullptr;
             request->args = 0;
+//            printf("searching %d\n", key);
             this->asynchronous_search_with_callback(request);
             semaphore.wait();
+//            printf("searched %d\n", key);
             return found;
         }
 
@@ -55,8 +57,10 @@ namespace tree {
             request->semaphore = &semaphore;
             request->cb_f = nullptr;
             request->args = 0;
+//            printf("inserting %d\n", key);
             this->asynchronous_insert_with_callback(request);
             semaphore.wait();
+//            printf("inserted %d\n", key);
         }
 
     private:

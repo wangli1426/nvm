@@ -116,6 +116,7 @@ namespace tree {
 //            assert(succeed);
 //            pending_request_++;
 //            return true;
+
             request_queue_.push(request);
             pending_request_++;
             return true;
@@ -133,6 +134,7 @@ namespace tree {
 //            assert(succeed);
 //            pending_request_++;
 //            return true;
+
             request_queue_.push(request);
             pending_request_++;
             return true;
@@ -152,11 +154,14 @@ namespace tree {
 //            }
 //            lock_.release();
 //            return ret;
+
+
 //            request<K, V>* ret;
 //            if (request_queue_.try_dequeue(ret))
 //                return ret;
 //            else
 //                return nullptr;
+
             request<K, V>* ret;
             if (request_queue_.pop(ret))
                 return ret;

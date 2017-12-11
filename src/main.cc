@@ -25,7 +25,6 @@ int main() {
 
     disk_optimized_b_plus_tree<int, int, 32> disk_optimized("tree.dat", 256);
     disk_optimized.init();
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 10000, 10000, 0.5, 0.5, 1);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 10000, 10000, 0.5, 0.5, 2);
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 10000, 10000, 0.5, 0, 2);
     disk_optimized.close();
 }
