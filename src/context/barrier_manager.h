@@ -48,10 +48,13 @@ public:
 
 private:
     context_barrier* get_or_create_barrier(int64_t node_id) {
-        if (barriers_.find(node_id) == barriers_.cend()) {
-            barriers_[node_id] = new context_barrier(node_id);
+        unordered_map<int64_t, context_barrier*>::const_iterator it = barriers_.find(node_id);
+        if (it == barriers_.cend()) {
+            context_barrier* ret = new context_barrier(node_id);
+            barriers_[node_id] = ret;
+            return ret;
         }
-        return barriers_[node_id];
+        return it->second;
     }
 
 private:

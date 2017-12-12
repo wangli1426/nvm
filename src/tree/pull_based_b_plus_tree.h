@@ -35,9 +35,10 @@ namespace tree {
     template<typename K, typename V>
     class request {
     public:
-        request(int t): type(t){};
+        request(int t): type(t), ownership(true){};
         int type;
         K key;
+        bool ownership;
     };
 
     template<typename K, typename V>
@@ -215,15 +216,14 @@ namespace tree {
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
-                } else {
-//                    tree->lock_.release();
-                    if (tree->pending_request_.load() > 0) {
-                        const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                        if (processed > 0) {
+                } else if (tree->pending_request_.load() > 0) {
+                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                    if (processed > 0) {
 //                        tree->free_context_slots_ += processed;
 //                        tree->pending_request_ -= processed;
-                        }
                     }
+                } else {
+                    std::this_thread::yield();
                 }
             }
 //            printf("context based process thread terminates!\n");
@@ -522,13 +522,17 @@ namespace tree {
                     }
                     case 11: {
                         release_all_barriers(); // TODO: this can be done earlier.
-                        request_->semaphore->post();
                         if (request_->cb_f) {
                             (*request_->cb_f)(request_->args);
                         }
                         tree_->pending_request_--;
                         tree_->free_context_slots_++;
-                        delete request_;
+                        if (request_->ownership) {
+                            request_->semaphore->post();
+                            delete request_;
+                        } else {
+                            request_->semaphore->post();
+                        }
                         return CONTEXT_TERMINATED;
                     }
                     case 12: {
@@ -630,7 +634,6 @@ namespace tree {
                 node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->blk_accessor_->create_null_ref());
                 node_ref_->copy(tree->root_);
                 last = ticks();
-//                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->root_);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);
@@ -669,13 +672,17 @@ namespace tree {
                                 *request_->found = current_node_->search(request_->key, *request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
-                                request_->semaphore->post();
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
                                 }
                                 tree_->pending_request_--;
                                 tree_->free_context_slots_++;
-                                delete request_;
+                                if (request_->ownership) {
+                                    request_->semaphore->post();
+                                    delete request_;
+                                } else {
+                                    request_->semaphore->post();
+                                }
                                 request_ = 0;
                                 for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
                                     tree_->manager.remove_read_barrier((*it)->barrier_id_);
@@ -692,14 +699,18 @@ namespace tree {
                                     *request_->found = false;
                                     delete current_node_;
                                     current_node_ = 0;
-                                    request_->semaphore->post();
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
+                                    if (request_->ownership) {
+                                        request_->semaphore->post();
+                                        delete request_;
+                                    } else {
+                                        request_->semaphore->post();
+                                    }
+                                    request_ = 0;
                                     tree_->pending_request_--;
                                     tree_->free_context_slots_++;
-                                    delete request_;
-                                    request_ = 0;
                                     for (auto it = this->obtained_barriers_.begin();
                                          it != obtained_barriers_.end(); ++it) {
                                         tree_->manager.remove_read_barrier((*it)->barrier_id_);
