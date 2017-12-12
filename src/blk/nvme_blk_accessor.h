@@ -222,9 +222,9 @@ protected:
         }
 #ifdef __NVME_ACCESSOR_LOG__
         printf("%d commands left.\n", pending_commands_);
-        if (pending_commands_ < 0) {
-            sleep(1);
-        }
+//        if (pending_commands_ < 0) {
+//            sleep(1);
+//        }
 #endif
         int processed = finished_contexts_;
         finished_contexts_ = 0;

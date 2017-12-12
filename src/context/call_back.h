@@ -11,7 +11,16 @@
 #include "../utils/sync.h"
 //#include "context_barrier.h"
 
-class barrier_token;
+class barrier_token {
+public:
+    barrier_token(int64_t barrier_id, int32_t type): barrier_id_(barrier_id), type_(type) {
+    }
+
+public:
+    int64_t barrier_id_;
+    int32_t type_;
+};
+
 class context_barrier;
 class call_back_context;
 
@@ -30,7 +39,7 @@ static void add_to_queue(call_back_context* context);
 
 class call_back_context {
 public:
-    call_back_context(const char* name = "unnamed"): status(0), current_state(0), next_state(-1), name_(std::string(name)) {};
+    call_back_context(): status(0), current_state(0), next_state(-1) {};
 
     virtual ~call_back_context(){};
     int current_state;
@@ -39,12 +48,10 @@ public:
 
     virtual int run() {
         if (status == 0) {
-            printf("[%s]: status %d\n", name_.c_str(), status);
             add_to_queue(this);
             set_next_state(1);
             return CONTEXT_TRANSIT;
         } else {
-            printf("[%s]: status %d, I am done!\n", name_.c_str(), status);
             return CONTEXT_TERMINATED;
         }
     }
@@ -62,17 +69,12 @@ public:
         current_state = next_state;
     }
 
-    void add_barrier_token(barrier_token* token) {
+    void add_barrier_token(const barrier_token &token) {
         obtained_barriers_.push_back(token);
     }
 
-    const char* get_name() const {
-        return name_.c_str();
-    }
-
 protected:
-    std::deque<barrier_token*> obtained_barriers_;
-    std::string name_;
+    std::deque<barrier_token> obtained_barriers_;
 };
 
 static void process_logic(volatile bool *terminate) {

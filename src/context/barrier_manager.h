@@ -46,11 +46,22 @@ public:
         barrier->remove_write_barrier();
     }
 
+    void process_ready_context(int32_t max) {
+        while(ready_contexts_.size() > 0 && max > 0) {
+            call_back_context* context = ready_contexts_.front();
+            ready_contexts_.pop();
+            if (context->run() == CONTEXT_TERMINATED) {
+                delete context;
+            }
+            max--;
+        }
+    }
+
 private:
     context_barrier* get_or_create_barrier(int64_t node_id) {
         unordered_map<int64_t, context_barrier*>::const_iterator it = barriers_.find(node_id);
         if (it == barriers_.cend()) {
-            context_barrier* ret = new context_barrier(node_id);
+            context_barrier* ret = new context_barrier(node_id, ready_contexts_);
             barriers_[node_id] = ret;
             return ret;
         }
@@ -59,6 +70,7 @@ private:
 
 private:
     unordered_map<int64_t, context_barrier*> barriers_;
+    std::queue<call_back_context*> ready_contexts_;
 };
 
 #endif //NVM_BARRIER_MANAGER_H
