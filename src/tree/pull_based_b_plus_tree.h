@@ -197,7 +197,8 @@ namespace tree {
 //                    tree->request_queue_.pop();
 //                    tree->lock_.release();
                 int64_t last = ticks();
-                if (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+                int32_t free = tree->free_context_slots_.load();
+                if (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while ((request = tree->atomic_dequeue_request()) != nullptr) {
                     call_back_context* context;
                     if (request->type == SEARCH_REQUEST) {
@@ -208,9 +209,10 @@ namespace tree {
                     tree->free_context_slots_ --;
                     if (context->run() == CONTEXT_TERMINATED)
                         delete context;
-                } else if (tree->pending_request_.load() > 0) {
-//                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                }
+                if (tree->pending_request_.load() > 0) {
+//                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_ / 8);
+                    const int processed = tree->blk_accessor_->process_completion(1);
                 }
 //                tree->manager.process_ready_context(tree->queue_length_);
             }

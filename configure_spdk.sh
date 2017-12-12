@@ -1,3 +1,4 @@
+sudo spdk/src/scripts/pkgdep.sh
 ROOT_FOLDER="$PWD"
 SPDK_FOLDER="$PWD/spdk/src"
 cd spdk/src
