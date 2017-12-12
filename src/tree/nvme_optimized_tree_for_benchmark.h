@@ -19,7 +19,7 @@ namespace tree{
         }
 
         ~nvme_optimized_tree_for_benchmark() {
-            printf("%d found!\n", found);
+//            printf("%d found!\n", found);
         }
 
         bool search(const K& key, V & value) {

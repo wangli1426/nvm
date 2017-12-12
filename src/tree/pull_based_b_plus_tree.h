@@ -739,7 +739,7 @@ namespace tree {
 //        queue<request<K, V> *> request_queue_;
 //        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
 
-        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<256> > request_queue_;
+        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<512> > request_queue_;
 
         atomic<int> request_queue_size_;
         pthread_t thread_handle_;

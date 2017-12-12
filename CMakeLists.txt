@@ -99,10 +99,10 @@ target_link_libraries(tree_benchmark
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_system.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_thread.a
 		-lpthread
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
 		)
 add_dependencies(tree_benchmark Boost)
 

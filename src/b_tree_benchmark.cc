@@ -135,16 +135,16 @@ int main(int argc, char** argv) {
 //    benchmark_mixed_workload(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0.8, key_skewness);
 //    benchmark_mixed_workload(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 1, key_skewness);
 ////
-//    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 64);
-//    nvme_optimized.init();
+    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 128);
+    nvme_optimized.init();
 //    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, key_skewness);
-//    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, key_skewness);
+    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.2, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.4, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.6, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.8, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 1, key_skewness);
-
+//    nvme_optimized.close();
 //
 
 //    concurrent_in_disk_b_plus_tree<int, int, order> concurrent_in_disk_tree;
@@ -185,16 +185,17 @@ int main(int argc, char** argv) {
 //    concurrent_shared_io_thread_in_nvme_tree.close();
 
 ////
-    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
+    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 128);
     concurrent_nvme_optimized.init();
+//    benchmark<int, int>(&concurrent_nvme_optimized, "in-nvme", 1, ntuples, ntuples, 0, key_skewness);
     multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 1);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 2);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 4);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 8);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 2);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 4);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 8);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 16);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 32);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 64);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0.5, key_skewness, 64);
 
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 2);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 3);
