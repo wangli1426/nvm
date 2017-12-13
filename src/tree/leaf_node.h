@@ -48,22 +48,24 @@ namespace tree {
 
     public:
 
-        LeafNode(blk_accessor<K, V>* blk_accessor = 0, bool allocate_blk_ref = true) : size_(0), right_sibling_(0), blk_accessor_(blk_accessor) {
+        LeafNode(blk_accessor<K, V>* blk_accessor = 0, bool allocate_blk_ref = true) : size_(0), right_sibling_(-1), blk_accessor_(blk_accessor) {
             if (blk_accessor) {
-                if (allocate_blk_ref)
+                if (allocate_blk_ref) {
                     self_ref_ = blk_accessor_->allocate_ref();
-                else
-                    self_ref_ = blk_accessor_->create_null_ref();
-                self_ref_->bind(this);
+                    self_rep_ = self_ref_->get_unified_representation();
+                    self_ref_->bind(this);
+                } else {
+                    self_ref_ = nullptr;
+                    self_rep_ = -1;
+                }
             } else {
                 self_ref_ = 0;
+                self_rep_ = -1;
             }
         };
 
         virtual ~LeafNode() {
-            delete right_sibling_;
             delete self_ref_;
-            right_sibling_ = nullptr;
             self_ref_ = nullptr;
         }
 
@@ -127,8 +129,8 @@ namespace tree {
                 right->mark_modified();
                 node_reference<K, V>* right_ref = right->get_self_ref();
 
-                right->update_right_sibling(left->right_sibling_);
-                left->update_right_sibling(right_ref);
+                right->right_sibling_ = left->right_sibling_;
+                left->right_sibling_ = right_ref->get_unified_representation();
 //                delete right_node_ref;
 
                 // move entries to the right node
@@ -167,7 +169,7 @@ namespace tree {
         bool locate_key(const K &k, node_reference<K, V> *&child, int &position) {
             const bool found = search_key_position(k, position);
             child = blk_accessor_->create_null_ref();
-            child->copy(self_ref_);
+            child->restore_by_unified_representation(self_rep_);
             return found;
         };
 
@@ -281,7 +283,7 @@ namespace tree {
             }
             this->size_ += right->size_;
             right->size_ = 0;
-            this->update_right_sibling(right->right_sibling_);
+            this->right_sibling_ = right->right_sibling_;
 
             // delete the right
 //            delete right;
@@ -290,7 +292,7 @@ namespace tree {
 
         node_reference<K, V> *get_leftmost_leaf_node() {
             node_reference<K, V>* ret = blk_accessor_->create_null_ref();
-            ret->copy(self_ref_);
+            ret->restore_by_unified_representation(self_rep_);
 
             return ret;
         }
@@ -326,10 +328,10 @@ namespace tree {
             write_offset += sizeof(int64_t);
 
             // write right_sibling_ref_;
-            if (right_sibling_)
-                *(reinterpret_cast<int64_t*>(write_offset)) = right_sibling_->get_unified_representation();
-            else
-                *(reinterpret_cast<int64_t*>(write_offset)) = -1;
+//            if (right_sibling_)
+            *(reinterpret_cast<int64_t*>(write_offset)) = right_sibling_;
+//            else
+//                *(reinterpret_cast<int64_t*>(write_offset)) = -1;
             write_offset += sizeof(int64_t);
 
             // copy entries
@@ -354,13 +356,12 @@ namespace tree {
 
             // restore self_ref_
             int64_t value = * reinterpret_cast<int64_t*>(read_offset);
-            self_ref_->restore_by_unified_representation(value);
-            self_ref_->bind(this);
+            self_rep_ = value;
             read_offset += sizeof(int64_t);
 
             // restore right_child_ref_
             value = * reinterpret_cast<int64_t*>(read_offset);
-            update_right_sibling(value);
+            right_sibling_ = value;
             read_offset += sizeof(int64_t);
 
             // restore entries
@@ -378,28 +379,24 @@ namespace tree {
         }
 
 
-        void update_right_sibling(int64_t value) {
-            if (!right_sibling_) {
-                right_sibling_ = blk_accessor_->create_null_ref();
-            }
-            right_sibling_->restore_by_unified_representation(value);
+        void update_right_sibling(int64_t &value) {
+            right_sibling_ = value;
         }
 
         void update_right_sibling(node_reference<K, V>* new_ref) {
-            if (!right_sibling_) {
-                right_sibling_ = blk_accessor_->create_null_ref();
-////                right_sibling_ = new in_memory_node_ref<K, V>(0);
-            }
-            if (new_ref)
-                right_sibling_->copy(new_ref);
+            right_sibling_ = new_ref->get_unified_representation();
         }
 
         node_reference<K, V>* get_self_ref() {
+            if (!self_ref_) {
+                self_ref_ = blk_accessor_->create_null_ref();
+                self_ref_->restore_by_unified_representation(self_rep_);
+            }
             return self_ref_;
         };
 
         int64_t get_self_rep() {
-            return self_ref_->get_unified_representation();
+            return self_rep_;
         }
 
         void set_blk_accessor(blk_accessor<K, V>* blk_accessor) {
@@ -443,9 +440,12 @@ namespace tree {
          */
         Entry entries_[CAPACITY];
         int size_;
-        node_reference<K, V> *right_sibling_;
-        node_reference<K, V> *self_ref_;
+        blk_address right_sibling_;
         blk_accessor<K, V>* blk_accessor_;
+        blk_address self_rep_;
+    private:
+        node_reference<K, V> *self_ref_;
+
 //    private:
 //        friend class boost::serialization::access;
 //

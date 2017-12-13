@@ -197,9 +197,9 @@ namespace tree {
                     offset_++;
                     leaf_node_ref_->close(blk_accessor_);
                     return upper_bound_ ? key < key_high_ || key == key_high_ : true;
-                } else if (leaf_node->right_sibling_ != 0 && !leaf_node->right_sibling_->is_null_ptr()) {
-                    node_reference<K, V> *right_sibling = leaf_node->right_sibling_;
-                    blk_address right_sibling_rep = right_sibling->get_unified_representation();
+                } else if (leaf_node->right_sibling_ != -1) {
+//                    node_reference<K, V> *right_sibling = leaf_node->right_sibling_;
+                    blk_address right_sibling_rep = leaf_node->right_sibling_;
                     leaf_node_ref_->close(blk_accessor_);
 //                    leaf_node_ref_->copy(right_sibling);
                     leaf_node_ref_->restore_by_unified_representation(right_sibling_rep);

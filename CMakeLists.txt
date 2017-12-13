@@ -102,7 +102,7 @@ target_link_libraries(tree_benchmark
 		${spdk/lib/libspdk.a}
 		${spdk/lib/librte.a}
 		-L${CMAKE_SOURCE_DIR}/spdk/lib
-		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
 		)
 add_dependencies(tree_benchmark Boost)
 

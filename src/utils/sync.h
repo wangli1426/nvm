@@ -28,10 +28,10 @@ public:
 
     ~Lock() { pthread_mutex_destroy(&m); }
 
-    void acquire() { pthread_mutex_lock(&m); }
+    inline void acquire() { pthread_mutex_lock(&m); }
 
     bool try_acquire() { return pthread_mutex_trylock(&m) == 0; }
-    void release() { pthread_mutex_unlock(&m); }
+    inline void release() { pthread_mutex_unlock(&m); }
 
     void destroy() { pthread_mutex_destroy(&m); }
 };
@@ -122,9 +122,13 @@ public:
 
     void set_value(int value) { sem_init(sem, 0, value); }
 
-    inline void post(int times = 1) {
+    inline void post() {
+        sem_post(sem);
+    }
+
+    inline void post(int times) {
         for (int i = 0; i < times; i++) {
-            sem_post(sem);
+            post();
         }
     }
 

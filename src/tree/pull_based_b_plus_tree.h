@@ -29,6 +29,8 @@ using namespace std;
 
 typedef void (*callback_function)(void*);
 
+typedef SpinLock request_lock;
+
 namespace tree {
 
 
@@ -48,7 +50,7 @@ namespace tree {
     public:
         V *value;
         bool *found;
-        Semaphore *semaphore;
+        SpinLock *semaphore;
         callback_function cb_f;
         void* args;
     };
@@ -59,7 +61,7 @@ namespace tree {
         insert_request(): request<K, V>(INSERT_REQUEST) {};
         V value;
         bool succeed;
-        Semaphore* semaphore;
+        SpinLock* semaphore;
         callback_function  cb_f;
         void* args;
     };
@@ -200,10 +202,9 @@ namespace tree {
                         delete context;
                 }
                 if (tree->pending_request_.load() > 0) {
-//                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_ / 8);
-                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_ / 8);
+                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
                 }
-//                tree->manager.process_ready_context(tree->queue_length_);
+                tree->manager.process_ready_context(tree->queue_length_);
             }
 //            printf("context based process thread terminates!\n");
             return nullptr;
@@ -240,7 +241,7 @@ namespace tree {
             }
 
             int run() {
-                while(true)
+//                while(true)
                 switch (this->current_state) {
                     case 0: {
                         if (node_ref_ == -1) {
@@ -259,8 +260,8 @@ namespace tree {
                             obtained_barrier = tree_->manager.request_write_barrier(node_ref_, this);
                         if (obtained_barrier) {
                             transition_to_next_state();
-//                            return run();
-                            continue;
+                            return run();
+//                            continue;
                         } else {
                             return CONTEXT_TRANSIT;
                         }
@@ -275,8 +276,8 @@ namespace tree {
                                 node_ref_ = -1;
                                 set_next_state(0);
                                 transition_to_next_state();
-//                                return run();
-                                continue;
+                                return run();
+//                                continue;
                             } else {
                                 refer_to_root_ = false;
                             }
@@ -298,8 +299,8 @@ namespace tree {
                         }
                         set_next_state(1);
                         transition_to_next_state();
-//                        return run();
-                        continue;
+                        return run();
+//                        continue;
                     }
 
                     case 1: {
@@ -320,8 +321,8 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
-//                                    return run();
-                                    continue;
+                                    return run();
+//                                    continue;
                                 }
                                 child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, split_);
                                 if (!child_node_split_) {
@@ -363,8 +364,8 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
-//                                    return run();
-                                    continue;
+                                    return run();
+//                                    continue;
                                 }
                                 target_node_index = target_node_index < 0 ? 0 : target_node_index;
                                 if (exceed_left_boundary) {
@@ -380,8 +381,8 @@ namespace tree {
                                 current_node_level_ --;
                                 set_next_state(0);
                                 transition_to_next_state();
-//                                return run();
-                                continue;
+                                return run();
+//                                continue;
                             }
                         }
                     }
@@ -501,8 +502,8 @@ namespace tree {
                             }
                             set_next_state(11);
                             transition_to_next_state();
-//                            return run();
-                            continue;
+                            return run();
+//                            continue;
                         }
                     }
                     case 10: {
@@ -510,8 +511,8 @@ namespace tree {
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
                             transition_to_next_state();
-//                            return run();
-                            continue;
+                            return run();
+//                            continue;
                         }
                         return CONTEXT_TRANSIT;
                     }
@@ -523,10 +524,10 @@ namespace tree {
                         tree_->pending_request_--;
                         tree_->free_context_slots_++;
                         if (request_->ownership) {
-                            request_->semaphore->post();
+                            request_->semaphore->release();
                             delete request_;
                         } else {
-                            request_->semaphore->post();
+                            request_->semaphore->release();
                         }
                         return CONTEXT_TERMINATED;
                     }
@@ -562,8 +563,8 @@ namespace tree {
                         set_next_state(0);
                         transition_to_next_state();
                         node_ref_ = -1;
-//                        return run();
-                        continue;
+                        return run();
+//                        continue;
                     }
 
                 }
@@ -635,20 +636,23 @@ namespace tree {
             }
 
             int run() {
-//                int64_t duration = ticks() - last;
 //                if (duration > 10000) {
-//                    printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(duration), current_state);
 //                }
-//                last = ticks();
-                while(true)
+                last = ticks();
+                int current = this->current_state;
+
+//                printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
+//                while(true)
                 switch (this->current_state) {
                     case 0:
                         set_next_state(1);
                         if (tree_->manager.request_read_barrier(node_ref_, this)) {
                             transition_to_next_state();
-//                            return run();
-                            continue;
+//                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
+                            return run();
+//                            continue;
                         } else {
+//                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return CONTEXT_TRANSIT;
                         }
                     case 1:
@@ -660,32 +664,50 @@ namespace tree {
                         }
                         set_next_state(2);
                         tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
+//                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
                     case 2: {
                         uint32_t node_type = *reinterpret_cast<uint32_t *>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
+                                int64_t realwork_start = ticks();
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 *request_->found = current_node_->search(request_->key, *request_->value);
                                 delete current_node_;
                                 current_node_ = 0;
+                                int64_t realwork_end = ticks();
+                                int64_t free_work_start = realwork_end;
                                 if (request_->cb_f) {
                                     (*request_->cb_f)(request_->args);
                                 }
                                 tree_->pending_request_--;
                                 tree_->free_context_slots_++;
-                                if (request_->ownership) {
-                                    request_->semaphore->post();
+                                int64_t free_work1_start = realwork_end;
+                                bool ownership = request_->ownership;
+                                request_->semaphore->release();
+                                int64_t free_work1_end = ticks();
+                                if (ownership) {
                                     delete request_;
                                     request_ = 0;
-                                } else {
-                                    request_->semaphore->post();
                                 }
+//                                else {
+//                                    request_->semaphore->post();
+//                                }
+                                int64_t free_work_end = ticks();
+                                int64_t barrier_work_start = free_work_end;
                                 for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
                                     tree_->manager.remove_read_barrier((*it).barrier_id_);
                                 }
                                 obtained_barriers_.clear();
+                                int64_t barrier_work_end = ticks();
+//                                printf("during is %.2f ns, state: %d [L] read work: %.2f ns, free work: %.2f, barrier work: %.2f, free work 1: %.2f\n",
+//                                       cycles_to_nanoseconds(ticks() - last),
+//                                       current,
+//                                       cycles_to_nanoseconds(realwork_end - realwork_start),
+//                                       cycles_to_nanoseconds(free_work_end - free_work_start),
+//                                       cycles_to_nanoseconds(barrier_work_end - barrier_work_start),
+//                                       cycles_to_nanoseconds(free_work1_end - free_work1_start));
                                 return CONTEXT_TERMINATED;
                             }
                             case INNER_NODE: {
@@ -701,10 +723,10 @@ namespace tree {
                                         (*request_->cb_f)(request_->args);
                                     }
                                     if (request_->ownership) {
-                                        request_->semaphore->post();
+                                        request_->semaphore->release();
                                         delete request_;
                                     } else {
-                                        request_->semaphore->post();
+                                        request_->semaphore->release();
                                     }
                                     request_ = 0;
                                     tree_->pending_request_--;
@@ -714,6 +736,7 @@ namespace tree {
                                         tree_->manager.remove_read_barrier((*it).barrier_id_);
                                     }
                                     obtained_barriers_.clear();
+//                                    printf("during is %.2f ns, state: %d [I1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TERMINATED;
                                 } else {
                                     node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
@@ -721,8 +744,9 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(0);
                                     transition_to_next_state();
-//                                    return run();
-                                    continue;
+//                                    printf("during is %.2f ns, state: %d [I2]\n", cycles_to_nanoseconds(ticks() - last), current);
+                                    return run();
+//                                    continue;
                                 }
                             }
                         }

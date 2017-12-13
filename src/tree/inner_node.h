@@ -39,6 +39,7 @@ namespace tree {
                 }
             } else {
                 self_ref_ = nullptr;
+                self_rep_ = -1;
             }
         };
 

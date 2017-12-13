@@ -80,10 +80,10 @@ private:
     void fire_context(call_back_context* context, int type) {
         context->add_barrier_token(barrier_token(id, type));
         context->transition_to_next_state();
-        if (context->run() == CONTEXT_TERMINATED) {
-            delete context;
-        }
-//        ready_contexts_.push(context);
+//        if (context->run() == CONTEXT_TERMINATED) {
+//            delete context;
+//        }
+        ready_contexts_.push(context);
     }
 
     // try to offer barrier

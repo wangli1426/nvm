@@ -121,16 +121,16 @@ int main(int argc, char** argv) {
 
     disk_optimized_b_plus_tree<int, int, order> disk_optimized("tree.dat", 256);
     disk_optimized.init();
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
     multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 2);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 8);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 16);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 32);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 64);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 128);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 256);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 8);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 16);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 32);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 64);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 128);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 256);
     disk_optimized.close();
 //////
 //    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);

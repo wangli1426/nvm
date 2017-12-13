@@ -34,7 +34,8 @@ namespace tree {
 
         virtual bool search(const K &key, V &value) override {
             search_request<K,V>* request = new search_request<K,V>;
-            Semaphore semaphore;
+            SpinLock semaphore;
+            semaphore.acquire();
             bool found = true;
             request->key = key;
             request->value = &value;
@@ -44,14 +45,15 @@ namespace tree {
             request->args = 0;
 //            printf("searching %d\n", key);
             this->asynchronous_search_with_callback(request);
-            semaphore.wait();
+            semaphore.acquire();
 //            printf("searched %d\n", key);
             return found;
         }
 
         virtual void insert(const K &key, const V &value) override {
             insert_request<K,V>* request = new insert_request<K,V>;
-            Semaphore semaphore;
+            SpinLock semaphore;
+            semaphore.acquire();
             request->key = key;
             request->value = value;
             request->semaphore = &semaphore;
@@ -59,7 +61,7 @@ namespace tree {
             request->args = 0;
 //            printf("inserting %d\n", key);
             this->asynchronous_insert_with_callback(request);
-            semaphore.wait();
+            semaphore.acquire();
 //            printf("inserted %d\n", key);
         }
 
