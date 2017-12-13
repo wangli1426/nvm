@@ -234,7 +234,7 @@ namespace tree {
                 call_back_context(), tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 buffer_2 = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = nullptr;
+                node_ref_ = -1;
                 current_state = 0;
                 free_slot_available_in_parent_ = false;
                 refer_to_root_ = false;
@@ -253,10 +253,9 @@ namespace tree {
             int run() {
                 switch (this->current_state) {
                     case 0: {
-                        if (node_ref_ == nullptr) {
+                        if (node_ref_ == -1) {
                             refer_to_root_ = true;
-                            node_ref_ = static_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
-                            node_ref_->copy(tree_->root_);
+                            node_ref_ = tree_->root_->get_unified_representation();
                             current_node_level_ = tree_->get_height();
 //                            printf("begin to insert [%d], root is %lld\n", request_->key,
 //                                   tree_->root_->get_unified_representation());
@@ -264,9 +263,9 @@ namespace tree {
                         set_next_state(10001);
 //                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
                         if (optimistic_ && !next_visit_is_leaf_node_)
-                            tree_->manager.request_read_barrier(node_ref_->get_unified_representation(), this);
+                            tree_->manager.request_read_barrier(node_ref_, this);
                         else
-                            tree_->manager.request_write_barrier(node_ref_->get_unified_representation(), this);
+                            tree_->manager.request_write_barrier(node_ref_, this);
                         return CONTEXT_TRANSIT;
                     }
                     case 10001: {
@@ -276,7 +275,7 @@ namespace tree {
 //                                printf("[%d]: detected root update!\n", request_->key);
                                 release_all_barriers();
                                 refer_to_root_ = true;
-                                node_ref_ = nullptr;
+                                node_ref_ = -1;
                                 set_next_state(0);
                                 transition_to_next_state();
                                 return run();
@@ -309,7 +308,7 @@ namespace tree {
                     }
 
                     case 1: {
-                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
+                        tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
                         set_next_state(2);
                         return CONTEXT_TRANSIT;
                     }
@@ -321,6 +320,8 @@ namespace tree {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 if (optimistic_ && current_node_->size() == CAPACITY) {
+                                    delete current_node_;
+                                    current_node_ = 0;
                                     // leaf node is full, so the optimistic update fails.
                                     set_next_state(13);
                                     transition_to_next_state();
@@ -330,10 +331,12 @@ namespace tree {
                                 if (!child_node_split_) {
                                     // the leaf node does not split, so we only need to flush the leaf node
                                     current_node_->serialize(buffer_);
+                                    delete current_node_;
+                                    current_node_ = 0;
                                     write_back_completion_target_ = 1;
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
-                                    tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
+                                    tree_->blk_accessor_->asynch_write(node_ref_, buffer_, this);
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the leaf node wat split and we need to flush both the leaf node and the new node.
@@ -347,7 +350,7 @@ namespace tree {
                                     }
                                     write_back_completion_target_ = 2;
                                     write_back_completion_count_ = 0;
-                                    tree_->blk_accessor_->asynch_write(node_ref_->get_unified_representation(), buffer_, this);
+                                    tree_->blk_accessor_->asynch_write(node_ref_, buffer_, this);
                                     tree_->blk_accessor_->asynch_write(split_.right->get_self_ref()->get_unified_representation(), buffer_2, this);
                                     return CONTEXT_TRANSIT;
                                 }
@@ -360,6 +363,8 @@ namespace tree {
                                 const bool exceed_left_boundary = target_node_index < 0;
                                 if (exceed_left_boundary && optimistic_) {
                                     // the insertion needs to update the inner node, so the optimistic insertion fails.
+                                    delete current_node_;
+                                    current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
                                     return run();
@@ -369,11 +374,9 @@ namespace tree {
                                     inner_node->key_[0] = request_->key;
                                     inner_node->mark_modified();
                                 }
-                                blk_node_reference<K, V, CAPACITY>* child_node_ref = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(inner_node->get_child_reference(target_node_index));
                                 store_parent_node(inner_node, target_node_index);
                                 current_node_ = nullptr;
-                                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
-                                node_ref_->copy(child_node_ref);
+                                node_ref_ = inner_node->child_rep_[target_node_index];
                                 free_slot_available_in_parent_ = inner_node->has_free_slot();
                                 parent_boundary_update_ = exceed_left_boundary;
                                 next_visit_is_leaf_node_ = current_node_level_ == 2;
@@ -402,8 +405,7 @@ namespace tree {
                                 pending_parent_nodes_.pop_back();
                                 InnerNode<K, V, CAPACITY> *parent_node = parent_context.node;
                                 current_node_ = parent_node;
-                                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree_->blk_accessor_->create_null_ref());
-                                node_ref_->copy(current_node_->get_self_ref());
+                                node_ref_ = current_node_->get_self_rep();
 
                                 if (current_node_->size() < CAPACITY) {
                                     // the current node has free slot for the new node.
@@ -419,6 +421,9 @@ namespace tree {
                                     set_next_state(10);
                                     tree_->blk_accessor_->asynch_write(
                                             current_node_->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    delete split_.left;
+                                    delete split_.right;
+                                    delete parent_node;
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the current node need to split to accommodate the new node.
@@ -450,6 +455,8 @@ namespace tree {
                                             split_.boundary_key);
                                     host_for_node->insert_inner_node(split_.right, split_.boundary_key,
                                                                      inner_node_insert_position + 1);
+                                    delete split_.left;
+                                    delete split_.right;
 
                                     // write the remaining content in the split data structure.
                                     split_.left = (left);
@@ -490,7 +497,10 @@ namespace tree {
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
                                     tree_->blk_accessor_->asynch_write(parent_node->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    delete parent_node;
                                     return CONTEXT_TRANSIT;
+                                } else {
+                                    delete parent_node;
                                 }
                             }
                             set_next_state(11);
@@ -553,8 +563,7 @@ namespace tree {
                         release_all_barriers();
                         set_next_state(0);
                         transition_to_next_state();
-                        delete node_ref_;
-                        node_ref_ = nullptr;
+                        node_ref_ = -1;
                         return run();
                     }
 
@@ -590,7 +599,7 @@ namespace tree {
             };
         private:
             pull_based_b_plus_tree *tree_;
-            blk_node_reference<K, V, CAPACITY> *node_ref_;
+            blk_address node_ref_;
             void *buffer_, *buffer_2;
             Node<K, V>* current_node_;
             insert_request<K, V>* request_;
@@ -618,8 +627,7 @@ namespace tree {
             search_context(pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(),
                                                                                                           tree_(tree), request_(request) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
-                node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY>*>(tree->blk_accessor_->create_null_ref());
-                node_ref_->copy(tree->root_);
+                node_ref_ = tree->root_->get_unified_representation();
                 last = ticks();
             };
             ~search_context() {
@@ -635,10 +643,8 @@ namespace tree {
 //                last = ticks();
                 switch (this->current_state) {
                     case 0:
-                        int64_t node_id;
-                        node_id = node_ref_->get_unified_representation();
                         set_next_state(1);
-                        tree_->manager.request_read_barrier(node_id, this);
+                        tree_->manager.request_read_barrier(node_ref_, this);
                         return CONTEXT_TRANSIT;
                     case 1:
                         assert(this->obtained_barriers_.size() <= 2);
@@ -648,7 +654,7 @@ namespace tree {
                             this->obtained_barriers_.pop_front();
                         }
                         set_next_state(2);
-                        tree_->blk_accessor_->asynch_read(node_ref_->get_unified_representation(), buffer_, this);
+                        tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
                         return CONTEXT_TRANSIT;
                     case 2: {
                         uint32_t node_type = *reinterpret_cast<uint32_t *>(buffer_);
@@ -705,11 +711,12 @@ namespace tree {
                                     obtained_barriers_.clear();
                                     return CONTEXT_TERMINATED;
                                 } else {
-                                    delete node_ref_;
-                                    node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY> *>(tree_->blk_accessor_->create_null_ref());
-                                    node_ref_->copy(
-                                            dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->get_child_reference(
-                                                    child_index));
+//                                    delete node_ref_;
+//                                    node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY> *>(tree_->blk_accessor_->create_null_ref());
+//                                    node_ref_->copy(
+//                                            dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->get_child_reference(
+//                                                    child_index));
+                                    node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
                                     delete current_node_;
                                     current_node_ = 0;
                                     set_next_state(0);
@@ -729,7 +736,7 @@ namespace tree {
 
         private:
             pull_based_b_plus_tree *tree_;
-            blk_node_reference<K, V, CAPACITY> *node_ref_;
+            blk_address node_ref_;
             void *buffer_;
             Node<K, V>* current_node_;
             search_request<K, V>* request_;
