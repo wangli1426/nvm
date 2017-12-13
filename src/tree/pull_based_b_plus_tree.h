@@ -283,16 +283,12 @@ namespace tree {
                                 refer_to_root_ = false;
                             }
                         }
-//                        if (obtained_barriers_.back()->barrier_id_ == tree_->root_->get_unified_representation()) {
-//                            printf("[%d] ooo <%lld> (root)\n", request_->key, obtained_barriers_.back()->barrier_id_);
-//                        } else
-//                            printf("[%d] ooo <%lld>\n", request_->key, obtained_barriers_.back()->barrier_id_);
                         if (optimistic_) {
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
                             release_all_barriers();
                             obtained_barriers_.push_back(latest_token);
-                        } else if ( free_slot_available_in_parent_ && !parent_boundary_update_) {
+                        } else if (free_slot_available_in_parent_ && !parent_boundary_update_) {
                             //TODO release all the
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
@@ -320,9 +316,9 @@ namespace tree {
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
                                 if (optimistic_ && current_node_->size() == CAPACITY) {
+                                    // leaf node is full, so the optimistic update fails.
                                     delete current_node_;
                                     current_node_ = 0;
-                                    // leaf node is full, so the optimistic update fails.
                                     set_next_state(13);
                                     transition_to_next_state();
                                     return run();
@@ -489,8 +485,6 @@ namespace tree {
                                 parent_node_context parent_context = pending_parent_nodes_.back();
                                 pending_parent_nodes_.pop_back();
                                 InnerNode<K, V, CAPACITY>* parent_node = parent_context.node;
-//                                parent_node->get_self_ref()->close(tree_->blk_accessor_);
-//                                delete parent_node;
                                 if (parent_node->is_modified()) {
                                     parent_node->serialize(buffer_);
                                     write_back_completion_target_ = 1;
