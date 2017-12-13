@@ -118,7 +118,6 @@ public:
     }
 
     virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
-        assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->start_time = ticks();
         para->type = NVM_READ;
@@ -153,7 +152,6 @@ public:
     }
 
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
-        assert((uint64_t)buffer % 512 == 0);
         nvme_callback_para* para = new nvme_callback_para;
         para->start_time = ticks();
         para->type = NVM_WRITE;
