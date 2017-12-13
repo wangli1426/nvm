@@ -35,14 +35,24 @@ class context_barrier {
 public:
     context_barrier(int64_t id, std::queue<call_back_context*> &ready_contexts): id(id), ready_contexts_(ready_contexts), read_barriers(0), write_barriers(0){};
 
-    void set_read_barrier(call_back_context* context) {
-        pending_barrier_requests.push(pending_barrier_request(context, READ_BARRIER));
-        offer_barrier();
+    bool set_read_barrier(call_back_context* context) {
+        if (grant_read_barrier_request()) {
+            context->add_barrier_token(barrier_token(id, READ_BARRIER));
+            return true;
+        } else {
+            pending_barrier_requests.push(pending_barrier_request(context, READ_BARRIER));
+            return false;
+        }
     }
 
-    void set_write_barrier(call_back_context* context) {
-        pending_barrier_requests.push(pending_barrier_request(context, WRITE_BARRIER));
-        offer_barrier();
+    bool set_write_barrier(call_back_context* context) {
+        if (grant_write_barrier_request()) {
+            context->add_barrier_token(barrier_token(id, WRITE_BARRIER));
+            return true;
+        } else {
+            pending_barrier_requests.push(pending_barrier_request(context, WRITE_BARRIER));
+            return false;
+        }
     }
 
     void remove_read_barrier() {
@@ -68,7 +78,6 @@ public:
 private:
 
     void fire_context(call_back_context* context, int type) {
-//        barrier_token* token = new barrier_token(id, type);
         context->add_barrier_token(barrier_token(id, type));
         context->transition_to_next_state();
         if (context->run() == CONTEXT_TERMINATED) {
@@ -105,6 +114,24 @@ private:
                 }
             }
             break;
+        }
+    }
+
+    bool grant_read_barrier_request() {
+        if (write_barriers == 0) {
+            read_barriers++;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool grant_write_barrier_request() {
+        if (write_barriers == 0 && read_barriers == 0) {
+            write_barriers++;
+            return true;
+        } else {
+            return false;
         }
     }
 

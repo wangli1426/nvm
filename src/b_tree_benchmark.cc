@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 100000;
-    const int nopertions = 100000;
+    const int ntuples = 1000000;
+    const int nopertions = 1000000;
     const double write_rate = 0;
     const double key_skewness = 0;
 
@@ -142,10 +142,9 @@ int main(int argc, char** argv) {
 //    benchmark_mixed_workload(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0.6, key_skewness);
 //    benchmark_mixed_workload(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 0.8, key_skewness);
 //    benchmark_mixed_workload(&in_nvme_tree, "in-nvme", 1, ntuples, ntuples, 1, key_skewness);
-////
+//
 //    nvme_optimized_tree_for_benchmark<int, int, order> nvme_optimized(size, 256);
 //    nvme_optimized.init();
-//    benchmark<int, int>(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.2, key_skewness);
 //    benchmark_mixed_workload(&nvme_optimized, "nvme-optimized", 1, ntuples, ntuples, 0.4, key_skewness);

@@ -262,11 +262,17 @@ namespace tree {
                         }
                         set_next_state(10001);
 //                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
+                        bool obtained_barrier;
                         if (optimistic_ && !next_visit_is_leaf_node_)
-                            tree_->manager.request_read_barrier(node_ref_, this);
+                            obtained_barrier = tree_->manager.request_read_barrier(node_ref_, this);
                         else
-                            tree_->manager.request_write_barrier(node_ref_, this);
-                        return CONTEXT_TRANSIT;
+                            obtained_barrier = tree_->manager.request_write_barrier(node_ref_, this);
+                        if (obtained_barrier) {
+                            transition_to_next_state();
+                            return run();
+                        } else {
+                            return CONTEXT_TRANSIT;
+                        }
                     }
                     case 10001: {
                         if (refer_to_root_) {
@@ -638,8 +644,12 @@ namespace tree {
                 switch (this->current_state) {
                     case 0:
                         set_next_state(1);
-                        tree_->manager.request_read_barrier(node_ref_, this);
-                        return CONTEXT_TRANSIT;
+                        if (tree_->manager.request_read_barrier(node_ref_, this)) {
+                            transition_to_next_state();
+                            return run();
+                        } else {
+                            return CONTEXT_TRANSIT;
+                        }
                     case 1:
                         assert(this->obtained_barriers_.size() <= 2);
                         if (this->obtained_barriers_.size() == 2) {
@@ -705,11 +715,6 @@ namespace tree {
                                     obtained_barriers_.clear();
                                     return CONTEXT_TERMINATED;
                                 } else {
-//                                    delete node_ref_;
-//                                    node_ref_ = reinterpret_cast<blk_node_reference<K, V, CAPACITY> *>(tree_->blk_accessor_->create_null_ref());
-//                                    node_ref_->copy(
-//                                            dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->get_child_reference(
-//                                                    child_index));
                                     node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
                                     delete current_node_;
                                     current_node_ = 0;
@@ -718,8 +723,6 @@ namespace tree {
                                     return run();
                                 }
                             }
-//                            default:
-//                                assert(false);
                         }
                     }
 

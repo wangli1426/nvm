@@ -26,22 +26,22 @@ public:
             }
         }
     }
-    void request_write_barrier(int64_t node_id, call_back_context* context) {
+    bool request_write_barrier(const int64_t &node_id, call_back_context* context) {
         context_barrier* barrier = get_or_create_barrier(node_id);
-        barrier->set_write_barrier(context);
+        return barrier->set_write_barrier(context);
     }
 
-    void request_read_barrier(int64_t node_id, call_back_context* context) {
+    bool request_read_barrier(const int64_t &node_id, call_back_context* context) {
         context_barrier* barrier = get_or_create_barrier(node_id);
-        barrier->set_read_barrier(context);
+        return barrier->set_read_barrier(context);
     }
 
-    void remove_read_barrier(int64_t node_id) {
+    void remove_read_barrier(const int64_t &node_id) {
         context_barrier* barrier = get_or_create_barrier(node_id);
         barrier->remove_read_barrier();
     }
 
-    void remove_write_barrier(int64_t node_id) {
+    void remove_write_barrier(const int64_t &node_id) {
         context_barrier* barrier = get_or_create_barrier(node_id);
         barrier->remove_write_barrier();
     }
