@@ -27,7 +27,7 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0) {
-//        cache_ = new blk_cache(block_size, 10000);
+//        cache_ = new blk_cache(block_size, 1000000);
         cache_ = nullptr;
     }
 

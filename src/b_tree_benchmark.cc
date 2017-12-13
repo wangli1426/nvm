@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 1000000;
-    const int nopertions = 1000000;
+    const int ntuples = 100000;
+    const int nopertions = 100000;
     const double write_rate = 0;
     const double key_skewness = 0;
 

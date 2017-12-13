@@ -175,13 +175,6 @@ namespace tree {
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
 //                usleep(100000);
                 request<K, V>* request;
-//                while (!tree->lock_.try_lock()) {
-//                    if (tree->working_thread_terminate_flag_ && tree->pending_request_.load() == 0) {
-//                        printf("context based process thread terminates!\n");
-//                        return nullptr;
-//                    }
-//                }
-
                 /**
                  TODO 1: if all the incoming operations can be completed by calling context->run only once, the pending
                  context will never be processed. One possible solution is to process_completion() in each round
@@ -192,13 +185,9 @@ namespace tree {
 
                  **/
 
-//                if (tree->request_queue_.size() > 0 && tree->free_context_slots_.load() > 0) {
-//                    request = tree->request_queue_queue_.front();
-//                    tree->request_queue_.pop();
-//                    tree->lock_.release();
                 int64_t last = ticks();
                 int32_t free = tree->free_context_slots_.load();
-                if (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while ((request = tree->atomic_dequeue_request()) != nullptr) {
                     call_back_context* context;
                     if (request->type == SEARCH_REQUEST) {
@@ -212,7 +201,7 @@ namespace tree {
                 }
                 if (tree->pending_request_.load() > 0) {
 //                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_ / 8);
-                    const int processed = tree->blk_accessor_->process_completion(1);
+                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_ / 8);
                 }
 //                tree->manager.process_ready_context(tree->queue_length_);
             }
@@ -251,6 +240,7 @@ namespace tree {
             }
 
             int run() {
+                while(true)
                 switch (this->current_state) {
                     case 0: {
                         if (node_ref_ == -1) {
@@ -269,7 +259,8 @@ namespace tree {
                             obtained_barrier = tree_->manager.request_write_barrier(node_ref_, this);
                         if (obtained_barrier) {
                             transition_to_next_state();
-                            return run();
+//                            return run();
+                            continue;
                         } else {
                             return CONTEXT_TRANSIT;
                         }
@@ -284,7 +275,8 @@ namespace tree {
                                 node_ref_ = -1;
                                 set_next_state(0);
                                 transition_to_next_state();
-                                return run();
+//                                return run();
+                                continue;
                             } else {
                                 refer_to_root_ = false;
                             }
@@ -306,7 +298,8 @@ namespace tree {
                         }
                         set_next_state(1);
                         transition_to_next_state();
-                        return run();
+//                        return run();
+                        continue;
                     }
 
                     case 1: {
@@ -327,7 +320,8 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
-                                    return run();
+//                                    return run();
+                                    continue;
                                 }
                                 child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, split_);
                                 if (!child_node_split_) {
@@ -369,7 +363,8 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
-                                    return run();
+//                                    return run();
+                                    continue;
                                 }
                                 target_node_index = target_node_index < 0 ? 0 : target_node_index;
                                 if (exceed_left_boundary) {
@@ -385,7 +380,8 @@ namespace tree {
                                 current_node_level_ --;
                                 set_next_state(0);
                                 transition_to_next_state();
-                                return run();
+//                                return run();
+                                continue;
                             }
                         }
                     }
@@ -505,7 +501,8 @@ namespace tree {
                             }
                             set_next_state(11);
                             transition_to_next_state();
-                            return run();
+//                            return run();
+                            continue;
                         }
                     }
                     case 10: {
@@ -513,7 +510,8 @@ namespace tree {
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
                             transition_to_next_state();
-                            return run();
+//                            return run();
+                            continue;
                         }
                         return CONTEXT_TRANSIT;
                     }
@@ -564,7 +562,8 @@ namespace tree {
                         set_next_state(0);
                         transition_to_next_state();
                         node_ref_ = -1;
-                        return run();
+//                        return run();
+                        continue;
                     }
 
                 }
@@ -641,12 +640,14 @@ namespace tree {
 //                    printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(duration), current_state);
 //                }
 //                last = ticks();
+                while(true)
                 switch (this->current_state) {
                     case 0:
                         set_next_state(1);
                         if (tree_->manager.request_read_barrier(node_ref_, this)) {
                             transition_to_next_state();
-                            return run();
+//                            return run();
+                            continue;
                         } else {
                             return CONTEXT_TRANSIT;
                         }
@@ -677,10 +678,10 @@ namespace tree {
                                 if (request_->ownership) {
                                     request_->semaphore->post();
                                     delete request_;
+                                    request_ = 0;
                                 } else {
                                     request_->semaphore->post();
                                 }
-                                request_ = 0;
                                 for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
                                     tree_->manager.remove_read_barrier((*it).barrier_id_);
                                 }
@@ -720,7 +721,8 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(0);
                                     transition_to_next_state();
-                                    return run();
+//                                    return run();
+                                    continue;
                                 }
                             }
                         }

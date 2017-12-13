@@ -23,12 +23,12 @@ namespace tree {
     template<typename K, typename V, int CAPACITY>
     class disk_optimized_b_plus_tree : public pull_based_b_plus_tree<K, V, CAPACITY> {
     public:
-        disk_optimized_b_plus_tree(const char* path, int queue_length):
-                pull_based_b_plus_tree<K, V, CAPACITY>(queue_length), path(path) {
+        disk_optimized_b_plus_tree(const char* path, int queue_length, int block_size = 512):
+                pull_based_b_plus_tree<K, V, CAPACITY>(queue_length), path(path), block_size_(block_size) {
         }
 
         void create_and_init_blk_accessor() {
-            this->blk_accessor_ = new file_blk_accessor<K, V, CAPACITY>(path, 512);
+            this->blk_accessor_ = new file_blk_accessor<K, V, CAPACITY>(path, block_size_);
             this->blk_accessor_->open();
         }
 
@@ -65,6 +65,7 @@ namespace tree {
 
     private:
         const char* path;
+        const int32_t block_size_;
     };
 }
 
