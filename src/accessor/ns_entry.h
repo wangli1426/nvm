@@ -8,6 +8,7 @@
 #include <spdk/nvme.h>
 #include <iostream>
 #include "qpair_context.h"
+#include "../utils/cpu_set.h"
 
 struct ctrlr_entry;
 
@@ -79,9 +80,22 @@ namespace nvm {
             if (!g_ns) {
                 struct spdk_env_opts opts;
                 spdk_env_opts_init(&opts);
+//                printf("mask: %s\n", opts.core_mask);
+                opts.core_mask = "0xf";
                 opts.name = "nvm access interface";
                 opts.shm_id = 0;
+
+//                print_current_cpu_set();
+//                set_cpu_set(32);
+//                print_current_cpu_set();
+
                 spdk_env_init(&opts);
+                spdk_unaffinitize_thread();
+                print_current_cpu_set();
+                set_cpu_set(32);
+                print_current_cpu_set();
+//
+//                spdk_unaffinitize_thread();
                 printf("Initializing NVMe Controllers\n");
                 return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
             } else {

@@ -33,36 +33,36 @@ namespace tree {
         }
 
         virtual bool search(const K &key, V &value) override {
-            search_request<K,V>* request = new search_request<K,V>;
+            search_request<K,V> request;
+            request.ownership = false;
             SpinLock semaphore;
             semaphore.acquire();
             bool found = true;
-            request->key = key;
-            request->value = &value;
-            request->found = &found;
-            request->semaphore = &semaphore;
-            request->cb_f = nullptr;
-            request->args = 0;
-//            printf("searching %d\n", key);
-            this->asynchronous_search_with_callback(request);
-            semaphore.acquire();
-//            printf("searched %d\n", key);
+            request.key = key;
+            request.value = &value;
+            request.found = &found;
+            request.semaphore = &semaphore;
+            request.cb_f = nullptr;
+            request.args = 0;
+            this->asynchronous_search_with_callback(&request);
+            while(!semaphore.try_lock());
+//                usleep(1);
             return found;
         }
 
         virtual void insert(const K &key, const V &value) override {
-            insert_request<K,V>* request = new insert_request<K,V>;
+            insert_request<K,V> request;
+            request.ownership = false;
             SpinLock semaphore;
             semaphore.acquire();
-            request->key = key;
-            request->value = value;
-            request->semaphore = &semaphore;
-            request->cb_f = nullptr;
-            request->args = 0;
-//            printf("inserting %d\n", key);
-            this->asynchronous_insert_with_callback(request);
-            semaphore.acquire();
-//            printf("inserted %d\n", key);
+            request.key = key;
+            request.value = value;
+            request.semaphore = &semaphore;
+            request.cb_f = nullptr;
+            request.args = 0;
+            this->asynchronous_insert_with_callback(&request);
+            while(!semaphore.try_lock());
+//                usleep(1);
         }
 
     private:

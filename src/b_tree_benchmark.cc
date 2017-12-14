@@ -14,6 +14,8 @@
 #include "tree/concurrent_in_disk_b_plus_tree.h"
 #include "tree/concurrent_in_nvme_b_plus_tree.h"
 #include "utils/rdtsc.h"
+#include "utils/dummy.h"
+#include "utils/cpu_set.h"
 
 #include <list>
 #include <unordered_map>
@@ -86,9 +88,9 @@ int main(int argc, char** argv) {
 //
     const int order = 32;
     const int size = 512;
-    const int ntuples = 100000;
-    const int nopertions = 100000;
-    const double write_rate = 0;
+    const int ntuples = 10000;
+    const int nopertions = 10000;
+    const double write_rate = 0.5;
     const double key_skewness = 0;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
@@ -112,17 +114,20 @@ int main(int argc, char** argv) {
 //    VanillaBPlusTree<int, int, order> tree;
 //    tree.init();
 //    benchmark<int, int>(&tree, "in-memory", 1, ntuples, ntuples, ntuples, 1);
+//    tree.close();
 //
 //    disk_optimized_tree_for_benchmark<int, int, order> tree_optimized(256);
 //    tree_optimized.init();
 //    benchmark<int, int>(&tree_optimized, "disk-optimized", 1, ntuples, ntuples, ntuples, 0);
 //    benchmark_mixed_workload(&tree_optimized, "disk-optimized-mixed", 1, ntuples, ntuples, 0.5, 0);
 
-
-    disk_optimized_b_plus_tree<int, int, order> disk_optimized("tree.dat", 256);
-    disk_optimized.init();
+//    nvme_optimized_b_plus_tree<int, int, order> stone(size, 256);
+//    print_current_cpu_set();
+//    stone.init();
+//    disk_optimized_b_plus_tree<int, int, order> disk_optimized("tree.dat", 256);
+//    disk_optimized.init();
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
-    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 8);
@@ -131,7 +136,7 @@ int main(int argc, char** argv) {
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 64);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 128);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 256);
-    disk_optimized.close();
+//    disk_optimized.close();
 //////
 //    in_nvme_b_plus_tree<int, int, order> in_nvme_tree(size);
 //    in_nvme_tree.init();
@@ -202,13 +207,20 @@ int main(int argc, char** argv) {
 //    concurrent_shared_io_thread_in_nvme_tree.close();
 
 ////
-//    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
-//    concurrent_nvme_optimized.init();
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 1);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 2);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 3);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 4);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 8);
+    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
+    print_current_cpu_set();
+    concurrent_nvme_optimized.init();
+//    print_current_cpu_set();
+//    set_cpu_set(4);
+    print_current_cpu_set();
+//    create_one_cpu_consumer();
+//    create_one_cpu_consumer();
+//    printf("\n\ncreated two consumers! ########\n\n");
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 2);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 3);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 4);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 8);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 16);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 32);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 64);
@@ -220,5 +232,5 @@ int main(int argc, char** argv) {
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 4);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 8);
 //    printf("tree depth: %d\n", concurrent_nvme_optimized.get_height());
-//    concurrent_nvme_optimized.close();
+    concurrent_nvme_optimized.close();
 }
