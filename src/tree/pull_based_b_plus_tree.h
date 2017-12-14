@@ -242,6 +242,9 @@ namespace tree {
 
             int run() {
 //                while(true)
+                int64_t last;
+                last = ticks();
+                int current = this->current_state;
                 switch (this->current_state) {
                     case 0: {
                         if (node_ref_ == -1) {
@@ -260,9 +263,11 @@ namespace tree {
                             obtained_barrier = tree_->manager.request_write_barrier(node_ref_, this);
                         if (obtained_barrier) {
                             transition_to_next_state();
+                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return run();
 //                            continue;
                         } else {
+                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return CONTEXT_TRANSIT;
                         }
                     }
@@ -276,6 +281,7 @@ namespace tree {
                                 node_ref_ = -1;
                                 set_next_state(0);
                                 transition_to_next_state();
+                                printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                                 return run();
 //                                continue;
                             } else {
@@ -299,6 +305,7 @@ namespace tree {
                         }
                         set_next_state(1);
                         transition_to_next_state();
+                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return run();
 //                        continue;
                     }
@@ -306,6 +313,7 @@ namespace tree {
                     case 1: {
                         tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
                         set_next_state(2);
+//                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
                     }
                     case 2: {
@@ -321,6 +329,7 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
+                                    printf("during is %.2f ns, state: %d [2L1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return run();
 //                                    continue;
                                 }
@@ -334,12 +343,13 @@ namespace tree {
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
                                     tree_->blk_accessor_->asynch_write(node_ref_, buffer_, this);
+//                                    printf("during is %.2f ns, state: %d [2L2]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the leaf node wat split and we need to flush both the leaf node and the new node.
                                     current_node_->serialize(buffer_);
                                     split_.right->serialize(buffer_2);
-                                    if (current_node_->get_self_ref()->get_unified_representation() ==
+                                    if (current_node_->get_self_rep() ==
                                             tree_->root_->get_unified_representation()) {
                                         set_next_state(12);
                                     } else {
@@ -348,7 +358,8 @@ namespace tree {
                                     write_back_completion_target_ = 2;
                                     write_back_completion_count_ = 0;
                                     tree_->blk_accessor_->asynch_write(node_ref_, buffer_, this);
-                                    tree_->blk_accessor_->asynch_write(split_.right->get_self_ref()->get_unified_representation(), buffer_2, this);
+                                    tree_->blk_accessor_->asynch_write(split_.right->get_self_rep(), buffer_2, this);
+//                                    printf("during is %.2f ns, state: %d [2L3]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TRANSIT;
                                 }
                             }
@@ -364,6 +375,7 @@ namespace tree {
                                     current_node_ = 0;
                                     set_next_state(13);
                                     transition_to_next_state();
+                                    printf("during is %.2f ns, state: %d [2I1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return run();
 //                                    continue;
                                 }
@@ -381,6 +393,7 @@ namespace tree {
                                 current_node_level_ --;
                                 set_next_state(0);
                                 transition_to_next_state();
+                                printf("during is %.2f ns, state: %d [2I2]\n", cycles_to_nanoseconds(ticks() - last), current);
                                 return run();
 //                                continue;
                             }
@@ -419,10 +432,11 @@ namespace tree {
 
                                     set_next_state(10);
                                     tree_->blk_accessor_->asynch_write(
-                                            current_node_->get_self_ref()->get_unified_representation(), buffer_, this);
+                                            current_node_->get_self_rep(), buffer_, this);
                                     delete split_.left;
                                     delete split_.right;
                                     delete parent_node;
+                                    printf("during is %.2f ns, state: %d [9*1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the current node need to split to accommodate the new node.
@@ -434,7 +448,6 @@ namespace tree {
                                     InnerNode<K, V, CAPACITY> *right = new InnerNode<K, V, CAPACITY>(
                                             tree_->blk_accessor_);
                                     right->mark_modified();
-                                    node_reference<K, V> *right_ref = right->get_self_ref();
 
                                     // move the keys and children to the right node
                                     for (int i = start_index_for_right, j = 0; i < left->size_; ++i, ++j) {
@@ -471,14 +484,15 @@ namespace tree {
 
                                     write_back_completion_target_ = 2;
                                     if (tree_->root_->get_unified_representation() !=
-                                        left->get_self_ref()->get_unified_representation())
+                                        left->get_self_rep())
                                         set_next_state(10);
                                     else
                                         set_next_state(12);
                                     tree_->blk_accessor_->asynch_write(
-                                            left->get_self_ref()->get_unified_representation(), buffer_, this);
+                                            left->get_self_rep(), buffer_, this);
                                     tree_->blk_accessor_->asynch_write(
-                                            right->get_self_ref()->get_unified_representation(), buffer_2, this);
+                                            right->get_self_rep(), buffer_2, this);
+                                    printf("during is %.2f ns, state: %d [9*2]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TRANSIT;
                                 }
                             }
@@ -493,8 +507,9 @@ namespace tree {
                                     write_back_completion_target_ = 1;
                                     write_back_completion_count_ = 0;
                                     set_next_state(10);
-                                    tree_->blk_accessor_->asynch_write(parent_node->get_self_ref()->get_unified_representation(), buffer_, this);
+                                    tree_->blk_accessor_->asynch_write(parent_node->get_self_rep(), buffer_, this);
                                     delete parent_node;
+                                    printf("during is %.2f ns, state: %d [9*3]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     delete parent_node;
@@ -502,6 +517,7 @@ namespace tree {
                             }
                             set_next_state(11);
                             transition_to_next_state();
+                            printf("during is %.2f ns, state: %d [9*4]\n", cycles_to_nanoseconds(ticks() - last), current);
                             return run();
 //                            continue;
                         }
@@ -511,9 +527,11 @@ namespace tree {
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
                             transition_to_next_state();
+                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return run();
 //                            continue;
                         }
+                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
                     }
                     case 11: {
@@ -529,6 +547,7 @@ namespace tree {
                         } else {
                             request_->semaphore->release();
                         }
+                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TERMINATED;
                     }
                     case 12: {
@@ -547,7 +566,8 @@ namespace tree {
                             write_back_completion_target_ = 1;
                             child_node_split_ = false;
                             set_next_state(11);
-                            tree_->blk_accessor_->asynch_write(new_inner_node->get_self_ref()->get_unified_representation(), buffer_, this);
+                            tree_->blk_accessor_->asynch_write(new_inner_node->get_self_rep(), buffer_, this);
+                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return CONTEXT_TRANSIT;
                         }
                         return CONTEXT_TRANSIT;
@@ -563,6 +583,7 @@ namespace tree {
                         set_next_state(0);
                         transition_to_next_state();
                         node_ref_ = -1;
+                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return run();
 //                        continue;
                     }
@@ -708,6 +729,7 @@ namespace tree {
 //                                       cycles_to_nanoseconds(free_work_end - free_work_start),
 //                                       cycles_to_nanoseconds(barrier_work_end - barrier_work_start),
 //                                       cycles_to_nanoseconds(free_work1_end - free_work1_start));
+//                                printf("during is %.2f ns, state: %d [L]\n", cycles_to_nanoseconds(ticks() - last), current);
                                 return CONTEXT_TERMINATED;
                             }
                             case INNER_NODE: {

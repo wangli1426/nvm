@@ -52,8 +52,8 @@ namespace tree {
             if (blk_accessor) {
                 if (allocate_blk_ref) {
                     self_ref_ = blk_accessor_->allocate_ref();
-                    self_rep_ = self_ref_->get_unified_representation();
                     self_ref_->bind(this);
+                    self_rep_ = self_ref_->get_unified_representation();
                 } else {
                     self_ref_ = nullptr;
                     self_rep_ = -1;
@@ -127,10 +127,9 @@ namespace tree {
                 LeafNode<K, V, CAPACITY> *const left = this;
                 LeafNode<K, V, CAPACITY> *const right = new LeafNode<K, V, CAPACITY>(blk_accessor_);
                 right->mark_modified();
-                node_reference<K, V>* right_ref = right->get_self_ref();
 
                 right->right_sibling_ = left->right_sibling_;
-                left->right_sibling_ = right_ref->get_unified_representation();
+                left->right_sibling_ = right->get_self_rep();
 //                delete right_node_ref;
 
                 // move entries to the right node
@@ -391,6 +390,7 @@ namespace tree {
             if (!self_ref_) {
                 self_ref_ = blk_accessor_->create_null_ref();
                 self_ref_->restore_by_unified_representation(self_rep_);
+                self_ref_->bind(this);
             }
             return self_ref_;
         };

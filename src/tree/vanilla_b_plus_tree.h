@@ -190,7 +190,7 @@ namespace tree {
             }
 
             virtual bool next(K &key, V &val) {
-                if (!leaf_node_ref_)
+                if (!leaf_node_ref_ || leaf_node_ref_->is_null_ptr())
                     return false;
                 LeafNode<K, V, CAPACITY>* leaf_node = dynamic_cast<LeafNode<K, V, CAPACITY>*>(leaf_node_ref_->get(blk_accessor_));
                 if (leaf_node->getEntry(offset_, key, val)) {

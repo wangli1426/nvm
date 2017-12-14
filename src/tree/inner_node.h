@@ -29,8 +29,8 @@ namespace tree {
             if (blk_accessor_) {
                 if (allocate_blk_ref) {
                     self_ref_ = blk_accessor_->allocate_ref();
-                    self_rep_ = self_ref_->get_unified_representation();
                     self_ref_->bind(this);
+                    self_rep_ = self_ref_->get_unified_representation();
                 } else {
 //                    self_ref_ = blk_accessor_->create_null_ref();
 //                    self_rep_ = self_ref_->get_unified_representation();
@@ -47,8 +47,8 @@ namespace tree {
             initialize_child_refs();
             if (blk_accessor_) {
                 self_ref_ = blk_accessor_->allocate_ref();
-                self_rep_ = self_ref_->get_unified_representation();
                 self_ref_->bind(this);
+                self_rep_ = self_ref_->get_unified_representation();
             } else {
                 self_ref_ = 0;
                 self_rep_ = -1;
@@ -57,13 +57,15 @@ namespace tree {
 
             size_ = 2;
             key_[0] = left->get_leftmost_key();
-            child_[0] = blk_accessor_->create_null_ref();
-            child_[0]->copy(left->get_self_ref());
-            child_rep_[0] = child_[0]->get_unified_representation();
+//            child_[0] = blk_accessor_->create_null_ref();
+//            child_[0]->copy(left->get_self_ref());
+            child_rep_[0] = left->get_self_rep(); //->get_unified_representation();
             key_[1] = right->get_leftmost_key();
-            child_[1] = blk_accessor_->create_null_ref();
-            child_[1]->copy(right->get_self_ref());
-            child_rep_[1] = child_[1]->get_unified_representation();
+//            child_[1] = blk_accessor_->create_null_ref();
+//            child_[1]->copy(right->get_self_ref());
+            child_rep_[1] = right->get_self_rep();
+            assert(child_rep_[0] != -1);
+            assert(child_rep_[1] != -1);
         }
 
         virtual ~InnerNode() {
@@ -265,7 +267,7 @@ namespace tree {
 
 //            child_[insert_position] = blk_accessor_->create_null_ref();
 //            child_[insert_position]->copy(innerNode->get_self_ref());
-            child_rep_[insert_position] = innerNode->get_self_ref()->get_unified_representation();
+            child_rep_[insert_position] = innerNode->get_self_rep();
             child_[insert_position] = nullptr;
 
             ++size_;
