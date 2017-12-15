@@ -188,23 +188,30 @@ namespace tree {
 
                 int64_t last = ticks();
                 int32_t free = tree->free_context_slots_.load();
-                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+                do {
+                    while ((request = tree->atomic_dequeue_request()) != nullptr) {
+//                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while ((request = tree->atomic_dequeue_request()) != nullptr) {
-                    call_back_context* context;
-                    if (request->type == SEARCH_REQUEST) {
-                        context = new search_context(tree, static_cast<search_request<K, V> *>(request));
-                    } else {
-                        context = new insert_context(tree, static_cast<insert_request<K, V> *>(request));
+                        call_back_context *context;
+                        if (request->type == SEARCH_REQUEST) {
+                            context = new search_context(tree, static_cast<search_request<K, V> *>(request));
+                        } else {
+                            context = new insert_context(tree, static_cast<insert_request<K, V> *>(request));
+                        }
+                        tree->free_context_slots_--;
+                        if (context->run() == CONTEXT_TERMINATED)
+                            delete context;
                     }
-                    tree->free_context_slots_ --;
-                    if (context->run() == CONTEXT_TERMINATED)
-                        delete context;
-                }
+                } while (tree->manager.process_ready_context(tree->queue_length_));
+
                 if (tree->pending_request_.load() > 0) {
 //                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+//                    printf("\n\n\nto process!");
+//                    int64_t start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+//                    if(processed > 0)
+//                        printf("%d processed, time: %.2f\n\n\n", processed, cycles_to_nanoseconds(ticks() - start));
                 }
-                tree->manager.process_ready_context(tree->queue_length_);
             }
             return nullptr;
         }
@@ -221,6 +228,7 @@ namespace tree {
         public:
             insert_context(pull_based_b_plus_tree* tree, insert_request<K, V>* request):
                 call_back_context(), tree_(tree), request_(request) {
+                int64_t start = ticks();
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 buffer_2 = tree_->blk_accessor_->malloc_buffer();
                 node_ref_ = -1;
@@ -230,13 +238,16 @@ namespace tree {
                 optimistic_ = true;
                 next_visit_is_leaf_node_ = tree_->depth_ == 1;
                 current_node_level_ = tree_->get_height();
+//                printf("allocation time: %.2f ns\n", cycles_to_nanoseconds(ticks() - start));
             }
 
             ~insert_context() {
+                int64_t start = ticks();
                 tree_->blk_accessor_->free_buffer(buffer_);
                 tree_->blk_accessor_->free_buffer(buffer_2);
                 buffer_ = 0;
                 buffer_2 = 0;
+//                printf("deallocation time: %.2f ns\n", cycles_to_nanoseconds(ticks() - start));
             }
 
             int run() {

@@ -226,7 +226,7 @@ protected:
 #endif
         int processed = finished_contexts_;
         finished_contexts_ = 0;
-        return processed;
+        return status;
     }
 
 //    void print_metrics() {

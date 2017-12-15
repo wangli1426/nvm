@@ -46,7 +46,8 @@ public:
         barrier->remove_write_barrier();
     }
 
-    void process_ready_context(int32_t max) {
+    int32_t process_ready_context(int32_t max) {
+        int32_t processed = 0;
         while(ready_contexts_.size() > 0 && max > 0) {
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
@@ -54,7 +55,9 @@ public:
                 delete context;
             }
             max--;
+            processed++;
         }
+        return processed;
     }
 
 private:

@@ -90,10 +90,10 @@ namespace nvm {
 //                print_current_cpu_set();
 
                 spdk_env_init(&opts);
-                spdk_unaffinitize_thread();
-                print_current_cpu_set();
-                set_cpu_set(32);
-                print_current_cpu_set();
+//                spdk_unaffinitize_thread();
+//                print_current_cpu_set();
+//                set_cpu_set(32);
+//                print_current_cpu_set();
 //
 //                spdk_unaffinitize_thread();
                 printf("Initializing NVMe Controllers\n");

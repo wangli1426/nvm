@@ -15,6 +15,8 @@
 #include "../context/call_back.h"
 #include "../tree/blk_node_reference.h"
 #include "pull_based_b_plus_tree.h"
+#include "../utils/cpu_set.h"
+#include <spdk/nvme.h>
 
 using namespace std;
 
@@ -31,6 +33,10 @@ namespace tree {
         void create_and_init_blk_accessor() {
             this->blk_accessor_ = new nvme_blk_accessor<K, V, CAPACITY>(block_size_);
             this->blk_accessor_->open();
+            spdk_unaffinitize_thread();
+            print_current_cpu_set();
+            set_cpu_set(32);
+            print_current_cpu_set();
         }
 
 
@@ -48,7 +54,7 @@ namespace tree {
             request.args = 0;
             this->asynchronous_search_with_callback(&request);
             while(!semaphore.try_lock()) {
-//                usleep(1);
+                usleep(1);
             }
             return found;
         }
@@ -65,7 +71,7 @@ namespace tree {
             request.args = 0;
             this->asynchronous_insert_with_callback(&request);
             while(!semaphore.try_lock()) {
-//                usleep(1);
+                usleep(1);
             }
         }
 
