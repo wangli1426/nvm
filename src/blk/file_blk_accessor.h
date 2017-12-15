@@ -26,7 +26,7 @@ template<typename K, typename V, int CAPACITY>
 class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
-                                                                               cursor_(0) {
+                                                                               cursor_(0), wait_for_completion_counts_(0) {
 //        cache_ = new blk_cache(block_size, 1000000);
         cache_ = nullptr;
     }
@@ -146,19 +146,22 @@ public:
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         read(blk_addr, buffer);
-        completed_callbacks_.push(context);
+        ready_contexts_.push(context);
+        wait_for_completion_counts_++;
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         write(blk_addr, buffer);
-        completed_callbacks_.push(context);
+        ready_contexts_.push(context);
+        wait_for_completion_counts_++;
     }
 
     int32_t process_ready_contexts(int32_t max = 1) override {
         int processed = 0;
-        for(; i < ready_contexts_.size() && processed < max; processed++) {
+        for(; processed < ready_contexts_.size() && processed < max; processed++) {
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
+            context->transition_to_next_state();
             if (context->run() == CONTEXT_TERMINATED) {
                 delete context;
             }
@@ -167,23 +170,26 @@ public:
     }
 
     int process_completion(int max = 1) override {
-        int processed = 0;
-        for (int i = 0; i < max; i++) {
-            if (completed_callbacks_.size() > 0) {
-                call_back_context* callback = completed_callbacks_.front();
-                completed_callbacks_.pop();
-                callback->transition_to_next_state();
-//                printf("[blk:] before\n");
-//                if (callback->run() == CONTEXT_TERMINATED) {
-//                    processed++;
-//                    delete callback;
-//                }
-//                printf("[blk:] after\n");
-
-                ready_contexts_.push(callback);
-            }
-        }
-        return processed;
+//        int processed = 0;
+//        for (int i = 0; i < max; i++) {
+//            if (ready_contexts_.size() > 0) {
+//                call_back_context* callback = ready_contexts_.front();
+//                ready_contexts_.pop();
+//                callback->transition_to_next_state();
+////                printf("[blk:] before\n");
+////                if (callback->run() == CONTEXT_TERMINATED) {
+////                    processed++;
+////                    delete callback;
+////                }
+////                printf("[blk:] after\n");
+//
+//                ready_contexts_.push(callback);
+//            }
+//        }
+//        return processed;
+        int ret = wait_for_completion_counts_ < max ? wait_for_completion_counts_: max;
+        wait_for_completion_counts_ -= ret;
+        return ret;
     }
 
     std::string get_name() const override {
@@ -201,6 +207,7 @@ private:
     uint32_t cursor_;
     std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
+    uint32_t wait_for_completion_counts_;
 };
 
 

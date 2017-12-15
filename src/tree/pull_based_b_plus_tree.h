@@ -212,6 +212,7 @@ namespace tree {
 //                    if(processed > 0)
 //                        printf("%d processed, time: %.2f\n\n\n", processed, cycles_to_nanoseconds(ticks() - start));
                 }
+                const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
             }
             return nullptr;
         }
