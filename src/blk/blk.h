@@ -46,6 +46,9 @@ public:
     virtual int read(const blk_address &, void* buffer) = 0;
     virtual int write(const blk_address &, void* buffer) = 0;
     virtual void flush() = 0;
+    virtual int32_t process_ready_contexts(int32_t max = 1) {
+        return 0;
+    };
 
     virtual std::string get_name() const {
         return std::string("Undefined");

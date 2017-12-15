@@ -21,6 +21,14 @@
 #include "utils/cpu_set.h"
 using namespace tree;
 
+class A {
+public:
+    std::vector<int>& get_list() {
+        return list;
+    }
+    std::vector<int> list;
+};
+
 
 int main() {
 //
@@ -33,7 +41,13 @@ int main() {
 //    create_one_cpu_consumer();
 //    create_one_cpu_consumer();
 //    sleep(10000);
-    print_current_cpu_set();
-    set_cpu_set(100);
-    print_current_cpu_set();
+
+    A a;
+    a.list.push_back(1);
+    a.list.push_back(2);
+
+    std::vector<int> &list = a.get_list();
+    list.push_back(3);
+    printf("size is %d.\n", a.list.size());
+
 }

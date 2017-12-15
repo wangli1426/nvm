@@ -154,6 +154,18 @@ public:
         completed_callbacks_.push(context);
     }
 
+    int32_t process_ready_contexts(int32_t max = 1) override {
+        int processed = 0;
+        for(; i < ready_contexts_.size() && processed < max; processed++) {
+            call_back_context* context = ready_contexts_.front();
+            ready_contexts_.pop();
+            if (context->run() == CONTEXT_TERMINATED) {
+                delete context;
+            }
+        }
+        return processed;
+    }
+
     int process_completion(int max = 1) override {
         int processed = 0;
         for (int i = 0; i < max; i++) {
@@ -162,11 +174,13 @@ public:
                 completed_callbacks_.pop();
                 callback->transition_to_next_state();
 //                printf("[blk:] before\n");
-                if (callback->run() == CONTEXT_TERMINATED) {
-                    processed++;
-                    delete callback;
-                }
+//                if (callback->run() == CONTEXT_TERMINATED) {
+//                    processed++;
+//                    delete callback;
+//                }
 //                printf("[blk:] after\n");
+
+                ready_contexts_.push(callback);
             }
         }
         return processed;
@@ -185,7 +199,7 @@ private:
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
-    std::queue<call_back_context*> completed_callbacks_;
+    std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
 };
 

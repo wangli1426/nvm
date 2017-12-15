@@ -38,7 +38,6 @@ class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
     nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
         cursor_ = 0;
-        pending_commands_ = 0;
         qpair_ = 0;
     };
 
@@ -122,16 +121,12 @@ public:
         para->start_time = ticks();
         para->type = NVM_READ;
         para->context = context;
-        para->finished_context = &finished_contexts_;
-        pending_commands_ ++;
-        para->pending_command = &pending_commands_;
         para->id = blk_addr;
         para->accessor = this;
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
-            pending_commands_ --;
             return;
         }
 #ifdef __NVME_ACCESSOR_LOG__
@@ -156,9 +151,6 @@ public:
         para->start_time = ticks();
         para->type = NVM_WRITE;
         para->context = context;
-        para->finished_context = &finished_contexts_;
-        pending_commands_ ++;
-        para->pending_command = &pending_commands_;
         para->id = blk_addr;
         para->accessor = this;
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
@@ -167,7 +159,6 @@ public:
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
-            pending_commands_ --;
             return;
         }
 #ifdef __NVME_ACCESSOR_LOG__
@@ -185,22 +176,36 @@ public:
             para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
             para->accessor->metrics_.writes_.fetch_add(1);
         }
-        para->context->transition_to_next_state();
+//        para->context->transition_to_next_state();
 //        printf("%d(%s) is completed!\n", para->id, para->type.c_str());
 //        printf("pending ios: %s\n", pending_ios_to_string(para->pending_io_).c_str());
 //        printf("to process context[%s]\n", para->context->get_name());
-        if (para->context->run() == CONTEXT_TERMINATED) {
-//            *para->finished_context += 1;
-            delete para->context;
-            para->context = 0;
-        }
+//        if (para->context->run() == CONTEXT_TERMINATED) {
+//            delete para->context;
+//            para->context = 0;
+//        }
+
+        para->context->transition_to_next_state();
+        para->accessor->ready_contests_.push_back(para->context);
+
         delete para;
+    }
+
+    int32_t process_ready_contexts(int32_t max = 1) {
+        int32_t processed = 0;
+        for (int i = 0; i < ready_contests_.size(); i++) {
+            call_back_context* context = ready_contests_.front();
+            ready_contests_.pop();
+            if (context->run() == CONTEXT_TERMINATED) {
+                delete context;
+            }
+            processed++;
+        }
+        return processed;
     }
 
     struct nvme_callback_para {
         call_back_context* context;
-        volatile int32_t* finished_context;
-        volatile int32_t* pending_command;
         int64_t id;
         int64_t start_time;
         nvme_blk_accessor* accessor;
@@ -224,42 +229,17 @@ protected:
 //            sleep(1);
 //        }
 #endif
-        int processed = finished_contexts_;
-        finished_contexts_ = 0;
         return status;
     }
-
-//    void print_metrics() {
-//        double duration_in_seconds = cycles_to_seconds(ticks() - open_time_);
-//        if (reads_ > 0)
-//            printf("[nvm:] total reads: %ld, average: %.2f us, IOPS: %.0f\n",  reads_.load(),
-//                   cycles_to_microseconds(read_cycles_.load() / reads_.load()), reads_.load() / duration_in_seconds);
-//        if (writes_ > 0)
-//            printf("[nvm:] total writes: %ld, average: %.2f us, IOPS %.0f\n",  writes_.load(),
-//                   cycles_to_microseconds(write_cycles_.load() / writes_.load()), writes_.load() / duration_in_seconds);
-//        if (writes_ || reads_)
-//            printf("[nvm:] total IO: %ld, average: %.2f us, IOPS %.0f\n", reads_.load() + writes_.load(),
-//                   cycles_to_microseconds((read_cycles_.load() + write_cycles_.load()) / (reads_.load() + writes_.load())),
-//                   (reads_.load() + writes_.load()) / duration_in_seconds);
-//    }
-//
-//protected:
-//
-//    atomic<uint64_t> read_cycles_;
-//    atomic<uint64_t> write_cycles_;
-//    atomic<uint64_t> reads_;
-//    atomic<uint64_t> writes_;
-//    int64_t open_time_;
 
     QPair* qpair_;
     bool closed_;
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint64_t cursor_;
-    volatile int32_t finished_contexts_;
-    volatile int32_t pending_commands_;
     unordered_map<int64_t, string> pending_io_;
     SpinLock spin_lock_;
+    std::queue<call_back_context*> ready_contests_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H
