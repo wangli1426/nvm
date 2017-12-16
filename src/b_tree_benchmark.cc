@@ -127,9 +127,9 @@ int main(int argc, char** argv) {
     disk_optimized_b_plus_tree<int, int, order> disk_optimized("tree.dat", 256);
     disk_optimized.init();
     multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
-//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
-//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
-//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 8);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 16);
 //    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, ntuples, nopertions, write_rate, key_skewness, 32);
@@ -159,20 +159,20 @@ int main(int argc, char** argv) {
 //    nvme_optimized.close();
 
 
-//    concurrent_in_disk_b_plus_tree<int, int, order> concurrent_in_disk_tree;
-//    concurrent_in_disk_tree.init();
+    concurrent_in_disk_b_plus_tree<int, int, order> concurrent_in_disk_tree;
+    concurrent_in_disk_tree.init();
 //    benchmark<int, int>(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, 0, key_skewness);
-//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
-//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 2);
-//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
-//    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
+    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 2);
+    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 3);
+    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 4);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 8);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 16);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 32);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 64);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 128);
 //    multithread_benchmark_mixed_workload(&concurrent_in_disk_tree, "concurrent-in-disk-tree", 1, ntuples, nopertions, write_rate, key_skewness, 256);
-//    concurrent_in_disk_tree.close();
+    concurrent_in_disk_tree.close();
 
 //    concurrent_in_nvme_b_plus_tree<int, int, order> concurrent_in_nvme_tree;
 //    concurrent_in_nvme_tree.init();

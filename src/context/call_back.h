@@ -56,6 +56,12 @@ public:
         }
     }
 
+    void reset_state() {
+        status = 0;
+        current_state = 0;
+        next_state = -1;
+    }
+
     void transition_to_state(int status) {
         this->status = status;
     }

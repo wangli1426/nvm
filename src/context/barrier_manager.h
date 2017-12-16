@@ -52,7 +52,7 @@ public:
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
             if (context->run() == CONTEXT_TERMINATED) {
-                delete context;
+//                delete context;
             }
             max--;
             processed++;

@@ -247,7 +247,7 @@ public:
             call_back_context* context = ready_contests_.front();
             ready_contests_.pop();
             if (context->run() == CONTEXT_TERMINATED) {
-                delete context;
+//                delete context;
             }
             processed++;
         }

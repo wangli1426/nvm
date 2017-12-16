@@ -28,8 +28,8 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0) {
-        cache_ = new blk_cache(block_size, 10000);
-//        cache_ = nullptr;
+//        cache_ = new blk_cache(block_size, 10000);
+        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {
@@ -82,6 +82,7 @@ public:
             this->metrics_.reads_++;
             return this->block_size;
         }
+        lock_.release();
 
         int status = (int)::pread(fd_, buffer, this->block_size, address * this->block_size);
         if (status < 0) {
@@ -178,7 +179,7 @@ public:
             ready_contexts_.pop();
             context->transition_to_next_state();
             if (context->run() == CONTEXT_TERMINATED) {
-                delete context;
+//                delete context;
             }
         }
         return processed;
