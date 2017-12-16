@@ -40,8 +40,8 @@ public:
     nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
         cursor_ = 0;
         qpair_ = 0;
-//        cache_ = 0;
-        cache_ = new blk_cache(this->block_size, 1000);
+        cache_ = 0;
+//        cache_ = new blk_cache(this->block_size, 10000);
     };
 
     ~nvme_blk_accessor() {
