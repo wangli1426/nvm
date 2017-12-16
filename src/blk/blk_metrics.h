@@ -54,6 +54,16 @@ public:
         this->name_ = metrics.name_;
     }
 
+    void add_read_latency(const int64_t &cycles) {
+        this->read_cycles_ += cycles;
+        this->reads_++;
+    }
+
+    void add_write_latency(const int64_t &cycles) {
+        this->write_cycles_ += cycles;
+        this->writes_++;
+    }
+
     void print() {
         double duration_in_seconds = cycles_to_seconds(total_cycles_);
         if (reads_ > 0)

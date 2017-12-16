@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <atomic>
 #include "blk.h"
+#include "blk_cache.h"
 #include "../tree/blk_node_reference.h"
 #include "../accessor/ns_entry.h"
 #include "../accessor/qpair_context.h"
@@ -39,10 +40,16 @@ public:
     nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
         cursor_ = 0;
         qpair_ = 0;
+//        cache_ = 0;
+        cache_ = new blk_cache(this->block_size, 1000);
     };
 
     ~nvme_blk_accessor() {
         delete qpair_;
+        if (cache_) {
+            cache_->print();
+        }
+        delete cache_;
     }
 
     node_reference<K, V>* allocate_ref() override {
@@ -92,7 +99,18 @@ public:
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         spin_lock_.acquire();
-        qpair_->synchronous_read(buffer, this->block_size, blk_addr);
+        if (cache_ && cache_->read(blk_addr, buffer)) {
+        } else {
+            qpair_->synchronous_read(buffer, this->block_size, blk_addr);
+            if (cache_) {
+                blk_cache::cache_unit unit;
+                if (cache_->write(blk_addr, buffer, false, unit)) {
+                    if (unit.dirty)
+                        qpair_->synchronous_write(unit.data, this->block_size, unit.id);
+                    free(unit.data);
+                }
+            }
+        }
         spin_lock_.release();
         this->metrics_.read_cycles_ += ticks() - start;
         this->metrics_.reads_++;
@@ -100,10 +118,20 @@ public:
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         spin_lock_.acquire();
-        qpair_->synchronous_write(buffer, this->block_size, blk_addr);
+//        if (cache_) {
+//            blk_cache::cache_unit evit_unit;
+//            if (cache_->write(blk_addr, buffer, true, evit_unit)) {
+//                if (evit_unit.dirty)
+//                    qpair_->synchronous_write(evit_unit.data, this->block_size, evit_unit.id);
+//                free(evit_unit.data);
+//            }
+//        } else {
+            qpair_->synchronous_write(buffer, this->block_size, blk_addr);
+//        }
         spin_lock_.release();
         this->metrics_.write_cycles_ += ticks() - start;
         this->metrics_.writes_++;
+        return this->block_size;
     }
 
     void* malloc_buffer() const override {
@@ -117,12 +145,23 @@ public:
     }
 
     virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        int64_t start = ticks();
+        if (cache_ && cache_->read(blk_addr, buffer)) {
+            // we read the data from in-memory cache, so asynchronous io will be omitted.
+            // As such, we just forward the context to the ready context queue.
+            context->transition_to_next_state();
+            ready_contests_.push(context);
+            this->metrics_.add_read_latency(ticks() - start);
+            return;
+        }
+
         nvme_callback_para* para = new nvme_callback_para;
-        para->start_time = ticks();
+        para->start_time = start;
         para->type = NVM_READ;
         para->context = context;
         para->id = blk_addr;
         para->accessor = this;
+        para->buffer = buffer;
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
@@ -153,6 +192,7 @@ public:
         para->context = context;
         para->id = blk_addr;
         para->accessor = this;
+        para->buffer = buffer;
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
 //        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
@@ -168,13 +208,23 @@ public:
 
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
-        *para->pending_command -= 1;
         if (para->type == NVM_READ) {
-            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
-            para->accessor->metrics_.reads_.fetch_add(1);
+//            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
+//            para->accessor->metrics_.reads_.fetch_add(1);
+            para->accessor->metrics_.add_read_latency(ticks() - para->start_time);
         } else {
-            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
-            para->accessor->metrics_.writes_.fetch_add(1);
+//            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
+//            para->accessor->metrics_.writes_.fetch_add(1);
+            para->accessor->metrics_.add_write_latency(ticks() - para->start_time);
+        }
+
+        if (para->accessor->cache_) {
+            blk_cache::cache_unit unit;
+            bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);
+            if (evicted) {
+                assert(!unit.dirty);
+                free(unit.data);
+            }
         }
 //        para->context->transition_to_next_state();
 //        printf("%d(%s) is completed!\n", para->id, para->type.c_str());
@@ -186,7 +236,7 @@ public:
 //        }
 
         para->context->transition_to_next_state();
-        para->accessor->ready_contests_.push_back(para->context);
+        para->accessor->ready_contests_.push(para->context);
 
         delete para;
     }
@@ -210,6 +260,7 @@ public:
         int64_t start_time;
         nvme_blk_accessor* accessor;
         int32_t type;
+        void* buffer;
     };
     std::string get_name() const {
         return std::string("NVM");
@@ -240,6 +291,7 @@ private:
     unordered_map<int64_t, string> pending_io_;
     SpinLock spin_lock_;
     std::queue<call_back_context*> ready_contests_;
+    blk_cache *cache_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

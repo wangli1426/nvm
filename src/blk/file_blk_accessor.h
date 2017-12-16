@@ -15,6 +15,7 @@
 #include "../utils/rdtsc.h"
 #include "asynchronous_accessor.h"
 #include "blk_cache.h"
+#include "../utils/sync.h"
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -27,12 +28,16 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0) {
-//        cache_ = new blk_cache(block_size, 1000000);
-        cache_ = nullptr;
+        cache_ = new blk_cache(block_size, 10000);
+//        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {
+//        if (cache_) {
+//            cache_->print();
+//        }
         delete cache_;
+        cache_ = 0;
     }
 
     int open() override{
@@ -70,8 +75,9 @@ public:
         uint64_t start = ticks();
         if (!is_address_valid(address))
             return 0;
-
+        lock_.acquire();
         if (cache_ && cache_->read(address, buffer)) {
+            lock_.release();
             this->metrics_.read_cycles_ += ticks() - start;
             this->metrics_.reads_++;
             return this->block_size;
@@ -87,7 +93,9 @@ public:
 
         if (cache_) {
             blk_cache::cache_unit unit;
-            bool evicted = cache_->write(address, buffer, unit);
+            lock_.acquire();
+            bool evicted = cache_->write(address, buffer, false, unit);
+            lock_.release();
             if (evicted) {
                 int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
                 if (write_status) {
@@ -106,12 +114,19 @@ public:
             return 0;
         if (cache_) {
             blk_cache::cache_unit unit;
-            if (cache_->write(address, buffer, unit)) {
-                int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
-                if (write_status < 0) {
-                    printf("error in write: %s\n", strerror(errno));
+            lock_.acquire();
+            if (cache_->write(address, buffer, true, unit)) {
+                lock_.release();
+                if (unit.dirty) {
+                    int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                    if (write_status < 0) {
+                        printf("error in write: %s\n", strerror(errno));
+                    }
                 }
                 free(unit.data);
+                unit.data = 0;
+            } else {
+                lock_.release();
             }
             return this->block_size;
         }
@@ -208,6 +223,7 @@ private:
     std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;
+    SpinLock lock_;
 };
 
 

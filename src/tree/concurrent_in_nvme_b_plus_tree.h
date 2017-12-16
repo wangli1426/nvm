@@ -57,6 +57,10 @@ namespace tree{
             }
 
             this->blk_accessor_->open();
+            spdk_unaffinitize_thread();
+            print_current_cpu_set();
+            set_cpu_set(32);
+            print_current_cpu_set();
         }
 
     private:

@@ -20,11 +20,16 @@ int main() {
         cout << "namespace is initialized." << endl;
     }
 
+    spdk_unaffinitize_thread();
+    print_current_cpu_set();
+    set_cpu_set(32);
+    print_current_cpu_set();
+
     cout << "++++++++++ WARMUP ++++++++++" << endl;
-    run_multiple_threads_benchmark(1, 100000, 512, 16, rand_access, read_load, asynch);
-    run_multiple_threads_benchmark(2, 100000, 512, 16, rand_access, read_load, asynch);
-    run_multiple_threads_benchmark(3, 100000, 512, 16, rand_access, read_load, asynch);
-    run_multiple_threads_benchmark(4, 100000, 512, 16, rand_access, read_load, asynch);
+    run_multiple_threads_benchmark(1, 1000000, 512, 256, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(2, 1000000, 512, 256, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(3, 1000000, 512, 256, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(4, 1000000, 512, 256, rand_access, write_load, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
 
 

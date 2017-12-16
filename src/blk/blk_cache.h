@@ -30,16 +30,18 @@ public:
         for(auto it = key_.begin(); it != key_.end(); ++it) {
             free(it->data);
         }
+        key_.clear();
     }
 
 
-    bool write(const int64_t &id, void* buffer, cache_unit & evict) {
+    bool write(const int64_t &id, void* buffer, bool dirty, cache_unit & evict) {
         probes_++;
         cache_unit unit;
         bool evicted = false;
         if (cache_.find(id) == cache_.cend()) {
             unit.id = id;
             unit.data = malloc(blk_size_);
+            unit.dirty = dirty;
             insert_new_unit(unit);
             if (size_ > capacity_) {
                 evicted = true;
@@ -50,6 +52,7 @@ public:
             unit = get(id);
         }
         memcpy(unit.data, buffer, blk_size_);
+        unit.dirty |= dirty;
         return evicted;
     }
 

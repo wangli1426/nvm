@@ -10,7 +10,7 @@ TEST(LRU_CACHE_TEST, WRITE_AND_GET) {
     void* buffer = malloc(512);
     *reinterpret_cast<int*>(buffer) = 31485;
     blk_cache::cache_unit unit;
-    cache.write(0, buffer, unit);
+    cache.write(0, buffer, true, unit);
 
     void* read_buffer = malloc(512);
     cache.read(0, read_buffer);
@@ -27,10 +27,10 @@ TEST(LRU_CACHE_TEST, EVIT) {
     blk_cache cache(512, 2);
     void* buffer = malloc(512);
     blk_cache::cache_unit unit;
-    ASSERT_FALSE(cache.write(0, buffer, unit));
-    ASSERT_FALSE(cache.write(1, buffer, unit));
+    ASSERT_FALSE(cache.write(0, buffer, true, unit));
+    ASSERT_FALSE(cache.write(1, buffer, true, unit));
 
-    ASSERT_TRUE(cache.write(2, buffer, unit));
+    ASSERT_TRUE(cache.write(2, buffer, true, unit));
     ASSERT_EQ(0, unit.id);
 
     free(buffer);
@@ -40,10 +40,10 @@ TEST(LRU_CACHE_TEST, REORDER) {
     blk_cache cache(512, 4);
     void* buffer = malloc(512);
     blk_cache::cache_unit unit;
-    ASSERT_FALSE(cache.write(0, buffer, unit));
-    ASSERT_FALSE(cache.write(1, buffer, unit));
-    ASSERT_FALSE(cache.write(2, buffer, unit));
-    ASSERT_FALSE(cache.write(3, buffer, unit));
+    ASSERT_FALSE(cache.write(0, buffer, true, unit));
+    ASSERT_FALSE(cache.write(1, buffer, true, unit));
+    ASSERT_FALSE(cache.write(2, buffer, true, unit));
+    ASSERT_FALSE(cache.write(3, buffer, true, unit));
 
     ASSERT_EQ("{3, 2, 1, 0}", cache.keys_to_string());
 
