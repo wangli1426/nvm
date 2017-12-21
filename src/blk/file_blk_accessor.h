@@ -28,14 +28,14 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0) {
-//        cache_ = new blk_cache(block_size, 10000);
-        cache_ = nullptr;
+        cache_ = new blk_cache(block_size, 100000);
+//        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {
-//        if (cache_) {
-//            cache_->print();
-//        }
+        if (cache_) {
+            cache_->print();
+        }
         delete cache_;
         cache_ = 0;
     }

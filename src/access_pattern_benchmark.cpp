@@ -26,13 +26,21 @@ int main() {
     print_current_cpu_set();
 
     cout << "++++++++++ WARMUP ++++++++++" << endl;
+    run_multiple_threads_benchmark(1, 1000000, 512, 1, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(1, 1000000, 512, 4, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(1, 1000000, 512, 16, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(1, 1000000, 512, 64, rand_access, write_load, asynch);
     run_multiple_threads_benchmark(1, 1000000, 512, 256, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(2, 1000000, 512, 256, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(3, 1000000, 512, 256, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(4, 1000000, 512, 256, rand_access, write_load, asynch);
+    run_multiple_threads_benchmark(1, 1000000, 512, 1024, rand_access, write_load, asynch);
+//    run_multiple_threads_benchmark(3, 1000000, 512, 256, rand_access, read_load, asynch);
+//    run_multiple_threads_benchmark(4, 1000000, 512, 256, rand_access, read_load, asynch);
+//    run_multiple_threads_benchmark(5, 1000000, 512, 256, rand_access, read_load, asynch);
+//    run_multiple_threads_benchmark(6, 1000000, 512, 256, rand_access, read_load, asynch);
+//    run_multiple_threads_benchmark(7, 1000000, 512, 256, rand_access, read_load, asynch);
+//    run_multiple_threads_benchmark(8, 1000000, 512, 256, rand_access, read_load, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
 
-
+    exit(0);
     sleep(1);
 
     cout << "=========== Sequential Access ==========" << endl;

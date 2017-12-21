@@ -54,7 +54,7 @@ namespace tree {
             request.args = 0;
             this->asynchronous_search_with_callback(&request);
             while(!semaphore.try_lock()) {
-//                usleep(10);
+                usleep(1);
             }
             return found;
         }

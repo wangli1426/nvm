@@ -25,7 +25,7 @@ namespace nvm {
                                         const int bytes_per_access,
                                         const int queue_length, access_mode access, workload load, io_mode mode) {
         total_cycles = 0;
-        cout << "perf test" << endl;
+//        cout << "perf test" << endl;
 
         const uint64_t number_of_sectors = nvm_utility::get_sector_number();
         const uint64_t sectors_per_thread = number_of_sectors / number_of_threads;
@@ -60,11 +60,12 @@ namespace nvm {
 //        nvm_utility::detach();
 
 
-        printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS.\n",
-               cycles,
-               cycles_to_microseconds(cycles / number_of_accesses / number_of_threads),
-               1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses / number_of_threads));
-        printf("complete latency per IO: %.3f us\n", cycles_to_microseconds(total_cycles / number_of_accesses / number_of_threads));
+//        printf("total cycles: %ld, %.3f us per I/O,  %.3f IOPS.\n",
+//               cycles,
+//               cycles_to_microseconds(cycles / number_of_accesses / number_of_threads),
+//               1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses / number_of_threads));
+//        printf("complete latency per IO: %.3f us\n", cycles_to_microseconds(total_cycles / number_of_accesses / number_of_threads));
 
+        printf("%.1f\t", 1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses / number_of_threads) / 1000);
     }
 }

@@ -217,8 +217,8 @@ namespace tree {
 //                    printf("\n\n\nto process!");
 //                    int64_t start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-//                    if(processed > 0)
-//                        printf("%d processed, time: %.2f\n\n\n", processed, cycles_to_nanoseconds(ticks() - start));
+//                    if(processed > 1)
+//                        printf("%d processed, time: %.2f\t", processed, cycles_to_nanoseconds(ticks() - start));
                 }
                 const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
             }
