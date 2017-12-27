@@ -72,10 +72,7 @@ public:
     const uint32_t block_size;
 
     virtual void start_measurement() {
-        metrics_.writes_ = 0;
-        metrics_.write_cycles_ = 0;
-        metrics_.reads_ = 0;
-        metrics_.read_cycles_ = 0;
+        metrics_.reset();
         open_time_ = ticks();
     };
 

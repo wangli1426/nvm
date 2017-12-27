@@ -42,6 +42,8 @@ public:
         qpair_ = 0;
         cache_ = 0;
 //        cache_ = new blk_cache(this->block_size, 10000);
+
+        // measure the concurrency in the command queues
     };
 
     ~nvme_blk_accessor() {
@@ -168,6 +170,7 @@ public:
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
+        this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
 #endif
@@ -182,7 +185,10 @@ public:
     }
 
     int process_completion(int max = 1) {
-        return process_completion(qpair_, max);
+        int processed =  process_completion(qpair_, max);
+        this->metrics_.pending_commands_ -= processed;
+        this->metrics_.pending_command_counts_.push_back(this->metrics_.pending_commands_);
+        return processed;
     }
 
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
@@ -201,6 +207,7 @@ public:
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
+        this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
 #endif

@@ -176,50 +176,30 @@ namespace tree {
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
-//                usleep(100000);
                 request<K, V>* request;
-                /**
-                 TODO 1: if all the incoming operations can be completed by calling context->run only once, the pending
-                 context will never be processed. One possible solution is to process_completion() in each round
-                 regardless if new request arrives.
-
-                 TODO 2: It seems to be more efficient in terms of both throughput and processing latency to process
-                 multiple new requests at a time.
-
-                 **/
-
                 int64_t last = ticks();
-                int32_t free = tree->free_context_slots_.load();
-                do {
-                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-//                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+//                do {
+                    int32_t free = tree->free_context_slots_.load();
+//                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+                if (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while ((request = tree->atomic_dequeue_request()) != nullptr) {
                         call_back_context *context;
                         if (request->type == SEARCH_REQUEST) {
-//                            context = new search_context(tree, static_cast<search_request<K, V> *>(request));
                             context = tree->get_free_search_context();
                             reinterpret_cast<search_context*>(context)->init(
                                     reinterpret_cast<search_request<K, V>*>(request));
                         } else {
-//                            context = new insert_context(tree, static_cast<insert_request<K, V> *>(request));
                             context = tree->get_free_insert_context();
                             reinterpret_cast<insert_context*>(context)->init(reinterpret_cast<insert_request<K, V>*>(request));
                         }
                         tree->free_context_slots_--;
-//                        if (context->run() == CONTEXT_TERMINATED)
-//                            delete context;
                         context->run();
                     }
-                } while (tree->manager.process_ready_context(tree->queue_length_));
+//                } while (tree->manager.process_ready_context(tree->queue_length_));
 
-                if (tree->pending_request_.load() > 0) {
-//                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-//                    printf("\n\n\nto process!");
-//                    int64_t start = ticks();
+//                if (tree->pending_request_.load() > 0) {
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-//                    if(processed > 1)
-//                        printf("%d processed, time: %.2f\t", processed, cycles_to_nanoseconds(ticks() - start));
-                }
+//                }
                 const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
             }
             return nullptr;

@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <string>
+#include <vector>
 #include "../utils/rdtsc.h"
 using namespace std;
 class blk_metrics {
@@ -18,12 +19,21 @@ public:
     int64_t total_cycles_;
     string name_;
 
+    std::vector<int16_t> pending_command_counts_;
+    int64_t pending_commands_;
+
     blk_metrics() {
+        reset();
+    }
+
+    void reset() {
         read_cycles_ = 0;
         write_cycles_ = 0;
         reads_ = 0;
         writes_ = 0;
         total_cycles_ = 0;
+        pending_command_counts_.clear();
+        pending_commands_ = 0;
     }
 
     blk_metrics& operator=(blk_metrics&& r) {
@@ -33,6 +43,8 @@ public:
         this->writes_.store(r.writes_.load());
         this->total_cycles_ = r.total_cycles_;
         this->name_ = r.name_;
+        this->pending_command_counts_ = r.pending_command_counts_;
+        this->pending_commands_ = r.pending_commands_;
         return *this;
     }
 
@@ -43,6 +55,8 @@ public:
         this->writes_.store(r.writes_.load());
         this->total_cycles_ = r.total_cycles_;
         this->name_ = r.name_;
+        this->pending_command_counts_ = r.pending_command_counts_;
+        this->pending_commands_ = r.pending_commands_;
     }
 
     void merge(const blk_metrics & metrics) {
@@ -52,6 +66,8 @@ public:
         this->writes_ += metrics.writes_;
         this->total_cycles_ += metrics.total_cycles_;
         this->name_ = metrics.name_;
+        this->pending_command_counts_ = metrics.pending_command_counts_;
+        this->pending_commands_ = metrics.pending_commands_;
     }
 
     void add_read_latency(const int64_t &cycles) {
@@ -90,6 +106,18 @@ public:
                    duration_in_seconds / (reads_.load() + writes_.load()) * 1000000,
                    (reads_.load() + writes_.load()) / duration_in_seconds,
                    cycles_to_seconds(read_cycles_.load()  + write_cycles_.load()) / duration_in_seconds);
+
+        if (pending_command_counts_.size() > 0) {
+//            for (int i = 0; i < pending_command_counts_.size(); ++i) {
+//                printf("%d ", pending_command_counts_[i]);
+//            }
+
+            long sum = 0;
+            for (int i = 0; i < pending_command_counts_.size(); ++i) {
+                sum += pending_command_counts_[i];
+            }
+            printf("NVMe: average queue length: %.2f\n", (double) sum / pending_command_counts_.size());
+        }
     }
 };
 #endif //NVM_BLK_METRICS_H
