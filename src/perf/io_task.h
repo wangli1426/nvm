@@ -15,18 +15,18 @@ namespace nvm {
 
             if (mode == asynch) {
                 if (i == number_of_accesses - 1) {
-                    if (load == read_load)
+                    if (rand() % 100 >= load)
                         qpair->asynchronous_read(buffer, buffer_size, pattern->next_access(), &is_complete);
                     else
                         qpair->asynchronous_write(buffer, buffer_size, pattern->next_access(), &is_complete);
                 } else {
-                    if (load == read_load)
+                    if (rand() % 100 >= load)
                         qpair->asynchronous_read(buffer, buffer_size, pattern->next_access(), 0);
                     else
                         qpair->asynchronous_write(buffer, buffer_size, pattern->next_access(), 0);
                 }
             } else {
-                if (load == read_load)
+                if (rand() % 100 >= load)
                     qpair->synchronous_read(buffer, buffer_size, pattern->next_access());
                 else
                     qpair->synchronous_write(buffer, buffer_size, pattern->next_access());

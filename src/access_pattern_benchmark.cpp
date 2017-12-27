@@ -10,7 +10,7 @@
 
 using namespace std;
 using namespace nvm;
-int main() {
+int main(int argc, char* argv[]) {
 
     int status = nvm::nvm_utility::initialize_namespace();
     if (status != 0) {
@@ -22,22 +22,26 @@ int main() {
 
     spdk_unaffinitize_thread();
     print_current_cpu_set();
-    set_cpu_set(32);
+    set_cpu_set(8);
     print_current_cpu_set();
 
     cout << "++++++++++ WARMUP ++++++++++" << endl;
-    run_multiple_threads_benchmark(1, 1000000, 512, 1, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(1, 1000000, 512, 4, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(1, 1000000, 512, 16, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(1, 1000000, 512, 64, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(1, 1000000, 512, 256, rand_access, write_load, asynch);
-    run_multiple_threads_benchmark(1, 1000000, 512, 1024, rand_access, write_load, asynch);
-//    run_multiple_threads_benchmark(3, 1000000, 512, 256, rand_access, read_load, asynch);
-//    run_multiple_threads_benchmark(4, 1000000, 512, 256, rand_access, read_load, asynch);
-//    run_multiple_threads_benchmark(5, 1000000, 512, 256, rand_access, read_load, asynch);
-//    run_multiple_threads_benchmark(6, 1000000, 512, 256, rand_access, read_load, asynch);
-//    run_multiple_threads_benchmark(7, 1000000, 512, 256, rand_access, read_load, asynch);
-//    run_multiple_threads_benchmark(8, 1000000, 512, 256, rand_access, read_load, asynch);
+    const int number_of_threads = atoi(argv[1]);
+    const int write_rate = 50;
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 1, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 4, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 16, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 64, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 256, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 1024, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(1, 1000000, 512, 16, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(2, 1000000, 512, 16, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(3, 100000, 512, 32, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(4, 1000000, 512, 16, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(5, 100000, 512, 32, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(6, 100000, 512, 32, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(7, 100000, 512, 32, rand_access, write_rate, asynch);
+//    run_multiple_threads_benchmark(8, 1000000, 512, 16, rand_access, write_rate, asynch);
     cout << "++++++++++ WARMUP ++++++++++" << endl << endl;
 
     exit(0);

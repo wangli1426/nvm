@@ -43,7 +43,7 @@ namespace nvm {
 
         uint64_t start = ticks();
         for (int i = 0; i < number_of_threads; i++) {
-            threads[i] = std::thread(run_task, number_of_accesses, bytes_per_access, load, patterns[i], mode,
+            threads[i] = std::thread(run_task, number_of_accesses / number_of_threads, bytes_per_access, load, patterns[i], mode,
                                      qpairs[i]);
         }
 
@@ -66,6 +66,6 @@ namespace nvm {
 //               1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses / number_of_threads));
 //        printf("complete latency per IO: %.3f us\n", cycles_to_microseconds(total_cycles / number_of_accesses / number_of_threads));
 
-        printf("%.1f\t", 1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses / number_of_threads) / 1000);
+        printf("%.1f\t", 1000000000 / cycles_to_nanoseconds(cycles / number_of_accesses) / 1000);
     }
 }

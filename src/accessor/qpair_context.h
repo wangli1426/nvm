@@ -34,7 +34,8 @@ namespace nvm {
               int queue_length = 8): ctrlr_(ctrlr), ns_(ns), qpair_(qpair), free_slots_(queue_length),
                                      queue_length_(queue_length) {
             sector_size_ = spdk_nvme_ns_get_sector_size(ns);
-            completion_batch_size_ = queue_length / 1;
+            completion_batch_size_ = queue_length / 8 <= 4 ? 4 : queue_length / 8;
+//            completion_batch_size_ = 1;
         }
 
         ~QPair() {
