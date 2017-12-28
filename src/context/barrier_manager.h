@@ -51,13 +51,15 @@ public:
         while(ready_contexts_.size() > 0 && max > 0) {
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
-            if (context->run() == CONTEXT_TERMINATED) {
-//                delete context;
-            }
+            context->run();
             max--;
             processed++;
         }
         return processed;
+    }
+
+    std::queue<call_back_context*>& get_ready_context() {
+        return ready_contexts_;
     }
 
 private:

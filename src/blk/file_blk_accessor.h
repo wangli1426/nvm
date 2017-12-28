@@ -162,13 +162,13 @@ public:
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         read(blk_addr, buffer);
-        ready_contexts_.push(context);
+        pending_contexts_.push(context);
         wait_for_completion_counts_++;
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         write(blk_addr, buffer);
-        ready_contexts_.push(context);
+        pending_contexts_.push(context);
         wait_for_completion_counts_++;
     }
 
@@ -177,7 +177,6 @@ public:
         for(; processed < ready_contexts_.size() && processed < max; processed++) {
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
-            context->transition_to_next_state();
             if (context->run() == CONTEXT_TERMINATED) {
 //                delete context;
             }
@@ -203,9 +202,22 @@ public:
 //            }
 //        }
 //        return processed;
-        int ret = wait_for_completion_counts_ < max ? wait_for_completion_counts_: max;
-        wait_for_completion_counts_ -= ret;
-        return ret;
+//        int ret = wait_for_completion_counts_ < max ? wait_for_completion_counts_: max;
+//        wait_for_completion_counts_ -= ret;
+//        return ret;
+        int processed = 0;
+        while(pending_contexts_.size() > 0 && processed < max) {
+            call_back_context* context = pending_contexts_.front();
+            pending_contexts_.pop();
+            context->transition_to_next_state();
+            ready_contexts_.push(context);
+            processed++;
+        }
+        return processed;
+    }
+
+    std::queue<call_back_context*>& get_ready_context_queue() override {
+        return ready_contexts_;
     }
 
     std::string get_name() const override {
@@ -221,6 +233,7 @@ private:
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
+    std::queue<call_back_context*> pending_contexts_;
     std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;

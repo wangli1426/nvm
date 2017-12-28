@@ -28,6 +28,7 @@ void set_cpu_set(const int32_t &cpus) {
     for (int i = 0; i < cpus; i++) {
         CPU_SET(i, &mask);
     }
+    CPU_CLR(2, &mask);
     sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 #endif
 }

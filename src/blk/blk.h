@@ -69,6 +69,11 @@ public:
     virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual int process_completion(int max = 1) = 0;
+
+    virtual std::queue<call_back_context*>& get_ready_context_queue() {
+        assert(false);
+    };
+
     const uint32_t block_size;
 
     virtual void start_measurement() {

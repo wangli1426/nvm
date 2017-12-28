@@ -52,10 +52,16 @@ namespace tree {
             request.semaphore = &semaphore;
             request.cb_f = nullptr;
             request.args = 0;
+            request.start = ticks();
             this->asynchronous_search_with_callback(&request);
             while(!semaphore.try_lock()) {
-                usleep(1);
+//                usleep(1);
             }
+//            printf("Insert: before admission: %.2f us, process: %.2f us, after graduation: %.2f us, total: %.2f\n",
+//                   cycles_to_microseconds(request.admission - request.start),
+//                   cycles_to_microseconds(request.graduation - request.admission),
+//                   cycles_to_microseconds(ticks() - request.graduation),
+//                   cycles_to_microseconds(ticks() - request.start));
             return found;
         }
 
@@ -69,10 +75,16 @@ namespace tree {
             request.semaphore = &semaphore;
             request.cb_f = nullptr;
             request.args = 0;
+            request.start = ticks();
             this->asynchronous_insert_with_callback(&request);
             while(!semaphore.try_lock()) {
-//                usleep(10);
+//                usleep(1);
             }
+            printf("Insert: before admission: %.2f us, process: %.2f us, after graduation: %.2f us, total: %.2f\n",
+                   cycles_to_microseconds(request.admission - request.start),
+                   cycles_to_microseconds(request.graduation - request.admission),
+                   cycles_to_microseconds(ticks() - request.graduation),
+                   cycles_to_microseconds(ticks() - request.start));
         }
 
     private:
