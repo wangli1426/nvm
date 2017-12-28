@@ -212,12 +212,12 @@ namespace tree {
 //                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
                 if ((request = tree->atomic_dequeue_request()) != nullptr) {
 
-                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
-                           cycles_to_microseconds(admission_cycles),
-                           cycles_to_microseconds(blk_completion_cycles),
-                           cycles_to_microseconds(blk_ready_cycles),
-                           cycles_to_microseconds(manager_ready_cycles));
-                    printf("Count: adm: %d, blk_com: %d, blk_read: %d, manager: %d\n", admission, blk_completion, blk_ready, manager_ready);
+//                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
+//                           cycles_to_microseconds(admission_cycles),
+//                           cycles_to_microseconds(blk_completion_cycles),
+//                           cycles_to_microseconds(blk_ready_cycles),
+//                           cycles_to_microseconds(manager_ready_cycles));
+//                    printf("Count: adm: %d, blk_com: %d, blk_read: %d, manager: %d\n", admission, blk_completion, blk_ready, manager_ready);
 
                     admission_cycles = 0;
                     blk_completion_cycles = 0;
@@ -269,6 +269,7 @@ namespace tree {
                 manager_ready++;
                 manager_ready_cycles += ticks() - start;
             }
+            printf("processing threads terminated!\n");
             tree->destroy_free_contexts();
             return nullptr;
         }

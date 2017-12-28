@@ -72,7 +72,7 @@ public:
     }
 
     bool is_clear() {
-        return write_barriers == 0 && read_barriers ==0;
+        return write_barriers == 0 && read_barriers == 0;
     }
 
 private:

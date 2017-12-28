@@ -31,23 +31,45 @@ public:
 
 
 int main() {
-//
-//    disk_optimized_b_plus_tree<int, int, 32> disk_optimized("tree.dat", 256, 512);
-//    disk_optimized.init();
-//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 100000, 100000, 0, 0, 1);
-//////    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 100000, 100000, 0.5, 0, 2);
-//    disk_optimized.close();
-//    create_one_cpu_consumer();
-//    create_one_cpu_consumer();
-//    create_one_cpu_consumer();
-//    sleep(10000);
+    disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
+    tree.init();
+    vector<int> keys;
+    vector<operation<int, int> > operations;
+    const int tuples = 10000;
+    const int threads = 2;
+    std::thread tid[threads];
 
-    A a;
-    a.list.push_back(1);
-    a.list.push_back(2);
+    for(int i = 0; i < tuples; i++) {
+        keys.push_back(i);
+    }
 
-    std::vector<int> &list = a.get_list();
-    list.push_back(3);
-    printf("size is %d.\n", a.list.size());
+    std::random_shuffle(&keys[0], &keys[tuples]);
+
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        operation<int, int> op;
+        op.key = *it;
+        op.val = *it;
+        op.type = WRITE_OP;
+        operations.push_back(op);
+    }
+
+    const int tuples_per_thread = tuples / threads;
+    for (int i = 0; i < threads; i++) {
+        tid[i] = std::thread(&execute_operations<int, int>, &tree, operations.begin() + i * tuples_per_thread, operations.begin() + (i + 1) * tuples_per_thread);
+    }
+
+    for (int i = 0; i < threads; i++) {
+        tid[i].join();
+    }
+
+    tree.sync();
+
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        int value;
+        tree.search(*it, value);
+    }
+
+    tree.close();
+    printf("done!\n");
 
 }

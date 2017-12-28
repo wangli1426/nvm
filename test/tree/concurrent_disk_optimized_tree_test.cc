@@ -16,6 +16,7 @@ using namespace tree;
 using namespace std;
 
 TEST(ConcurrentDiskOptimizedBPlusTree, SingleThreadedInsertion) {
+    printf("begin to execute SingleThreadedInsertion\n");
     disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
@@ -45,11 +46,12 @@ TEST(ConcurrentDiskOptimizedBPlusTree, SingleThreadedInsertion) {
         tree.search(*it, value);
         ASSERT_EQ(*it, value);
     }
-
+    tree.sync();
     tree.close();
 }
 
 TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertion) {
+    printf("begin to execute MultipleThreadedInsertion\n");
     disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
@@ -88,11 +90,12 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertion) {
         tree.search(*it, value);
         ASSERT_EQ(*it, value);
     }
-
+    tree.sync();
     tree.close();
 }
 
 TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearch) {
+    printf("begin to execute MultipleThreadedInsertionAndSearch\n");
     disk_optimized_b_plus_tree<int, int, 16> tree("tree.dat", 256);
     tree.init();
     vector<int> keys;
@@ -140,11 +143,12 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearch) {
         tree.search(*it, value);
         ASSERT_EQ(*it, value);
     }
-
+    tree.sync();
     tree.close();
 }
 
 TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearchWithLargeBlockSize) {
+    printf("begin to execute MultipleThreadedInsertionAndSearchWithLargeBlockSize\n");
     disk_optimized_b_plus_tree<int, int, 128> tree("tree.dat", 256, 4096);
     tree.init();
     vector<int> keys;
@@ -192,6 +196,6 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearchWithLar
         tree.search(*it, value);
         ASSERT_EQ(*it, value);
     }
-
+    tree.sync();
     tree.close();
 }
