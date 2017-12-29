@@ -60,6 +60,10 @@ public:
         return processed;
     }
 
+    std::queue<call_back_context*>& get_ready_contexts() {
+        return ready_contexts_;
+    }
+
 private:
     context_barrier* get_or_create_barrier(const int64_t& node_id) {
         unordered_map<int64_t, context_barrier*>::const_iterator it = barriers_.find(node_id);

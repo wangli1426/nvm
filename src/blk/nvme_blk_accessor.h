@@ -152,7 +152,7 @@ public:
             // we read the data from in-memory cache, so asynchronous io will be omitted.
             // As such, we just forward the context to the ready context queue.
             context->transition_to_next_state();
-            ready_contests_.push(context);
+            ready_contexts_.push(context);
             this->metrics_.add_read_latency(ticks() - start);
             return;
         }
@@ -182,6 +182,11 @@ public:
             ost << it->first << "(" << it->second << ")" << " ";
         }
         return ost.str();
+    }
+
+
+    std::queue<call_back_context*>& get_ready_contexts() override {
+        return ready_contexts_;
     }
 
     int process_completion(int max = 1) {
@@ -243,16 +248,16 @@ public:
 //        }
 
         para->context->transition_to_next_state();
-        para->accessor->ready_contests_.push(para->context);
+        para->accessor->ready_contexts_.push(para->context);
 
         delete para;
     }
 
     int32_t process_ready_contexts(int32_t max = 1) {
         int32_t processed = 0;
-        for (int i = 0; i < ready_contests_.size(); i++) {
-            call_back_context* context = ready_contests_.front();
-            ready_contests_.pop();
+        for (int i = 0; i < ready_contexts_.size(); i++) {
+            call_back_context* context = ready_contexts_.front();
+            ready_contexts_.pop();
             if (context->run() == CONTEXT_TERMINATED) {
 //                delete context;
             }
@@ -297,7 +302,7 @@ private:
     uint64_t cursor_;
     unordered_map<int64_t, string> pending_io_;
     SpinLock spin_lock_;
-    std::queue<call_back_context*> ready_contests_;
+    std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
 };
 

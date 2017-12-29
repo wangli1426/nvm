@@ -175,13 +175,17 @@ namespace tree {
 
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
+
+            std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
+            std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
+
+            int64_t last = 0;
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
                 request<K, V>* request;
-                int64_t last = ticks();
 //                do {
                     int32_t free = tree->free_context_slots_.load();
 //                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-                if (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
+                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while ((request = tree->atomic_dequeue_request()) != nullptr) {
                         call_back_context *context;
                         if (request->type == SEARCH_REQUEST) {
@@ -192,17 +196,43 @@ namespace tree {
                             context = tree->get_free_insert_context();
                             reinterpret_cast<insert_context*>(context)->init(reinterpret_cast<insert_request<K, V>*>(request));
                         }
-                        tree->free_context_slots_--;
-                        context->run();
-                    }
+                    tree->free_context_slots_--;
+                    context->run();
+                }
 //                } while (tree->manager.process_ready_context(tree->queue_length_));
+                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
+                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 
 //                if (tree->pending_request_.load() > 0) {
+                if (ticks() - last > 100) {
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                    if (processed) {
+                        last = 0;
+                    }
+                    else {
+                        last = ticks();
+                    }
+                } else {
+                    if (blk_ready_contexts.empty() && barrier_ready_contexts.empty()) {
+                        usleep(1);
+                    }
+                }
 //                }
-                const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
+//                const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
+//                tree->manager.process_ready_context(tree->queue_length_);
             }
             return nullptr;
+        }
+
+        static int process_ready_contexts(std::queue<call_back_context*>& ready_contexts, int max = 1) {
+            int processed = 0;
+            while (processed < max && ready_contexts.size() > 0) {
+                call_back_context* context = ready_contexts.front();
+                ready_contexts.pop();
+                context->run();
+                processed++;
+            }
+            return processed;
         }
 
         void sync() override {

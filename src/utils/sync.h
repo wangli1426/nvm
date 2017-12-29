@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <atomic>
 
+#define PTHREAD_SPIN_LOCK
+
 using namespace std;
 
 class Lock {
@@ -41,17 +43,41 @@ public:
  */
 class SpinLock {
 public:
-    SpinLock() : _l(0) {}
+#ifndef PTHREAD_SPIN_LOCK
+    SpinLock() : _l(0) {
+
+    }
+#else
+    SpinLock() {
+        int ret = pthread_spin_init(&t, 0);
+        assert(ret == 0);
+    }
+    ~SpinLock() {
+        int ret = pthread_spin_destroy(&t);
+        assert(ret == 0);
+    }
+#endif
 
     /** Call blocks and retunrs only when it has the lock. */
     inline void acquire() {
+#ifdef PTHREAD_SPIN_LOCK
+        int ret = pthread_spin_lock(&t);
+        assert(ret == 0);
+#else
         while (tas(&_l)) {
 #if defined(__i386__) || defined(__x86_64__)
             __asm__ __volatile__("pause\n");
 #endif
         }
+#endif
     }
-    inline bool try_lock() { return !tas(&_l); }
+    inline bool try_lock() {
+#ifdef PTHREAD_SPIN_LOCK
+        return pthread_spin_trylock(&t) == 0;
+#else
+        return !tas(&_l);
+#endif
+    }
     inline int fakelock() { return _l == 0 ? 0 : 1; }
     inline int getvalue() {
         // return _l==0?0:1;
@@ -59,7 +85,14 @@ public:
     }
 
     /** Unlocks the lock object. */
-    inline void release() { _l = 0; }
+    inline void release() {
+#ifdef PTHREAD_SPIN_LOCK
+        int ret = pthread_spin_unlock(&t);
+        assert(ret == 0);
+#else
+        _l = 0;
+#endif
+    }
 
 private:
     inline int tas(volatile char* lock) {
@@ -79,8 +112,11 @@ private:
 #endif
         return res;
     }
-
+#ifdef PTHREAD_SPIN_LOCK
+    pthread_spinlock_t t;
+#endif
     volatile char _l;  //__attribute__((aligned(64)))
+
 };
 
 static atomic<long> sema_id;

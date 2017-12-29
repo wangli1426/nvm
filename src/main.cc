@@ -32,22 +32,22 @@ public:
 
 int main() {
 //
-//    disk_optimized_b_plus_tree<int, int, 32> disk_optimized("tree.dat", 256, 512);
-//    disk_optimized.init();
-//    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 100000, 100000, 0, 0, 1);
+    disk_optimized_b_plus_tree<int, int, 32> disk_optimized("tree.dat", 256, 512);
+    disk_optimized.init();
+    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 1000, 1000, 0, 0, 1);
 //////    multithread_benchmark_mixed_workload(&disk_optimized, "disk_optimized_b_plus_tree", 1, 100000, 100000, 0.5, 0, 2);
-//    disk_optimized.close();
+    disk_optimized.close();
 //    create_one_cpu_consumer();
 //    create_one_cpu_consumer();
 //    create_one_cpu_consumer();
 //    sleep(10000);
 
-    A a;
-    a.list.push_back(1);
-    a.list.push_back(2);
-
-    std::vector<int> &list = a.get_list();
-    list.push_back(3);
-    printf("size is %d.\n", a.list.size());
+//    A a;
+//    a.list.push_back(1);
+//    a.list.push_back(2);
+//
+//    std::vector<int> &list = a.get_list();
+//    list.push_back(3);
+//    printf("size is %d.\n", a.list.size());
 
 }
