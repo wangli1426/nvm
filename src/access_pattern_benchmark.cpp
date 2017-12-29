@@ -26,8 +26,8 @@ int main(int argc, char* argv[]) {
     print_current_cpu_set();
 
     cout << "++++++++++ WARMUP ++++++++++" << endl;
-    const int number_of_threads = atoi(argv[1]);
-    const int write_rate = 0;
+    const int number_of_threads = 1;
+    const int write_rate = 100;
     run_multiple_threads_benchmark(number_of_threads, 100000, 512, 1, rand_access, write_rate, asynch);
     run_multiple_threads_benchmark(number_of_threads, 100000, 512, 4, rand_access, write_rate, asynch);
     run_multiple_threads_benchmark(number_of_threads, 100000, 512, 16, rand_access, write_rate, asynch);

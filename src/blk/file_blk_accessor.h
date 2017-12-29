@@ -172,6 +172,10 @@ public:
         wait_for_completion_counts_++;
     }
 
+    std::queue<call_back_context*>& get_ready_contexts() override {
+        return ready_contexts_;
+    }
+
     int32_t process_ready_contexts(int32_t max = 1) override {
         int processed = 0;
         for(; processed < ready_contexts_.size() && processed < max; processed++) {
@@ -206,7 +210,7 @@ public:
 //        wait_for_completion_counts_ -= ret;
 //        return ret;
         int processed = 0;
-        while(pending_contexts_.size() > 0 && processed < max) {
+        while (processed < max && pending_contexts_.size() > 0) {
             call_back_context* context = pending_contexts_.front();
             pending_contexts_.pop();
             context->transition_to_next_state();
@@ -214,10 +218,6 @@ public:
             processed++;
         }
         return processed;
-    }
-
-    std::queue<call_back_context*>& get_ready_context_queue() override {
-        return ready_contexts_;
     }
 
     std::string get_name() const override {

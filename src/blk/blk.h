@@ -50,6 +50,10 @@ public:
         return 0;
     };
 
+    virtual std::queue<call_back_context*>& get_ready_contexts() {
+        assert(false);
+    }
+
     virtual std::string get_name() const {
         return std::string("Undefined");
     };

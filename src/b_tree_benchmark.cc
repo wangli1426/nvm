@@ -208,17 +208,16 @@ int main(int argc, char** argv) {
 ////
     nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
     concurrent_nvme_optimized.init();
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 1);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 1);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 2);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 3);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 4);
-    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 8);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 4);
+//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 8);
     multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 16);
     multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 32);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 64);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 128);
-//    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 256);
-
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 64);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 128);
+    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 256);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 2);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 3);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, 0, key_skewness, 4);

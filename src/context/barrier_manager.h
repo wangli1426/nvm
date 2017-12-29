@@ -57,7 +57,7 @@ public:
         return processed;
     }
 
-    std::queue<call_back_context*>& get_ready_context() {
+    std::queue<call_back_context*>& get_ready_contexts() {
         return ready_contexts_;
     }
 

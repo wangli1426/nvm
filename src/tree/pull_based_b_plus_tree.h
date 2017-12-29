@@ -196,9 +196,10 @@ namespace tree {
 
             uint64_t empty_queue_time = 0;
 
-//            std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_context_queue();
-//            std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_context();
+            std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
+            std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
 
+            int64_t last = 0;
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
 
 //                usleep(1);
@@ -207,10 +208,10 @@ namespace tree {
                 int state;
                 uint64_t start;
 //                do {
-//                    int32_t free = tree->free_context_slots_.load();
+                    int32_t free = tree->free_context_slots_.load();
 //                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-                if ((request = tree->atomic_dequeue_request()) != nullptr) {
+                while (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
 
 //                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
 //                           cycles_to_microseconds(admission_cycles),
@@ -242,8 +243,9 @@ namespace tree {
                     admission_cycles += ticks() - start;
                 }
 //                } while (tree->manager.process_ready_context(tree->queue_length_));
+                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
+                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 
-//                if (tree->pending_request_.load() > 0) {
 //                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
@@ -258,14 +260,12 @@ namespace tree {
 
 
                 start = ticks();
-                const int count = tree->blk_accessor_->process_ready_contexts(tree->queue_length_);
-//                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
+                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
                 blk_ready++;
                 blk_ready_cycles += ticks() - start;
 
                 start = ticks();
-                tree->manager.process_ready_context(tree->queue_length_);
-//                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
+                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
                 manager_ready++;
                 manager_ready_cycles += ticks() - start;
             }
@@ -274,20 +274,20 @@ namespace tree {
             return nullptr;
         }
 
-        void sync() override {
-            while(pending_request_.load()> 0) {
-                usleep(1000);
-            }
-        }
-
-        static int process_ready_contexts(std::queue<call_back_context*> &ready_contexts, int max = 10000) {
+        static int process_ready_contexts(std::queue<call_back_context*>& ready_contexts, int max = 1) {
             int processed = 0;
-            printf("size: %d.\n", ready_contexts.size());
-            while(ready_contexts.size() > 0 && processed < max) {
+            while (processed < max && ready_contexts.size() > 0) {
                 call_back_context* context = ready_contexts.front();
                 ready_contexts.pop();
                 context->run();
                 processed++;
+            }
+            return processed;
+        }
+
+        void sync() override {
+            while(pending_request_.load()> 0) {
+                usleep(1000);
             }
         }
 
@@ -628,13 +628,13 @@ namespace tree {
                         tree_->free_context_slots_++;
 
                         bool ownership = request_->ownership;
+                        request_->graduation = ticks();
                         request_->semaphore->release();
                         if (ownership) {
                             delete request_;
                             request_ = 0;
                         }
 //                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
-                        request_->graduation = ticks();
                         return CONTEXT_TERMINATED;
                     }
                     case 12: {
@@ -838,6 +838,7 @@ namespace tree {
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
+                                    request_->graduation = ticks();
                                     if (request_->ownership) {
                                         request_->semaphore->release();
                                         delete request_;
@@ -853,7 +854,6 @@ namespace tree {
                                     }
                                     obtained_barriers_.clear();
 //                                    printf("during is %.2f ns, state: %d [I1]\n", cycles_to_nanoseconds(ticks() - last), current);
-                                    request_->graduation = ticks();
                                     return CONTEXT_TERMINATED;
                                 } else {
                                     node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];

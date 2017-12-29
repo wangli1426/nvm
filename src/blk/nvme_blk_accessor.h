@@ -184,6 +184,11 @@ public:
         return ost.str();
     }
 
+
+    std::queue<call_back_context*>& get_ready_contexts() override {
+        return ready_contexts_;
+    }
+
     int process_completion(int max = 1) {
         int processed =  process_completion(qpair_, max);
         this->metrics_.pending_commands_ -= processed;
