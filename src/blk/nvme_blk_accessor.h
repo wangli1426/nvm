@@ -41,7 +41,7 @@ public:
         cursor_ = 0;
         qpair_ = 0;
         cache_ = 0;
-//        cache_ = new blk_cache(this->block_size, 100);
+        cache_ = new blk_cache(this->block_size, 100);
 
         // measure the concurrency in the command queues
     };
@@ -255,7 +255,7 @@ public:
 
     int32_t process_ready_contexts(int32_t max = 1) {
         int32_t processed = 0;
-        for (int i = 0; i < ready_contexts_.size(); i++) {
+        while (processed < max && ready_contexts_.size() > 0) {
             call_back_context* context = ready_contexts_.front();
             ready_contexts_.pop();
             context->run();

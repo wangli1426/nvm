@@ -233,7 +233,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         blk_accessor<K, V>* accessor = tree->get_accessor();
 
         uint64_t begin = ticks();
-        const int number_of_insertion_threads = 8;
+        const int number_of_insertion_threads = threads;
         std::thread insert_tid[number_of_insertion_threads];
         std::vector<operation<K,V>> insertion_ops;
         for (int i = 0; i < ntuples; i++) {

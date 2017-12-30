@@ -2,6 +2,7 @@
 // Created by Li Wang on 11/4/17.
 //
 
+
 #include <stdio.h>
 #include <algorithm>
 #include "perf/perf_test.h"
@@ -85,12 +86,14 @@ int main(int argc, char** argv) {
 //
 //    exit(0);
 //
+
 //
+
     const int order = 32;
     const int size = 512;
-    const int ntuples = 10000;
-    const int nopertions = 10000;
-    const double write_rate = 0.9;
+    const int ntuples = 100000;
+    const int nopertions = 100000;
+    const double write_rate = 0;
     const double key_skewness = 0;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);
@@ -206,7 +209,7 @@ int main(int argc, char** argv) {
 //    concurrent_shared_io_thread_in_nvme_tree.close();
 
 ////
-    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 512);
+    nvme_optimized_b_plus_tree<int, int, order> concurrent_nvme_optimized(size, 256);
     concurrent_nvme_optimized.init();
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 1);
 //    multithread_benchmark_mixed_workload(&concurrent_nvme_optimized, "concurrent_nvme_optimized", 1, ntuples, nopertions, write_rate, key_skewness, 2);

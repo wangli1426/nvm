@@ -11,6 +11,7 @@
 #include <queue>
 #include <atomic>
 #include <deque>
+#include <stack>
 #include <thread>
 #include <pthread.h>
 #include <assert.h>
@@ -179,11 +180,12 @@ namespace tree {
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             tree->create_free_contexts();
+#ifndef __APPLE__
             cpu_set_t mask;
             CPU_ZERO(&mask);
             CPU_SET(2, &mask);
             pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
-
+#endif
 
             int64_t t1 = ticks();
 
@@ -269,7 +271,6 @@ namespace tree {
                 manager_ready++;
                 manager_ready_cycles += ticks() - start;
             }
-            printf("processing threads terminated!\n");
             tree->destroy_free_contexts();
             return nullptr;
         }
@@ -636,6 +637,7 @@ namespace tree {
                             request_ = 0;
                         }
 //                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
+                        tree_->return_insert_context(this);
                         return CONTEXT_TERMINATED;
                     }
                     case 12: {
@@ -826,6 +828,7 @@ namespace tree {
 //                                       cycles_to_nanoseconds(barrier_work_end - barrier_work_start),
 //                                       cycles_to_nanoseconds(free_work1_end - free_work1_start));
 //                                printf("during is %.2f ns, state: %d [L]\n", cycles_to_nanoseconds(ticks() - last), current);
+                                tree_->return_search_context(this);
                                 return CONTEXT_TERMINATED;
                             }
                             case INNER_NODE: {
@@ -857,6 +860,7 @@ namespace tree {
                                         request_->semaphore->release();
                                     }
 //                                    printf("during is %.2f ns, state: %d [I1]\n", cycles_to_nanoseconds(ticks() - last), current);
+                                    tree_->return_search_context(this);
                                     return CONTEXT_TERMINATED;
                                 } else {
                                     node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
@@ -887,40 +891,47 @@ namespace tree {
 
         void create_free_contexts() {
             for (int i = 0; i < queue_length_; i++) {
-                free_insert_contexts_.push_back(new insert_context(this, nullptr));
-                free_search_contexts_.push_back(new search_context(this, nullptr));
+                free_insert_contexts_.push(new insert_context(this, nullptr));
+                free_search_contexts_.push(new search_context(this, nullptr));
             }
-            free_insert_context_cursor_ = 0;
-            free_search_context_cursor_ = 0;
         }
 
         void destroy_free_contexts() {
             for (int i = 0; i < queue_length_; i++) {
-                delete free_search_contexts_[i];
-                delete free_insert_contexts_[i];
+                delete free_search_contexts_.top();
+                free_search_contexts_.pop();
+                delete free_insert_contexts_.top();
+                free_insert_contexts_.pop();
             }
         }
 
         search_context *get_free_search_context() {
-            if (free_search_context_cursor_ >= queue_length_)
-                free_search_context_cursor_ = 0;
-            return free_search_contexts_[free_search_context_cursor_++];
+            assert(!free_search_contexts_.empty());
+            search_context* context = free_search_contexts_.top();
+            free_search_contexts_.pop();
+            return context;
+        }
+
+        void return_search_context(search_context* context) {
+            free_search_contexts_.push(context);
+        }
+
+        void return_insert_context(insert_context* context) {
+            free_insert_contexts_.push(context);
         }
 
 
         insert_context *get_free_insert_context() {
-            if (free_insert_context_cursor_ >= queue_length_)
-                free_insert_context_cursor_ = 0;
-            return free_insert_contexts_[free_insert_context_cursor_++];
+            assert(!free_insert_contexts_.empty());
+            insert_context* context = free_insert_contexts_.top();
+            free_insert_contexts_.pop();
+            return context;
         }
 
     private:
         SpinLock lock_;
         Semaphore queue_free_slots_;
-//        queue<request<K, V> *> request_queue_;
-//        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
-
-        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<4096> > request_queue_;
+        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<256>> request_queue_;
 
         atomic<int> request_queue_size_;
         pthread_t thread_handle_;
@@ -930,10 +941,9 @@ namespace tree {
         int queue_length_;
         barrier_manager manager;
 
-        std::vector<insert_context*> free_insert_contexts_;
-        std::vector<search_context*> free_search_contexts_;
-        int32_t free_insert_context_cursor_;
-        int32_t free_search_context_cursor_;
+
+        std::stack<insert_context*> free_insert_contexts_;
+        std::stack<search_context*> free_search_contexts_;
     };
 }
 
