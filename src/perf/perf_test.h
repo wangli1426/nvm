@@ -233,7 +233,27 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         blk_accessor<K, V>* accessor = tree->get_accessor();
 
         uint64_t begin = ticks();
-        insert<K, V>(tree, tuples, 1);
+        const int number_of_insertion_threads = 8;
+        std::thread insert_tid[number_of_insertion_threads];
+        std::vector<operation<K,V>> insertion_ops;
+        for (int i = 0; i < ntuples; i++) {
+            operation<K, V> op;
+            op.key = tuples[i].first;
+            op.val = tuples[i].second;
+            op.type = WRITE_OP;
+            insertion_ops.push_back(op);
+        }
+        random_shuffle(insertion_ops.begin(), insertion_ops.end());
+        const int inserts_per_thread = insertion_ops.size() / number_of_insertion_threads;
+        for (int i = 0; i < number_of_insertion_threads; ++i) {
+            insert_tid[i] = std::thread(&execute_operations<K, V>, tree,
+                                        insertion_ops.begin() + inserts_per_thread * i,
+            i == number_of_insertion_threads - 1 ? insertion_ops.end() : insertion_ops.begin() + inserts_per_thread * (i + 1));
+        }
+        for (int i = 0; i < number_of_insertion_threads; i++) {
+            insert_tid[i].join();
+        }
+//        insert<K, V>(tree, tuples, 1);
         uint64_t end = ticks();
         double elapsed_secs = cycles_to_seconds(end - begin);
         build_time += elapsed_secs;

@@ -55,8 +55,9 @@ namespace tree {
             request.start = ticks();
             this->asynchronous_search_with_callback(&request);
             while(!semaphore.try_lock()) {
-//                usleep(1);
+                usleep(1);
             }
+            assert(!found || key == value);
 //            printf("Insert: before admission: %.2f us, process: %.2f us, after graduation: %.2f us, total: %.2f\n",
 //                   cycles_to_microseconds(request.admission - request.start),
 //                   cycles_to_microseconds(request.graduation - request.admission),
@@ -80,11 +81,11 @@ namespace tree {
             while(!semaphore.try_lock()) {
                 usleep(1);
             }
-            printf("Insert: before admission: %.2f us, process: %.2f us, after graduation: %.2f us, total: %.2f\n",
-                   cycles_to_microseconds(request.admission - request.start),
-                   cycles_to_microseconds(request.graduation - request.admission),
-                   cycles_to_microseconds(ticks() - request.graduation),
-                   cycles_to_microseconds(ticks() - request.start));
+//            printf("Insert: before admission: %.2f us, process: %.2f us, after graduation: %.2f us, total: %.2f\n",
+//                   cycles_to_microseconds(request.admission - request.start),
+//                   cycles_to_microseconds(request.graduation - request.admission),
+//                   cycles_to_microseconds(ticks() - request.graduation),
+//                   cycles_to_microseconds(ticks() - request.start));
         }
 
     private:

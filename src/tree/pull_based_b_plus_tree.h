@@ -246,7 +246,7 @@ namespace tree {
                 process_ready_contexts(blk_ready_contexts, tree->queue_length_);
                 process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 
-//                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
+                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
                     if (processed == 0)
@@ -255,7 +255,7 @@ namespace tree {
                         empty_queue_time = 0;
                     blk_completion++;
                     blk_completion_cycles += ticks() - start;
-//                }
+                }
 //              }
 
 
@@ -405,6 +405,7 @@ namespace tree {
                         uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
+                                assert(current_node_level_ == 1);
                                 assert(obtained_barriers_.back().type_ == WRITE_BARRIER);
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
@@ -797,7 +798,13 @@ namespace tree {
                                 }
                                 tree_->pending_request_--;
                                 tree_->free_context_slots_++;
+                                for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
+                                    tree_->manager.remove_read_barrier((*it).barrier_id_);
+                                }
+                                obtained_barriers_.clear();
+
 //                                int64_t free_work1_start = realwork_end;
+                                request_->graduation = ticks();
                                 bool ownership = request_->ownership;
                                 request_->semaphore->release();
 //                                int64_t free_work1_end = ticks();
@@ -810,10 +817,6 @@ namespace tree {
 //                                }
 //                                int64_t free_work_end = ticks();
 //                                int64_t barrier_work_start = free_work_end;
-                                for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
-                                    tree_->manager.remove_read_barrier((*it).barrier_id_);
-                                }
-                                obtained_barriers_.clear();
 //                                int64_t barrier_work_end = ticks();
 //                                printf("during is %.2f ns, state: %d [L] read work: %.2f ns, free work: %.2f, barrier work: %.2f, free work 1: %.2f\n",
 //                                       cycles_to_nanoseconds(ticks() - last),
@@ -823,7 +826,6 @@ namespace tree {
 //                                       cycles_to_nanoseconds(barrier_work_end - barrier_work_start),
 //                                       cycles_to_nanoseconds(free_work1_end - free_work1_start));
 //                                printf("during is %.2f ns, state: %d [L]\n", cycles_to_nanoseconds(ticks() - last), current);
-                                request_->graduation = ticks();
                                 return CONTEXT_TERMINATED;
                             }
                             case INNER_NODE: {
@@ -838,14 +840,7 @@ namespace tree {
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
                                     }
-                                    request_->graduation = ticks();
-                                    if (request_->ownership) {
-                                        request_->semaphore->release();
-                                        delete request_;
-                                    } else {
-                                        request_->semaphore->release();
-                                    }
-                                    request_ = 0;
+                                    bool ownership = request_->ownership;
                                     tree_->pending_request_--;
                                     tree_->free_context_slots_++;
                                     for (auto it = this->obtained_barriers_.begin();
@@ -853,6 +848,14 @@ namespace tree {
                                         tree_->manager.remove_read_barrier((*it).barrier_id_);
                                     }
                                     obtained_barriers_.clear();
+                                    request_->graduation = ticks();
+                                    if (ownership) {
+                                        request_->semaphore->release();
+                                        delete request_;
+                                        request_ = 0;
+                                    } else {
+                                        request_->semaphore->release();
+                                    }
 //                                    printf("during is %.2f ns, state: %d [I1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     return CONTEXT_TERMINATED;
                                 } else {
@@ -917,7 +920,7 @@ namespace tree {
 //        queue<request<K, V> *> request_queue_;
 //        moodycamel::ConcurrentQueue<request<K, V> *> request_queue_;
 
-        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<512> > request_queue_;
+        boost::lockfree::queue<request<K, V>*, boost::lockfree::capacity<4096> > request_queue_;
 
         atomic<int> request_queue_size_;
         pthread_t thread_handle_;

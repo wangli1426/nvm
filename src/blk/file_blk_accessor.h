@@ -162,13 +162,13 @@ public:
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         read(blk_addr, buffer);
-        pending_contexts_.push(context);
+        pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         write(blk_addr, buffer);
-        pending_contexts_.push(context);
+        pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
 
@@ -210,9 +210,10 @@ public:
 //        wait_for_completion_counts_ -= ret;
 //        return ret;
         int processed = 0;
+        random_shuffle(pending_contexts_.begin(), pending_contexts_.end());
         while (processed < max && pending_contexts_.size() > 0) {
-            call_back_context* context = pending_contexts_.front();
-            pending_contexts_.pop();
+            call_back_context* context = pending_contexts_.back();
+            pending_contexts_.pop_back();
             context->transition_to_next_state();
             ready_contexts_.push(context);
             processed++;
@@ -233,7 +234,7 @@ private:
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
-    std::queue<call_back_context*> pending_contexts_;
+    std::vector<call_back_context*> pending_contexts_;
     std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;

@@ -57,7 +57,7 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertion) {
     vector<int> keys;
     vector<operation<int, int> > operations;
     const int tuples = 10000;
-    const int threads = 2;
+    const int threads = 64;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {
@@ -100,9 +100,9 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearch) {
     tree.init();
     vector<int> keys;
     vector<operation<int, int> > operations;
-    const int tuples = 10000;
-    const int searches = 10000;
-    const int threads = 8;
+    const int tuples = 100000;
+    const int searches = 100000;
+    const int threads = 64;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {
@@ -155,7 +155,7 @@ TEST(ConcurrentDiskOptimizedBPlusTree, MultipleThreadedInsertionAndSearchWithLar
     vector<operation<int, int> > operations;
     const int tuples = 10000;
     const int searches = 10000;
-    const int threads = 8;
+    const int threads = 64;
     std::thread tid[threads];
 
     for(int i = 0; i < tuples; i++) {

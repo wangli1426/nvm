@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <atomic>
 
-#define PTHREAD_SPIN_LOCK
+//#define PTHREAD_SPIN_LOCK
 
 using namespace std;
 
