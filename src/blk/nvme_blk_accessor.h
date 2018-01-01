@@ -41,7 +41,7 @@ public:
         cursor_ = 0;
         qpair_ = 0;
         cache_ = 0;
-        cache_ = new blk_cache(this->block_size, 100);
+//        cache_ = new blk_cache(this->block_size, 100);
 
         // measure the concurrency in the command queues
     };

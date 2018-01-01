@@ -15,6 +15,7 @@
 #include <thread>
 #include <pthread.h>
 #include <assert.h>
+#include <math.h>
 #include <boost/lockfree/queue.hpp>
 //#include "in_nvme_b_plus_tree.h"
 #include "vanilla_b_plus_tree.h"
@@ -194,16 +195,20 @@ namespace tree {
             uint64_t blk_ready_cycles = 0;
             uint64_t manager_ready_cycles = 0;
 
-            int admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
+            uint64_t admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
+
+            uint64_t loops = 0;
 
             uint64_t empty_queue_time = 0;
+
+            std::vector<int> blk_processed;
 
             std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
             std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
 
             int64_t last = 0;
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
-
+                loops++;
 //                usleep(1);
                 request<K, V>* request;
                 int64_t last = ticks();
@@ -222,11 +227,11 @@ namespace tree {
 //                           cycles_to_microseconds(manager_ready_cycles));
 //                    printf("Count: adm: %d, blk_com: %d, blk_read: %d, manager: %d\n", admission, blk_completion, blk_ready, manager_ready);
 
-                    admission_cycles = 0;
-                    blk_completion_cycles = 0;
-                    blk_ready_cycles = 0;
-                    manager_ready_cycles = 0;
-                    admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
+//                    admission_cycles = 0;
+//                    blk_completion_cycles = 0;
+//                    blk_ready_cycles = 0;
+//                    manager_ready_cycles = 0;
+//                    admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
 
                     request->admission = ticks();
                     call_back_context *context;
@@ -245,19 +250,20 @@ namespace tree {
                     admission_cycles += ticks() - start;
                 }
 //                } while (tree->manager.process_ready_context(tree->queue_length_));
-                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
-                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
+//                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
+//                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 
-                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
+//                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    if (processed == 0)
-                        empty_queue_time = ticks();
-                    else
-                        empty_queue_time = 0;
+                    blk_processed.push_back(processed);
+//                    if (processed == 0)
+//                        empty_queue_time = ticks();
+//                    else
+//                        empty_queue_time = 0;
                     blk_completion++;
                     blk_completion_cycles += ticks() - start;
-                }
+//                }
 //              }
 
 
@@ -272,6 +278,26 @@ namespace tree {
                 manager_ready_cycles += ticks() - start;
             }
             tree->destroy_free_contexts();
+
+            printf("loops: %ld\nblk_ready: %ld, blk_ready_cycle: %ld\nbarrier_ready: %ld, barrier_ready_cycles: %ld\nblk_com: %ld, blk_com_cycles: %ld\n",
+                    loops/1000000, blk_ready/1000000, blk_ready_cycles/1000000, manager_ready/1000000, manager_ready_cycles/1000000, blk_completion/1000000, blk_completion_cycles/1000000);
+
+            long sum = 0;
+            for (auto it = blk_processed.begin(); it != blk_processed.end(); it++) {
+                sum += *it;
+            }
+
+            double avg = sum / blk_processed.size();
+
+            double var = 0;
+
+            for (auto it = blk_processed.begin(); it != blk_processed.end(); it++) {
+                var += pow((avg - *it), 2);
+            }
+            var /= blk_processed.size();
+
+            printf("mean: %f, var: %.6f\n", avg, var);
+
             return nullptr;
         }
 

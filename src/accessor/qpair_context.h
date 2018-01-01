@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <spdk/nvme.h>
 #include "ns_entry.h"
+#include "../utils/dummy.h"
 #include "../utils/sync.h"
 #include "../utils/rdtsc.h"
 
@@ -82,7 +83,7 @@ namespace nvm {
 #ifdef __LOG__
             printf("waiting...\n");
 #endif
-            while(!is_complete) {
+            while(free_slots_ == 0) {
                 int32_t status = process_completions();
                 if (status < 0) {
                     printf("error in processing_completions()\n");

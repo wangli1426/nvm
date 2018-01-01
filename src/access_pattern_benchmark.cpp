@@ -26,14 +26,16 @@ int main(int argc, char* argv[]) {
     print_current_cpu_set();
 
     cout << "++++++++++ WARMUP ++++++++++" << endl;
-    const int number_of_threads = 1;
-    const int write_rate = 100;
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 1, rand_access, write_rate, asynch);
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 4, rand_access, write_rate, asynch);
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 16, rand_access, write_rate, asynch);
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 64, rand_access, write_rate, asynch);
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 256, rand_access, write_rate, asynch);
-    run_multiple_threads_benchmark(number_of_threads, 100000, 512, 1024, rand_access, write_rate, asynch);
+    const int number_of_threads = 2;
+    const int write_rate = 0;
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 1, rand_access, write_rate, synch);
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 1, rand_access, write_rate, asynch);
+
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 4, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 16, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 64, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 256, rand_access, write_rate, asynch);
+    run_multiple_threads_benchmark(number_of_threads, 10000, 512, 1024, rand_access, write_rate, asynch);
 //    run_multiple_threads_benchmark(1, 1000000, 512, 16, rand_access, write_rate, asynch);
 //    run_multiple_threads_benchmark(2, 1000000, 512, 16, rand_access, write_rate, asynch);
 //    run_multiple_threads_benchmark(3, 100000, 512, 32, rand_access, write_rate, asynch);
