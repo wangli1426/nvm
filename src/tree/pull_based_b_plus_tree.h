@@ -218,11 +218,11 @@ namespace tree {
                 int64_t last = ticks();
                 int state;
                 uint64_t start;
-//                do {
+                do {
                     int32_t free = tree->free_context_slots_.load();
 //                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-                while (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
+                    while (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
 
 //                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
 //                           cycles_to_microseconds(admission_cycles),
@@ -237,33 +237,39 @@ namespace tree {
 //                    manager_ready_cycles = 0;
 //                    admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
 
-                    request->admission = ticks();
-                    call_back_context *context;
-                    if (request->type == SEARCH_REQUEST) {
-                        context = tree->get_free_search_context();
-                        reinterpret_cast<search_context*>(context)->init(
-                                reinterpret_cast<search_request<K, V>*>(request));
-                    } else {
-                        context = tree->get_free_insert_context();
-                        reinterpret_cast<insert_context*>(context)->init(reinterpret_cast<insert_request<K, V>*>(request));
+                        request->admission = ticks();
+                        call_back_context *context;
+                        if (request->type == SEARCH_REQUEST) {
+                            context = tree->get_free_search_context();
+                            reinterpret_cast<search_context *>(context)->init(
+                                    reinterpret_cast<search_request<K, V> *>(request));
+                        } else {
+                            context = tree->get_free_insert_context();
+                            reinterpret_cast<insert_context *>(context)->init(
+                                    reinterpret_cast<insert_request<K, V> *>(request));
+                        }
+                        tree->free_context_slots_--;
+                        start = ticks();
+                        context->run();
+                        admission++;
+                        admission_cycles += ticks() - start;
                     }
-                    tree->free_context_slots_--;
-                    start = ticks();
-                    context->run();
-                    admission++;
-                    admission_cycles += ticks() - start;
-                }
 //                } while (tree->manager.process_ready_context(tree->queue_length_));
 //                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
 //                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
+                } while (process_ready_contexts(blk_ready_contexts, tree->queue_length_) || process_ready_contexts(barrier_ready_contexts, tree->queue_length_));
 
                 uint64_t current_tick = ticks();
-                uint64_t cycles_to_wait = 0;
-                if (current_tick - last_call_completion > 50000 || (estimator.get_number_of_pending_state() > tree->queue_length_ / 16 &&
-                        (cycles_to_wait = estimator.estimate_the_time_to_get_desirable_ready_state(tree->queue_length_ / 16, ticks())) == 0)) {
+                int64_t cycles_to_wait = -1;
+                if (current_tick - last_call_completion > 50000000 || (estimator.get_number_of_pending_state() > 8 &&
+                        (cycles_to_wait = estimator.estimate_the_time_to_get_desirable_ready_state(8, current_tick)) == 0)) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-//                    printf("%d (e) vs %d (a)\n", tree->queue_length_ / 16, processed);
+                    if (cycles_to_wait == 0) {
+                        printf("%d (e) vs %d (a) REAL\n", tree->queue_length_ / 16, processed);
+                    } else {
+                        printf("%d (e) vs %d (a) wait=%ld\n", tree->queue_length_ / 16, processed, cycles_to_wait);
+                    }
                     last_call_completion = ticks();
                     blk_processed.push_back(processed);
                     blk_completion++;
@@ -271,7 +277,7 @@ namespace tree {
                 }
 //                else if (blk_ready_contexts.empty() && barrier_ready_contexts.empty() && tree->request_queue_.empty()) {
                 else if (estimator.get_number_of_pending_state() > tree->queue_length_ / 3 * 2) {
-                    usleep(10);
+//                    usleep(10);
 //                    std::this_thread::sleep_for(std::chrono::nanoseconds((int)cycles_to_nanoseconds(cycles_to_wait)));
                 }
 
