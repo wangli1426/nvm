@@ -66,10 +66,9 @@ add_executable(main src/main.cc)
 target_link_libraries(main -lpthread
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_system.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_thread.a
-#	${spdk/lib/libspdk.a}
-#	${spdk/lib/librte.a}
-#	-L${CMAKE_SOURCE_DIR}/spdk/lib
-#  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt
+	${spdk/lib/libspdk.a}	${spdk/lib/librte.a}
+	-L${CMAKE_SOURCE_DIR}/spdk/lib
+  -lspdk -lrte -pthread -lnuma -ldl -luuid -lrt
 		)
 add_dependencies(main Boost)
 
@@ -99,10 +98,10 @@ target_link_libraries(tree_benchmark
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_system.a
 		${CMAKE_CURRENT_BINARY_DIR}/boost/lib/libboost_thread.a
 		-lpthread
-#		${spdk/lib/libspdk.a}
-#		${spdk/lib/librte.a}
-#		-L${CMAKE_SOURCE_DIR}/spdk/lib
-#		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
+		${spdk/lib/libspdk.a}
+		${spdk/lib/librte.a}
+		-L${CMAKE_SOURCE_DIR}/spdk/lib
+		-lspdk -lrte -lpthread -lnuma -ldl -luuid -lrt
 		)
 add_dependencies(tree_benchmark Boost)
 
@@ -113,7 +112,8 @@ set(TEST_FILES
 		test/utils/rwlock_test.cc
 		test/sync/lock_manager_test.cc
 		test/tree/concurrent_tree_test.cc
-		test/tree/concurrent_disk_optimized_tree_test.cc)
+		test/tree/concurrent_disk_optimized_tree_test.cc
+		test/scheduler/ready_state_estimater_test.cc)
 
 add_executable(unittest ${TEST_FILES})
 target_link_libraries(unittest
