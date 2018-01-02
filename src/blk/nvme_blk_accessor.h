@@ -19,6 +19,7 @@
 #include "../utils/sync.h"
 #include "../context/call_back.h"
 #include "asynchronous_accessor.h"
+#include "../scheduler/ready_state_estimator.h"
 
 using namespace std;
 
@@ -37,10 +38,11 @@ using namespace nvm;
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
-    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
+    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size), estimator(200, 400) {
         cursor_ = 0;
         qpair_ = 0;
         cache_ = 0;
+        io_id_generator_ = 0;
 //        cache_ = new blk_cache(this->block_size, 100);
 
         // measure the concurrency in the command queues
@@ -148,12 +150,14 @@ public:
 
     virtual void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) {
         int64_t start = ticks();
+        uint64_t io_id = io_id_generator_++;
         if (cache_ && cache_->read(blk_addr, buffer)) {
             // we read the data from in-memory cache, so asynchronous io will be omitted.
             // As such, we just forward the context to the ready context queue.
             context->transition_to_next_state();
             ready_contexts_.push(context);
             this->metrics_.add_read_latency(ticks() - start);
+            estimator.register_read_io(io_id, 0);
             return;
         }
 
@@ -164,12 +168,14 @@ public:
         para->id = blk_addr;
         para->accessor = this;
         para->buffer = buffer;
+        para->io_id = io_id;
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
+        estimator.register_read_io(io_id, ticks());
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -197,6 +203,7 @@ public:
     }
 
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        uint64_t io_id = io_id_generator_++;
         nvme_callback_para* para = new nvme_callback_para;
         para->start_time = ticks();
         para->type = NVM_WRITE;
@@ -204,6 +211,7 @@ public:
         para->id = blk_addr;
         para->accessor = this;
         para->buffer = buffer;
+        para->io_id = io_id;
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
 //        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
@@ -212,6 +220,7 @@ public:
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
+        estimator.register_write_io(io_id, ticks());
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -220,14 +229,25 @@ public:
 
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
+
+        para->accessor->estimator.remove_io(para->io_id);
+
         if (para->type == NVM_READ) {
 //            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.reads_.fetch_add(1);
             para->accessor->metrics_.add_read_latency(ticks() - para->start_time);
+            if (para->io_id >> 8 == 0) {
+                int latency = para->accessor->metrics_.get_avg_read_latency_in_cycles();
+                para->accessor->estimator.update_read_latency_in_cycles(latency);
+            }
         } else {
 //            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.writes_.fetch_add(1);
             para->accessor->metrics_.add_write_latency(ticks() - para->start_time);
+            if (para->io_id >> 8 == 0) {
+                int latency = para->accessor->metrics_.get_avg_write_latency_in_cycles();
+                para->accessor->estimator.update_write_latency_in_cycles(latency);
+            }
         }
 
         if (para->accessor->cache_) {
@@ -275,9 +295,14 @@ public:
         nvme_blk_accessor* accessor;
         int32_t type;
         void* buffer;
+        uint64_t io_id;
     };
     std::string get_name() const {
         return std::string("NVM");
+    }
+
+    ready_state_estimator& get_ready_state_estimator() override{
+        return estimator;
     }
 
 protected:
@@ -306,6 +331,8 @@ private:
     SpinLock spin_lock_;
     std::queue<call_back_context*> ready_contexts_;
     blk_cache *cache_;
+    ready_state_estimator estimator;
+    uint64_t io_id_generator_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

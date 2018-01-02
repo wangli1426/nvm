@@ -16,6 +16,7 @@
 #include "asynchronous_accessor.h"
 #include "blk_cache.h"
 #include "../utils/sync.h"
+#include "../scheduler/ready_state_estimator.h"
 
 namespace tree {
     template<typename K, typename V, int CAPACITY>
@@ -27,7 +28,8 @@ template<typename K, typename V, int CAPACITY>
 class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
-                                                                               cursor_(0), wait_for_completion_counts_(0) {
+                                                                               cursor_(0), wait_for_completion_counts_(0),
+                                                                               estimator_(0, 0), io_id_generator_(0) {
 //        cache_ = new blk_cache(block_size, 100000);
         cache_ = nullptr;
     }
@@ -162,12 +164,18 @@ public:
 
     void asynch_read(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         read(blk_addr, buffer);
+        const uint64_t id = io_id_generator_++;
+        estimator_.register_read_io(id, ticks());
+        pending_ids_.push_back(id);
         pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
 
     void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) override {
         write(blk_addr, buffer);
+        const uint64_t id = io_id_generator_++;
+        estimator_.register_write_io(id, ticks());
+        pending_ids_.push_back(id);
         pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
@@ -212,6 +220,9 @@ public:
         int processed = 0;
         random_shuffle(pending_contexts_.begin(), pending_contexts_.end());
         while (processed < max && pending_contexts_.size() > 0) {
+            uint64_t id = pending_ids_.back();
+            pending_ids_.pop_back();
+            estimator_.remove_io(id);
             call_back_context* context = pending_contexts_.back();
             pending_contexts_.pop_back();
             context->transition_to_next_state();
@@ -219,6 +230,10 @@ public:
             processed++;
         }
         return processed;
+    }
+
+    ready_state_estimator& get_ready_state_estimator() override{
+        return estimator_;
     }
 
     std::string get_name() const override {
@@ -239,6 +254,9 @@ private:
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;
     SpinLock lock_;
+    ready_state_estimator estimator_;
+    uint64_t io_id_generator_;
+    std::vector<uint64_t> pending_ids_;
 };
 
 

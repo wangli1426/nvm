@@ -10,6 +10,7 @@
 
 #include <queue>
 #include <atomic>
+#include <chrono>
 #include <deque>
 #include <stack>
 #include <thread>
@@ -206,7 +207,10 @@ namespace tree {
             std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
             std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
 
+            ready_state_estimator &estimator = tree->blk_accessor_->get_ready_state_estimator();
+
             int64_t last = 0;
+            uint64_t last_call_completion = 0;
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
                 loops++;
 //                usleep(1);
@@ -253,18 +257,23 @@ namespace tree {
 //                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
 //                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 
-//                if (!empty_queue_time || ticks() - empty_queue_time > 5000) {
+                uint64_t current_tick = ticks();
+                uint64_t cycles_to_wait = 0;
+                if (current_tick - last_call_completion > 50000 || (estimator.get_number_of_pending_state() > tree->queue_length_ / 16 &&
+                        (cycles_to_wait = estimator.estimate_the_time_to_get_desirable_ready_state(tree->queue_length_ / 16, ticks())) == 0)) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+//                    printf("%d (e) vs %d (a)\n", tree->queue_length_ / 16, processed);
+                    last_call_completion = ticks();
                     blk_processed.push_back(processed);
-//                    if (processed == 0)
-//                        empty_queue_time = ticks();
-//                    else
-//                        empty_queue_time = 0;
                     blk_completion++;
                     blk_completion_cycles += ticks() - start;
-//                }
-//              }
+                }
+//                else if (blk_ready_contexts.empty() && barrier_ready_contexts.empty() && tree->request_queue_.empty()) {
+                else if (estimator.get_number_of_pending_state() > tree->queue_length_ / 3 * 2) {
+                    usleep(10);
+//                    std::this_thread::sleep_for(std::chrono::nanoseconds((int)cycles_to_nanoseconds(cycles_to_wait)));
+                }
 
 
                 start = ticks();

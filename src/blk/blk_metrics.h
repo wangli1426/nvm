@@ -80,6 +80,14 @@ public:
         this->writes_++;
     }
 
+    int get_avg_write_latency_in_cycles() const {
+        return this->write_cycles_ / this->writes_;
+    }
+
+    int get_avg_read_latency_in_cycles() const {
+        return this->read_cycles_ / this->reads_;
+    }
+
     void print() {
         double duration_in_seconds = cycles_to_seconds(total_cycles_);
         if (reads_ > 0)

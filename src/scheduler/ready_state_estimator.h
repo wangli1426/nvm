@@ -5,9 +5,12 @@
 #ifndef NVM_READY_STATE_ESTIMATOR_H
 #define NVM_READY_STATE_ESTIMATOR_H
 
+#include <algorithm>
+#include <assert.h>
 #include <vector>
 #include <unordered_map>
-#include <assert.h>
+#include "../utils/rdtsc.h"
+
 using namespace std;
 
 /**
@@ -51,17 +54,31 @@ public:
     }
 
     uint64_t estimate_the_time_to_get_desirable_ready_state(int expected_number_of_ready_states, uint64_t timestamp) {
+//        uint64_t start = ticks();
         std::sort(ready_time_array_.begin(), ready_time_array_.end());
-        uint64_t time = 0;
+        uint64_t time = -1;
         int ready_count = 0;
         for (auto it = ready_time_array_.begin(); it != ready_time_array_.end(); ++it) {
             ready_count++;
-            time = *it;
             if (ready_count == expected_number_of_ready_states) {
+                time = *it;
                 break;
             }
         }
+//        printf("time: %.2f ns\n", cycles_to_nanoseconds(ticks() - start));
         return time;
+    }
+
+    int get_number_of_pending_state() const {
+        return ready_time_array_.size();
+    }
+
+    void update_read_latency_in_cycles(int read_lat) {
+        read_latency = read_lat;
+    }
+
+    void update_write_latency_in_cycles(int write_lat) {
+        write_latency = write_lat;
     }
 
 private:

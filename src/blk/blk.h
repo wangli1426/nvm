@@ -13,6 +13,7 @@
 #include "../utils/rdtsc.h"
 #include "../tree/node_reference.h"
 #include "../context/call_back.h"
+#include "../scheduler/ready_state_estimator.h"
 
 //struct blk_address {
 //    blk_address(uint32_t offset) {
@@ -77,6 +78,10 @@ public:
     virtual std::queue<call_back_context*>& get_ready_context_queue() {
         assert(false);
     };
+
+    virtual ready_state_estimator& get_ready_state_estimator() {
+        assert(false);
+    }
 
     const uint32_t block_size;
 
