@@ -38,12 +38,12 @@ using namespace nvm;
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
-    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size), estimator(200, 400) {
+    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size), estimator(200000, 400000) {
         cursor_ = 0;
         qpair_ = 0;
         cache_ = 0;
         io_id_generator_ = 0;
-//        cache_ = new blk_cache(this->block_size, 100);
+//        cache_ = new blk_cache(this->block_size, 1000);
 
         // measure the concurrency in the command queues
     };
@@ -155,7 +155,7 @@ public:
             // we read the data from in-memory cache, so asynchronous io will be omitted.
             // As such, we just forward the context to the ready context queue.
             context->transition_to_next_state();
-            ready_contexts_.push(context);
+            ready_contexts_.push_back(context);
             this->metrics_.add_read_latency(ticks() - start);
             estimator.register_read_io(io_id, 0);
             return;
@@ -191,7 +191,7 @@ public:
     }
 
 
-    std::queue<call_back_context*>& get_ready_contexts() override {
+    std::deque<call_back_context*>& get_ready_contexts() override {
         return ready_contexts_;
     }
 
@@ -230,24 +230,27 @@ public:
     static void context_call_back_function(void* parms, const struct spdk_nvme_cpl *) {
         nvme_callback_para* para = reinterpret_cast<nvme_callback_para*>(parms);
 
-        para->accessor->estimator.remove_io(para->io_id);
 
         if (para->type == NVM_READ) {
 //            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.reads_.fetch_add(1);
+            para->accessor->estimator.remove_read_io(para->io_id);
             para->accessor->metrics_.add_read_latency(ticks() - para->start_time);
             if (para->io_id >> 8 == 0) {
                 int latency = para->accessor->metrics_.get_avg_read_latency_in_cycles();
                 para->accessor->estimator.update_read_latency_in_cycles(latency);
             }
+            para->context->set_tag(CONTEXT_READ_IO);
         } else {
 //            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.writes_.fetch_add(1);
+            para->accessor->estimator.remove_write_io(para->io_id);
             para->accessor->metrics_.add_write_latency(ticks() - para->start_time);
             if (para->io_id >> 8 == 0) {
                 int latency = para->accessor->metrics_.get_avg_write_latency_in_cycles();
                 para->accessor->estimator.update_write_latency_in_cycles(latency);
             }
+            para->context->set_tag(CONTEXT_WRITE_IO);
         }
 
         if (para->accessor->cache_) {
@@ -268,7 +271,7 @@ public:
 //        }
 
         para->context->transition_to_next_state();
-        para->accessor->ready_contexts_.push(para->context);
+        para->accessor->ready_contexts_.push_back(para->context);
 
         delete para;
     }
@@ -277,14 +280,14 @@ public:
         int32_t processed = 0;
         while (processed < max && ready_contexts_.size() > 0) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop();
+            ready_contexts_.pop_front();
             context->run();
             processed++;
         }
         return processed;
     }
 
-    std::queue<call_back_context*>& get_ready_context_queue() override {
+    std::deque<call_back_context*>& get_ready_context_queue() override {
         return ready_contexts_;
     }
 
@@ -329,7 +332,7 @@ private:
     uint64_t cursor_;
     unordered_map<int64_t, string> pending_io_;
     SpinLock spin_lock_;
-    std::queue<call_back_context*> ready_contexts_;
+    std::deque<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     ready_state_estimator estimator;
     uint64_t io_id_generator_;

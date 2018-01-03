@@ -198,19 +198,25 @@ namespace tree {
 
             uint64_t admission = 0, blk_completion = 0, blk_ready = 0, manager_ready = 0;
 
-            uint64_t loops = 0;
+            uint64_t loops = 0, last_loop = 0;
 
             uint64_t empty_queue_time = 0;
 
             std::vector<int> blk_processed;
 
-            std::queue<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
-            std::queue<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
+            std::deque<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
+            std::deque<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
 
             ready_state_estimator &estimator = tree->blk_accessor_->get_ready_state_estimator();
 
             int64_t last = 0;
             uint64_t last_call_completion = 0;
+            uint64_t context_id_generator = 0;
+
+            uint64_t delay_start = 0;
+            uint64_t delay = 0;
+
+
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
                 loops++;
 //                usleep(1);
@@ -218,11 +224,20 @@ namespace tree {
                 int64_t last = ticks();
                 int state;
                 uint64_t start;
+                int new_arrivals = 0;
+
+//                int probe_granularity = max(8, min(32, (tree->pending_request_.load() - 1) / 4 + 1));
+                int probe_granularity = 8;
+
+//                if (rand() % 10000 < 1)
+//                    printf("granularity = %d.\n", probe_granularity);
+                int processed = 0;
                 do {
                     int32_t free = tree->free_context_slots_.load();
 //                    while (tree->free_context_slots_.load() > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
 //                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
-                    while (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
+                    new_arrivals = 0;
+                    if (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
 
 //                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
 //                           cycles_to_microseconds(admission_cycles),
@@ -248,49 +263,93 @@ namespace tree {
                             reinterpret_cast<insert_context *>(context)->init(
                                     reinterpret_cast<insert_request<K, V> *>(request));
                         }
+                        context->set_id(context_id_generator++);
                         tree->free_context_slots_--;
                         start = ticks();
                         context->run();
                         admission++;
                         admission_cycles += ticks() - start;
+                        new_arrivals ++;
                     }
 //                } while (tree->manager.process_ready_context(tree->queue_length_));
 //                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
 //                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
-                } while (process_ready_contexts(blk_ready_contexts, tree->queue_length_) || process_ready_contexts(barrier_ready_contexts, tree->queue_length_));
+//                } while (process_ready_contexts(blk_ready_contexts, tree->queue_length_) || process_ready_contexts(barrier_ready_contexts, tree->queue_length_));
+                    processed = 0;
+                        start = ticks();
+                        processed += process_ready_contexts(blk_ready_contexts, 1);
+                        blk_ready++;
+                        blk_ready_cycles += ticks() - start;
 
-                uint64_t current_tick = ticks();
-                int64_t cycles_to_wait = -1;
-                if (current_tick - last_call_completion > 50000000 || (estimator.get_number_of_pending_state() > 8 &&
-                        (cycles_to_wait = estimator.estimate_the_time_to_get_desirable_ready_state(8, current_tick)) == 0)) {
+                        start = ticks();
+                        processed += process_ready_contexts(barrier_ready_contexts, 1);
+                        manager_ready++;
+                        manager_ready_cycles += ticks() - start;
+//                    printf("%d processed \n", processed);
+                } while (ticks() - delay_start < delay && (new_arrivals || processed));
+
+                int64_t current_tick = ticks();
+                bool timeout = false;
+                int64_t cycles_to_wait = INT64_MAX;
+                int64_t cycles_to_wait_for_write = INT64_MAX;
+                int estimated_write = 0;
+                const int64_t max_waiting_cycles = 1;
+                delay_start = ticks();
+                if ((timeout = ((current_tick - last_call_completion) > max_waiting_cycles))
+                    || (cycles_to_wait_for_write = max((int64_t)0, estimator.estimate_the_time_to_get_desirable_ready_write_state(1, current_tick) - current_tick)) == 0
+                    || (cycles_to_wait = max((int64_t) 0,
+                                    estimator.estimate_the_time_to_get_desirable_ready_state(probe_granularity, current_tick) - current_tick)) == 0) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
-                    if (cycles_to_wait == 0) {
-                        printf("%d (e) vs %d (a) REAL\n", tree->queue_length_ / 16, processed);
+                    if (timeout) {
+//                        printf("%d (e) vs %d (a) timeout (%f us)\n", probe_granularity, processed,
+//                               cycles_to_microseconds(current_tick - last_call_completion));
+//                        printf("pending: %d, pending_write: %d\n", estimator.get_number_of_pending_state(), estimator.get_number_of_pending_write_state());
+//                        printf("loops: %ld\n", loops - last_loop);
+                        last_loop = loops;
+                    } else if (cycles_to_wait_for_write == 0) {
+//                        printf("%d (e) vs %d (a) write\n", 1, processed);
                     } else {
-                        printf("%d (e) vs %d (a) wait=%ld\n", tree->queue_length_ / 16, processed, cycles_to_wait);
+//                        printf("%d (e) vs %d (a) REAL\n", probe_granularity, processed);
                     }
                     last_call_completion = ticks();
                     blk_processed.push_back(processed);
                     blk_completion++;
                     blk_completion_cycles += ticks() - start;
+//                    printf("%d processed in blk_completion\n", processed);
                 }
 //                else if (blk_ready_contexts.empty() && barrier_ready_contexts.empty() && tree->request_queue_.empty()) {
-                else if (estimator.get_number_of_pending_state() > tree->queue_length_ / 3 * 2) {
+//                else if (estimator.get_number_of_pending_state() > tree->queue_length_ / 3 * 2) {
 //                    usleep(10);
 //                    std::this_thread::sleep_for(std::chrono::nanoseconds((int)cycles_to_nanoseconds(cycles_to_wait)));
-                }
+//                }
 
+                delay = min(max_waiting_cycles, min(cycles_to_wait_for_write, cycles_to_wait));
 
-                start = ticks();
-                process_ready_contexts(blk_ready_contexts, tree->queue_length_);
-                blk_ready++;
-                blk_ready_cycles += ticks() - start;
+//                printf("delay: %ld\n", delay);
 
-                start = ticks();
-                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
-                manager_ready++;
-                manager_ready_cycles += ticks() - start;
+//                int processed = 0;
+                do {
+                    processed = 0;
+                    start = ticks();
+                    processed += process_ready_contexts(blk_ready_contexts, probe_granularity);
+                    blk_ready++;
+                    blk_ready_cycles += ticks() - start;
+
+                    start = ticks();
+                    processed += process_ready_contexts(barrier_ready_contexts, probe_granularity);
+                    manager_ready++;
+                    manager_ready_cycles += ticks() - start;
+//                    printf("%d processed \n", processed);
+                } while (ticks() - delay_start < delay && processed > 0);
+
+//                do {
+//                    start = ticks();
+//                    process_ready_contexts(barrier_ready_contexts, 8);
+//                    manager_ready++;
+//                    manager_ready_cycles += ticks() - start;
+//                } while (ticks() - delay_start < delay);
+
             }
             tree->destroy_free_contexts();
 
@@ -316,11 +375,21 @@ namespace tree {
             return nullptr;
         }
 
-        static int process_ready_contexts(std::queue<call_back_context*>& ready_contexts, int max = 1) {
+        static bool compare(call_back_context* l, call_back_context* r) {
+            if (l->tag == r->tag)
+                return l->id < r->id;
+            else
+                return l->tag < r->tag;
+        }
+
+        static int process_ready_contexts(std::deque<call_back_context*>& ready_contexts, int max = 1) {
+            if (ready_contexts.empty())
+                return 0;
+            std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
             int processed = 0;
             while (processed < max && ready_contexts.size() > 0) {
                 call_back_context* context = ready_contexts.front();
-                ready_contexts.pop();
+                ready_contexts.pop_front();
                 context->run();
                 processed++;
             }

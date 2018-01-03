@@ -47,7 +47,7 @@ namespace tree {
             this->asynchronous_search_with_callback(&request);
             while(!semaphore.try_lock()) {
                 usleep(1);
-                std::this_thread::yield();
+//                std::this_thread::yield();
             }
 //                usleep(50);
             return found;
@@ -66,7 +66,7 @@ namespace tree {
             this->asynchronous_insert_with_callback(&request);
             while(!semaphore.try_lock()) {
                 usleep(1);
-                std::this_thread::yield();
+//                std::this_thread::yield();
             }
         }
 

@@ -6,6 +6,7 @@
 #define NVM_BLK_H
 
 #include <atomic>
+#include <deque>
 #include <list>
 #include <stdint.h>
 #include <string>
@@ -51,7 +52,7 @@ public:
         return 0;
     };
 
-    virtual std::queue<call_back_context*>& get_ready_contexts() {
+    virtual std::deque<call_back_context*>& get_ready_contexts() {
         assert(false);
     }
 
@@ -75,7 +76,7 @@ public:
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual int process_completion(int max = 1) = 0;
 
-    virtual std::queue<call_back_context*>& get_ready_context_queue() {
+    virtual std::deque<call_back_context*>& get_ready_context_queue() {
         assert(false);
     };
 

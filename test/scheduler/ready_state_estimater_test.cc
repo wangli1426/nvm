@@ -9,7 +9,7 @@ TEST(READY_STATE_ESTIMATOR, ESTIMATE_READ) {
     ASSERT_EQ(0, estimator.estimate_number_of_ready_states(5));
     ASSERT_EQ(1, estimator.estimate_number_of_ready_states(10));
     ASSERT_EQ(1, estimator.estimate_number_of_ready_states(15));
-    estimator.remove_io(0);
+    estimator.remove_read_io(0);
     ASSERT_EQ(0, estimator.estimate_number_of_ready_states(15));
 }
 
@@ -25,9 +25,12 @@ TEST(READY_STATE_ESTIMATOR, ESTIMATE_MIXED) {
     ASSERT_EQ(2, estimator.estimate_number_of_ready_states(15));
     ASSERT_EQ(3, estimator.estimate_number_of_ready_states(25));
 
+    ASSERT_EQ(0, estimator.estimate_number_of_write_states(15));
+    ASSERT_EQ(1, estimator.estimate_number_of_write_states(25));
 
-    estimator.remove_io(2);
+    estimator.remove_write_io(2);
     ASSERT_EQ(2, estimator.estimate_number_of_ready_states(25));
+    ASSERT_EQ(0, estimator.estimate_number_of_write_states(25));
 }
 
 TEST(READY_STATE_ESTIMATOR, EXPECTED_DURATION_FOR_EXPECTED_READY_STATES) {
@@ -44,6 +47,9 @@ TEST(READY_STATE_ESTIMATOR, EXPECTED_DURATION_FOR_EXPECTED_READY_STATES) {
     ASSERT_EQ(24, estimator.estimate_the_time_to_get_desirable_ready_state(5, 20));
     ASSERT_EQ(24, estimator.estimate_the_time_to_get_desirable_ready_state(5, 2000));
 
-
+    ASSERT_EQ(24, estimator.estimate_the_time_to_get_desirable_ready_write_state(1, 0));
+    estimator.remove_write_io(4);
+    ASSERT_EQ(INT64_MAX, estimator.estimate_the_time_to_get_desirable_ready_write_state(1, 0));
+    ASSERT_EQ(0, estimator.get_number_of_pending_write_state());
 }
 

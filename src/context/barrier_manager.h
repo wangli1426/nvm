@@ -6,6 +6,7 @@
 #define NVM_BARRIER_MANAGER_H
 
 #include <unordered_map>
+#include <deque>
 #include "context_barrier.h"
 #include "call_back.h"
 
@@ -50,14 +51,14 @@ public:
         int32_t processed = 0;
         while(ready_contexts_.size() > 0 && processed < max) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop();
+            ready_contexts_.pop_front();
             context->run();
             processed++;
         }
         return processed;
     }
 
-    std::queue<call_back_context*>& get_ready_contexts() {
+    std::deque<call_back_context*>& get_ready_contexts() {
         return ready_contexts_;
     }
 
@@ -74,7 +75,7 @@ private:
 
 private:
     unordered_map<int64_t, context_barrier*> barriers_;
-    std::queue<call_back_context*> ready_contexts_;
+    std::deque<call_back_context*> ready_contexts_;
 };
 
 #endif //NVM_BARRIER_MANAGER_H

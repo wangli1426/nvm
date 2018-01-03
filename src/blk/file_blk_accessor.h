@@ -4,6 +4,7 @@
 
 #ifndef NVM_FILE_BLK_ACCESSOR_H
 #define NVM_FILE_BLK_ACCESSOR_H
+#include <deque>
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -29,8 +30,8 @@ class file_blk_accessor: public blk_accessor<K, V>{
 public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0),
-                                                                               estimator_(0, 0), io_id_generator_(0) {
-//        cache_ = new blk_cache(block_size, 100000);
+                                                                               estimator_(1000, 2000), io_id_generator_(0) {
+//        cache_ = new blk_cache(block_size, 1000000);
         cache_ = nullptr;
     }
 
@@ -100,8 +101,8 @@ public:
             bool evicted = cache_->write(address, buffer, false, unit);
             lock_.release();
             if (evicted) {
-                int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
-                if (write_status) {
+                int write_status = ::pwrite(fd_, unit.data, this->block_size, unit.id * this->block_size);
+                if (write_status < 0) {
                     printf("write error: %s\n", strerror(errno));
                 }
                 free(unit.data);
@@ -121,7 +122,7 @@ public:
             if (cache_->write(address, buffer, true, unit)) {
                 lock_.release();
                 if (unit.dirty) {
-                    int write_status = ::pwrite(unit.id, unit.data, this->block_size, address * this->block_size);
+                    int write_status = ::pwrite(fd_, unit.data, this->block_size, unit.id * this->block_size);
                     if (write_status < 0) {
                         printf("error in write: %s\n", strerror(errno));
                     }
@@ -166,7 +167,10 @@ public:
         read(blk_addr, buffer);
         const uint64_t id = io_id_generator_++;
         estimator_.register_read_io(id, ticks());
-        pending_ids_.push_back(id);
+        pending_io io;
+        io.type = pending_io::read_io;
+        io.id = id;
+        pending_ids_.push_back(io);
         pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
@@ -175,12 +179,15 @@ public:
         write(blk_addr, buffer);
         const uint64_t id = io_id_generator_++;
         estimator_.register_write_io(id, ticks());
-        pending_ids_.push_back(id);
+        pending_io io;
+        io.type = pending_io::write_io;
+        io.id = id;
+        pending_ids_.push_back(io);
         pending_contexts_.push_back(context);
         wait_for_completion_counts_++;
     }
 
-    std::queue<call_back_context*>& get_ready_contexts() override {
+    std::deque<call_back_context*>& get_ready_contexts() override {
         return ready_contexts_;
     }
 
@@ -188,7 +195,7 @@ public:
         int processed = 0;
         for(; processed < ready_contexts_.size() && processed < max; processed++) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop();
+            ready_contexts_.pop_front();
             if (context->run() == CONTEXT_TERMINATED) {
 //                delete context;
             }
@@ -220,13 +227,19 @@ public:
         int processed = 0;
         random_shuffle(pending_contexts_.begin(), pending_contexts_.end());
         while (processed < max && pending_contexts_.size() > 0) {
-            uint64_t id = pending_ids_.back();
-            pending_ids_.pop_back();
-            estimator_.remove_io(id);
             call_back_context* context = pending_contexts_.back();
+            pending_io io = pending_ids_.back();
+            pending_ids_.pop_back();
+            if (io.type == pending_io::read_io) {
+                estimator_.remove_read_io(io.id);
+                context->set_tag(CONTEXT_READ_IO);
+            } else {
+                estimator_.remove_write_io(io.id);
+                context->set_tag(CONTEXT_WRITE_IO);
+            }
             pending_contexts_.pop_back();
             context->transition_to_next_state();
-            ready_contexts_.push(context);
+            ready_contexts_.push_back(context);
             processed++;
         }
         return processed;
@@ -245,18 +258,24 @@ private:
     }
 
 private:
+
+    struct pending_io {
+        uint64_t id;
+        enum {read_io, write_io} type;
+    };
+
     const char* path_;
     int fd_;
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
     std::vector<call_back_context*> pending_contexts_;
-    std::queue<call_back_context*> ready_contexts_;
+    std::deque<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;
     SpinLock lock_;
     ready_state_estimator estimator_;
     uint64_t io_id_generator_;
-    std::vector<uint64_t> pending_ids_;
+    std::vector<pending_io> pending_ids_;
 };
 
 

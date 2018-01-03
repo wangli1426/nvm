@@ -8,6 +8,7 @@
 #define READ_BARRIER 0
 #define WRITE_BARRIER 1
 #include <queue>
+#include <deque>
 #include <string>
 #include <sstream>
 #include "call_back.h"
@@ -33,7 +34,7 @@ class context_barrier {
     };
 
 public:
-    context_barrier(int64_t id, std::queue<call_back_context*> &ready_contexts): id(id), ready_contexts_(ready_contexts), read_barriers(0), write_barriers(0){};
+    context_barrier(int64_t id, std::deque<call_back_context*> &ready_contexts): id(id), ready_contexts_(ready_contexts), read_barriers(0), write_barriers(0){};
 
     bool set_read_barrier(call_back_context* context) {
         if (grant_read_barrier_request()) {
@@ -78,12 +79,16 @@ public:
 private:
 
     void fire_context(call_back_context* context, int type) {
+        if (type == WRITE_BARRIER)
+            context->set_tag(CONTEXT_WRITE_BARRIER);
+        else
+            context->set_tag(CONTEXT_READ_BARRIER);
         context->add_barrier_token(barrier_token(id, type));
         context->transition_to_next_state();
 //        if (context->run() == CONTEXT_TERMINATED) {
 //            delete context;
 //        }
-        ready_contexts_.push(context);
+        ready_contexts_.push_back(context);
     }
 
     // try to offer barrier
@@ -139,7 +144,7 @@ private:
     int32_t read_barriers;
     int32_t write_barriers;
     std::queue<pending_barrier_request> pending_barrier_requests;
-    std::queue<call_back_context*> &ready_contexts_;
+    std::deque<call_back_context*> &ready_contexts_;
 };
 
 #endif //NVM_CONTEXT_BARRIER_H

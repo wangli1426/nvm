@@ -37,6 +37,11 @@ static void add_to_queue(call_back_context* context);
 #define CONTEXT_TERMINATED 0
 #define CONTEXT_TRANSIT 1
 
+#define CONTEXT_WRITE_BARRIER 0
+#define CONTEXT_READ_BARRIER 1
+#define CONTEXT_WRITE_IO 0
+#define CONTEXT_READ_IO 1
+
 class call_back_context {
 public:
     call_back_context(): status(0), current_state(0), next_state(-1) {};
@@ -45,6 +50,16 @@ public:
     int current_state;
     int next_state;
     int status;
+    uint64_t id;
+    int tag;
+
+    void set_id(const uint64_t &id) {
+        this->id = id;
+    }
+
+    void set_tag(int tag) {
+        this->tag = tag;
+    }
 
     virtual int run() {
         if (status == 0) {
