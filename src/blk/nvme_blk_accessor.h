@@ -237,7 +237,7 @@ public:
             para->accessor->estimator.remove_read_io(para->io_id);
             para->accessor->metrics_.add_read_latency(ticks() - para->start_time);
             if (para->io_id >> 8 == 0) {
-                int latency = para->accessor->metrics_.get_avg_read_latency_in_cycles();
+                int latency = para->accessor->metrics_.get_recent_avg_read_latency_in_cycles();
                 para->accessor->estimator.update_read_latency_in_cycles(latency);
             }
             para->context->set_tag(CONTEXT_READ_IO);
@@ -247,7 +247,7 @@ public:
             para->accessor->estimator.remove_write_io(para->io_id);
             para->accessor->metrics_.add_write_latency(ticks() - para->start_time);
             if (para->io_id >> 8 == 0) {
-                int latency = para->accessor->metrics_.get_avg_write_latency_in_cycles();
+                int latency = para->accessor->metrics_.get_recent_avg_write_latency_in_cycles();
                 para->accessor->estimator.update_write_latency_in_cycles(latency);
             }
             para->context->set_tag(CONTEXT_WRITE_IO);

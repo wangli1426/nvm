@@ -6,6 +6,7 @@
 #define NVM_BLK_METRICS_H
 
 #include <atomic>
+#include <deque>
 #include <string>
 #include <vector>
 #include "../utils/rdtsc.h"
@@ -21,6 +22,11 @@ public:
 
     std::vector<int16_t> pending_command_counts_;
     int64_t pending_commands_;
+
+    deque<uint64_t> recent_read_cycles_;
+    deque<uint64_t> recent_write_cycles_;
+
+    const int window_size = 1000;
 
     blk_metrics() {
         reset();
@@ -73,11 +79,17 @@ public:
     void add_read_latency(const int64_t &cycles) {
         this->read_cycles_ += cycles;
         this->reads_++;
+        this->recent_read_cycles_.push_back(cycles);
+        if (recent_read_cycles_.size() > window_size)
+            this->recent_read_cycles_.pop_front();
     }
 
     void add_write_latency(const int64_t &cycles) {
         this->write_cycles_ += cycles;
         this->writes_++;
+        this->recent_write_cycles_.push_back(cycles);
+        if (recent_write_cycles_.size() > window_size)
+            this->recent_write_cycles_.pop_front();
     }
 
     int get_avg_write_latency_in_cycles() const {
@@ -86,6 +98,26 @@ public:
 
     int get_avg_read_latency_in_cycles() const {
         return this->read_cycles_ / this->reads_;
+    }
+
+    int get_recent_avg_write_latency_in_cycles() const {
+        if (recent_write_cycles_.empty())
+            return 10000;
+        uint64_t sum = 0;
+        for (auto it = recent_write_cycles_.begin(); it != recent_write_cycles_.end(); ++it) {
+            sum += *it;
+        }
+        return sum / recent_write_cycles_.size();
+    }
+
+    int get_recent_avg_read_latency_in_cycles() const {
+        if (recent_read_cycles_.empty())
+            return 10000;
+        uint64_t sum = 0;
+        for (auto it = recent_read_cycles_.begin(); it != recent_read_cycles_.end(); ++it) {
+            sum += *it;
+        }
+        return sum / recent_read_cycles_.size();
     }
 
     void print() {

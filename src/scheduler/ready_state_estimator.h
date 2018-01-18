@@ -120,12 +120,12 @@ public:
     }
 
     void update_read_latency_in_cycles(int read_lat) {
-        read_latency = read_lat * 0.8;
+        read_latency = read_lat;
 //        printf("read latency -> %f us\n", cycles_to_microseconds(read_latency));
     }
 
     void update_write_latency_in_cycles(int write_lat) {
-        write_latency = write_lat * 0.8;
+        write_latency = write_lat;
 //        printf("write latency -> %f us\n", cycles_to_microseconds(read_latency));
     }
 

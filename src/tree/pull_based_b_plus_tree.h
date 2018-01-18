@@ -227,7 +227,7 @@ namespace tree {
                 int new_arrivals = 0;
 
 //                int probe_granularity = max(8, min(32, (tree->pending_request_.load() - 1) / 4 + 1));
-                int probe_granularity = 8;
+                int probe_granularity = 16;
 
 //                if (rand() % 10000 < 1)
 //                    printf("granularity = %d.\n", probe_granularity);
@@ -277,12 +277,12 @@ namespace tree {
 //                } while (process_ready_contexts(blk_ready_contexts, tree->queue_length_) || process_ready_contexts(barrier_ready_contexts, tree->queue_length_));
                     processed = 0;
                         start = ticks();
-                        processed += process_ready_contexts(blk_ready_contexts, 1);
+                        processed += process_ready_contexts(blk_ready_contexts, probe_granularity);
                         blk_ready++;
                         blk_ready_cycles += ticks() - start;
 
                         start = ticks();
-                        processed += process_ready_contexts(barrier_ready_contexts, 1);
+                        processed += process_ready_contexts(barrier_ready_contexts, probe_granularity);
                         manager_ready++;
                         manager_ready_cycles += ticks() - start;
 //                    printf("%d processed \n", processed);
@@ -293,14 +293,14 @@ namespace tree {
                 int64_t cycles_to_wait = INT64_MAX;
                 int64_t cycles_to_wait_for_write = INT64_MAX;
                 int estimated_write = 0;
-                const int64_t max_waiting_cycles = 1;
+                const int64_t max_waiting_cycles = 100000;
                 delay_start = ticks();
                 if ((timeout = ((current_tick - last_call_completion) > max_waiting_cycles))
                     || (cycles_to_wait_for_write = max((int64_t)0, estimator.estimate_the_time_to_get_desirable_ready_write_state(1, current_tick) - current_tick)) == 0
                     || (cycles_to_wait = max((int64_t) 0,
                                     estimator.estimate_the_time_to_get_desirable_ready_state(probe_granularity, current_tick) - current_tick)) == 0) {
                     start = ticks();
-                    const int processed = tree->blk_accessor_->process_completion(tree->queue_length_);
+                    const int processed = tree->blk_accessor_->process_completion(probe_granularity);
                     if (timeout) {
 //                        printf("%d (e) vs %d (a) timeout (%f us)\n", probe_granularity, processed,
 //                               cycles_to_microseconds(current_tick - last_call_completion));
@@ -361,7 +361,7 @@ namespace tree {
                 sum += *it;
             }
 
-            double avg = sum / blk_processed.size();
+            double avg = (double)sum / blk_processed.size();
 
             double var = 0;
 
