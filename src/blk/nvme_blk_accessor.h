@@ -43,7 +43,7 @@ public:
         qpair_ = 0;
         cache_ = 0;
         io_id_generator_ = 0;
-//        cache_ = new blk_cache(this->block_size, 1000);
+        cache_ = new blk_cache(this->block_size, 1000);
 
         // measure the concurrency in the command queues
     };
@@ -103,18 +103,18 @@ public:
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
         spin_lock_.acquire();
-        if (cache_ && cache_->read(blk_addr, buffer)) {
-        } else {
-            qpair_->synchronous_read(buffer, this->block_size, blk_addr);
-            if (cache_) {
-                blk_cache::cache_unit unit;
-                if (cache_->write(blk_addr, buffer, false, unit)) {
-                    if (unit.dirty)
-                        qpair_->synchronous_write(unit.data, this->block_size, unit.id);
-                    free(unit.data);
-                }
-            }
-        }
+//        if (cache_ && cache_->read(blk_addr, buffer)) {
+//        } else {
+//            qpair_->synchronous_read(buffer, this->block_size, blk_addr);
+//            if (cache_) {
+//                blk_cache::cache_unit unit;
+//                if (cache_->write(blk_addr, buffer, false, unit)) {
+//                    if (unit.dirty)
+//                        qpair_->synchronous_write(unit.data, this->block_size, unit.id);
+//                    free(unit.data);
+//                }
+//            }
+//        }
         spin_lock_.release();
         this->metrics_.read_cycles_ += ticks() - start;
         this->metrics_.reads_++;
@@ -152,6 +152,8 @@ public:
         int64_t start = ticks();
         uint64_t io_id = io_id_generator_++;
         if (cache_ && cache_->read(blk_addr, buffer)) {
+//            printf("read hit on [%d]\n", blk_addr);
+//            printf("%s\n", cache_->keys_to_string().c_str());
             // we read the data from in-memory cache, so asynchronous io will be omitted.
             // As such, we just forward the context to the ready context queue.
             context->transition_to_next_state();
@@ -160,6 +162,7 @@ public:
             estimator.register_read_io(io_id, 0);
             return;
         }
+//        printf("read not hit on [%d]\n", blk_addr);
 
         nvme_callback_para* para = new nvme_callback_para;
         para->start_time = start;
@@ -214,6 +217,9 @@ public:
         para->io_id = io_id;
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
 //        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
+        if (cache_) {
+//            cache_->invalidate(blk_addr);
+        }
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
@@ -253,6 +259,7 @@ public:
             para->context->set_tag(CONTEXT_WRITE_IO);
         }
 
+//        if (para->accessor->cache_ && para->type == NVM_READ) {
         if (para->accessor->cache_) {
             blk_cache::cache_unit unit;
             bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);

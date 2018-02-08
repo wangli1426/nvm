@@ -81,7 +81,7 @@ namespace nvm {
                 struct spdk_env_opts opts;
                 spdk_env_opts_init(&opts);
 //                printf("mask: %s\n", opts.core_mask);
-                opts.core_mask = "0xff";
+                opts.core_mask = "0xf";
                 opts.name = "nvm access interface";
                 opts.shm_id = 0;
 

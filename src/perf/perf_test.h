@@ -259,7 +259,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         build_time += elapsed_secs;
         tree->sync();
         printf("inserted...\n");
-
+        printf("Tree hight: %d\n", tree->height());
 //        sleep(1);
 
         blk_metrics metrics;

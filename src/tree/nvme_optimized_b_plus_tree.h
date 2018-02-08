@@ -88,6 +88,10 @@ namespace tree {
 //                   cycles_to_microseconds(ticks() - request.start));
         }
 
+        virtual int height() {
+            return this->get_height();
+        };
+
     private:
         int block_size_;
     };

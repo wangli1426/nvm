@@ -385,7 +385,7 @@ namespace tree {
         static int process_ready_contexts(std::deque<call_back_context*>& ready_contexts, int max = 1) {
             if (ready_contexts.empty())
                 return 0;
-            std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
+//            std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
             int processed = 0;
             while (processed < max && ready_contexts.size() > 0) {
                 call_back_context* context = ready_contexts.front();
@@ -443,10 +443,15 @@ namespace tree {
                 int current = this->current_state;
                 switch (this->current_state) {
                     case 0: {
+                        last_state_1 = false;
                         if (node_ref_ == -1) {
                             refer_to_root_ = true;
                             node_ref_ = tree_->root_->get_unified_representation();
                             current_node_level_ = tree_->get_height();
+                            this->record_debug_info("root reset");
+                            char chars[40];
+                            sprintf(chars, "current: %d", current_node_level_);
+                            this->record_debug_info(chars);
 //                            printf("begin to insert [%d], root is %lld\n", request_->key,
 //                                   tree_->root_->get_unified_representation());
                         }
@@ -468,6 +473,7 @@ namespace tree {
                         }
                     }
                     case 10001: {
+                        last_state_1 = false;
                         if (refer_to_root_) {
                             if (obtained_barriers_.back().barrier_id_ != tree_->root_->get_unified_representation()) {
                                 // root was updated
@@ -475,6 +481,7 @@ namespace tree {
                                 release_all_barriers();
                                 refer_to_root_ = true;
                                 node_ref_ = -1;
+                                this->record_debug_info("detected root update");
                                 set_next_state(0);
                                 transition_to_next_state();
 //                                printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
@@ -485,11 +492,13 @@ namespace tree {
                             }
                         }
                         if (optimistic_) {
+                            this->record_debug_info("optimistic");
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
                             release_all_barriers();
                             obtained_barriers_.push_back(latest_token);
                         } else if (free_slot_available_in_parent_ && !parent_boundary_update_) {
+                            this->record_debug_info("pessimistic");
                             //TODO release all the
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
@@ -507,15 +516,24 @@ namespace tree {
                     }
 
                     case 1: {
-                        tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
+                        assert(!last_state_1);
+                        last_state_1 = true;
                         set_next_state(2);
+                        tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
+                        this->record_debug_info("set next state to 2");
+
 //                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
                     }
                     case 2: {
+                        last_state_1 = false;
                         uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
+                                if (current_node_level_ != 1) {
+                                    printf("current_node_level: %d\n", current_node_level_);
+                                    printf("Lineage: %s\n", this->get_transition_lineage().c_str());
+                                }
                                 assert(current_node_level_ == 1);
                                 assert(obtained_barriers_.back().type_ == WRITE_BARRIER);
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
@@ -533,6 +551,7 @@ namespace tree {
                                 child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, split_);
                                 if (!child_node_split_) {
                                     // the leaf node does not split, so we only need to flush the leaf node
+                                    this->record_debug_info("leaf node insert");
                                     current_node_->serialize(buffer_);
                                     delete current_node_;
                                     current_node_ = 0;
@@ -544,6 +563,7 @@ namespace tree {
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the leaf node wat split and we need to flush both the leaf node and the new node.
+                                    this->record_debug_info("leaf node insert with split");
                                     current_node_->serialize(buffer_);
                                     split_.right->serialize(buffer_2);
                                     if (current_node_->get_self_rep() ==
@@ -567,6 +587,7 @@ namespace tree {
                                 int target_node_index = inner_node->locate_child_index(request_->key);
                                 const bool exceed_left_boundary = target_node_index < 0;
                                 if (exceed_left_boundary && optimistic_) {
+                                    this->record_debug_info("optimistic fails");
                                     // the insertion needs to update the inner node, so the optimistic insertion fails.
                                     delete current_node_;
                                     current_node_ = 0;
@@ -589,6 +610,7 @@ namespace tree {
                                 next_visit_is_leaf_node_ = current_node_level_ == 2;
                                 current_node_level_ --;
                                 set_next_state(0);
+                                this->record_debug_info("going to child node");
                                 transition_to_next_state();
 //                                printf("during is %.2f ns, state: %d [2I2]\n", cycles_to_nanoseconds(ticks() - last), current);
                                 return run();
@@ -597,6 +619,7 @@ namespace tree {
                         }
                     }
                     case 9: {
+                        last_state_1 = false;
                         // The insertion process goes into this state, when the tuple has been inserted into the
                         // child node. Depending on whether the child node was split during the insertion, the
                         // process logic varies. If the child node was split, we need to accommodate the new node;
@@ -720,6 +743,7 @@ namespace tree {
                         }
                     }
                     case 10: {
+                        last_state_1 = false;
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
                             set_next_state(9);
@@ -732,6 +756,7 @@ namespace tree {
                         return CONTEXT_TRANSIT;
                     }
                     case 11: {
+                        last_state_1 = false;
                         release_all_barriers(); // TODO: this can be done earlier.
                         if (request_->cb_f) {
                             (*request_->cb_f)(request_->args);
@@ -751,6 +776,7 @@ namespace tree {
                         return CONTEXT_TERMINATED;
                     }
                     case 12: {
+                        last_state_1 = false;
                         // handle root node split
                         write_back_completion_count_ ++;
                         if (write_back_completion_count_ == write_back_completion_target_) {
@@ -774,6 +800,7 @@ namespace tree {
                     }
 
                     case 13: {
+                        last_state_1 = false;
                         optimistic_ = false;
                         free_slot_available_in_parent_ = false;
                         refer_to_root_ = false;
@@ -838,6 +865,8 @@ namespace tree {
             bool optimistic_;
             bool next_visit_is_leaf_node_;
             int current_node_level_;
+
+            bool last_state_1;
         };
 
 

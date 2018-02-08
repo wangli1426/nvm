@@ -24,6 +24,10 @@ namespace tree {
 
         virtual void sync() {};
 
+        virtual int height() {
+            return -1;
+        };
+
         class Iterator {
         public:
             virtual ~Iterator(){};
