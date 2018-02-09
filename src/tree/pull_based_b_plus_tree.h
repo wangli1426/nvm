@@ -185,7 +185,7 @@ namespace tree {
         static void *schedule(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             tree->create_free_contexts();
-            naive_scheduler sched(tree);
+            latency_aware_scheduler sched(tree);
             sched.run();
         }
 
@@ -1189,6 +1189,38 @@ namespace tree {
 //                    printf("completion: %d\n", processed);
                 }
             }
+        };
+
+        class latency_aware_scheduler: public scheduler {
+        public:
+            latency_aware_scheduler(pull_based_b_plus_tree* tree): scheduler(tree) {
+                estimator = &(tree->blk_accessor_->get_ready_state_estimator());
+                last_probe_tick = 0;
+            };
+            void run() {
+                while(!this->terminated()) {
+                    int processed;
+                    processed = this->admission(process_granularity);
+                    processed = this->process_new_context(process_granularity);
+                    processed = this->process_blk_ready_context(process_granularity);
+                    processed = this->process_barrier_ready_context(process_granularity);
+                    int64_t now = ticks();
+                    if (now - last_probe_tick > max_probe_delay_cycles ||
+                            max((int64_t)0, estimator->estimate_the_time_to_get_desirable_ready_write_state(1, now) - now) == 0 ||
+                            max((int64_t) 0,
+                                estimator->estimate_the_time_to_get_desirable_ready_state(probe_granularity, now) - now) == 0) {
+                        processed = this->probe_blk_completion();
+                        last_probe_tick = ticks();
+                    }
+                }
+            }
+
+        private:
+            ready_state_estimator * estimator;
+            int64_t last_probe_tick;
+            const int64_t max_probe_delay_cycles = 10000;
+            const int64_t probe_granularity = 8;
+            const int process_granularity = 8;
         };
 
     };
