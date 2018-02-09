@@ -49,7 +49,7 @@ using namespace std;
 class call_back_context {
 public:
     call_back_context(): status(0), current_state(0), next_state(-1) {
-        record_transition(0);
+//        record_transition(0);
     };
 
     virtual ~call_back_context(){};
@@ -81,8 +81,6 @@ public:
         status = 0;
         current_state = 0;
         next_state = -1;
-        debug_info.str("");
-        debug_info.clear();
     }
 
     void transition_to_state(int status) {
@@ -103,23 +101,23 @@ public:
         obtained_barriers_.push_back(token);
     }
 
-    string get_transition_lineage() {
-        return debug_info.str();
-    }
-
-    void record_debug_info(const char* str) {
-//        debug_info << str << ", ";
-    }
+//    string get_transition_lineage() {
+//        return debug_info.str();
+//    }
+//
+//    void record_debug_info(const char* str) {
+////        debug_info << str << ", ";
+//    }
 
 protected:
     std::deque<barrier_token> obtained_barriers_;
 //    std::vector<string> state_history_;
-    ostringstream debug_info;
+//    ostringstream debug_info;
 
 private:
-    void record_transition(int state) {
-//        debug_info << " |" << state << ": ";
-    }
+//    void record_transition(int state) {
+////        debug_info << " |" << state << ": ";
+//    }
 };
 
 static void process_logic(volatile bool *terminate) {

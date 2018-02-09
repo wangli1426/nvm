@@ -25,6 +25,7 @@
 #include "../tree/blk_node_reference.h"
 #include "../context/barrier_manager.h"
 #include "../utils/concurrent_queue.h"
+//#include "../scheduler/scheduler.h"
 
 #define SEARCH_REQUEST 1
 #define INSERT_REQUEST 2
@@ -100,7 +101,8 @@ namespace tree {
 //            create_free_contexts();
             VanillaBPlusTree<K, V, CAPACITY>::init();
             working_thread_terminate_flag_ = false;
-            pthread_create(&thread_handle_, NULL, pull_based_b_plus_tree::context_based_process, this);
+            pthread_create(&thread_handle_, NULL, pull_based_b_plus_tree::schedule, this);
+//            pthread_create(&thread_handle_, NULL, pull_based_b_plus_tree::context_based_process, this);
         }
 
         virtual void create_and_init_blk_accessor() = 0;
@@ -179,6 +181,14 @@ namespace tree {
                 return nullptr;
         }
 
+
+        static void *schedule(void* para) {
+            pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
+            tree->create_free_contexts();
+            naive_scheduler sched(tree);
+            sched.run();
+        }
+
         static void *context_based_process(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             tree->create_free_contexts();
@@ -216,6 +226,7 @@ namespace tree {
             uint64_t delay_start = 0;
             uint64_t delay = 0;
 
+//            scheduler<K, V, CAPACITY> sche(this);
 
             while (!tree->working_thread_terminate_flag_ || tree->pending_request_.load() > 0) {
                 loops++;
@@ -276,15 +287,15 @@ namespace tree {
 //                process_ready_contexts(barrier_ready_contexts, tree->queue_length_);
 //                } while (process_ready_contexts(blk_ready_contexts, tree->queue_length_) || process_ready_contexts(barrier_ready_contexts, tree->queue_length_));
                     processed = 0;
-                        start = ticks();
-                        processed += process_ready_contexts(blk_ready_contexts, probe_granularity);
-                        blk_ready++;
-                        blk_ready_cycles += ticks() - start;
+                    start = ticks();
+                    processed += process_ready_contexts(blk_ready_contexts, probe_granularity);
+                    blk_ready++;
+                    blk_ready_cycles += ticks() - start;
 
-                        start = ticks();
-                        processed += process_ready_contexts(barrier_ready_contexts, probe_granularity);
-                        manager_ready++;
-                        manager_ready_cycles += ticks() - start;
+                    start = ticks();
+                    processed += process_ready_contexts(barrier_ready_contexts, probe_granularity);
+                    manager_ready++;
+                    manager_ready_cycles += ticks() - start;
 //                    printf("%d processed \n", processed);
                 } while (ticks() - delay_start < delay && (new_arrivals || processed));
 
@@ -294,11 +305,12 @@ namespace tree {
                 int64_t cycles_to_wait_for_write = INT64_MAX;
                 int estimated_write = 0;
                 const int64_t max_waiting_cycles = 100000;
+//                const int64_t max_waiting_cycles = 1000;
                 delay_start = ticks();
                 if ((timeout = ((current_tick - last_call_completion) > max_waiting_cycles))
                     || (cycles_to_wait_for_write = max((int64_t)0, estimator.estimate_the_time_to_get_desirable_ready_write_state(1, current_tick) - current_tick)) == 0
                     || (cycles_to_wait = max((int64_t) 0,
-                                    estimator.estimate_the_time_to_get_desirable_ready_state(probe_granularity, current_tick) - current_tick)) == 0) {
+                                             estimator.estimate_the_time_to_get_desirable_ready_state(probe_granularity, current_tick) - current_tick)) == 0) {
                     start = ticks();
                     const int processed = tree->blk_accessor_->process_completion(probe_granularity);
                     if (timeout) {
@@ -354,7 +366,7 @@ namespace tree {
             tree->destroy_free_contexts();
 
             printf("loops: %ld\nblk_ready: %ld, blk_ready_cycle: %ld\nbarrier_ready: %ld, barrier_ready_cycles: %ld\nblk_com: %ld, blk_com_cycles: %ld\n",
-                    loops/1000000, blk_ready/1000000, blk_ready_cycles/1000000, manager_ready/1000000, manager_ready_cycles/1000000, blk_completion/1000000, blk_completion_cycles/1000000);
+                   loops/1000000, blk_ready/1000000, blk_ready_cycles/1000000, manager_ready/1000000, manager_ready_cycles/1000000, blk_completion/1000000, blk_completion_cycles/1000000);
 
             long sum = 0;
             for (auto it = blk_processed.begin(); it != blk_processed.end(); it++) {
@@ -407,7 +419,7 @@ namespace tree {
         class insert_context: public call_back_context {
         public:
             insert_context(pull_based_b_plus_tree* tree, insert_request<K, V>* request):
-                call_back_context(), tree_(tree){
+                    call_back_context(), tree_(tree){
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
                 buffer_2 = tree_->blk_accessor_->malloc_buffer();
 //                init(request);
@@ -448,10 +460,6 @@ namespace tree {
                             refer_to_root_ = true;
                             node_ref_ = tree_->root_->get_unified_representation();
                             current_node_level_ = tree_->get_height();
-                            this->record_debug_info("root reset");
-                            char chars[40];
-                            sprintf(chars, "current: %d", current_node_level_);
-                            this->record_debug_info(chars);
 //                            printf("begin to insert [%d], root is %lld\n", request_->key,
 //                                   tree_->root_->get_unified_representation());
                         }
@@ -481,7 +489,6 @@ namespace tree {
                                 release_all_barriers();
                                 refer_to_root_ = true;
                                 node_ref_ = -1;
-                                this->record_debug_info("detected root update");
                                 set_next_state(0);
                                 transition_to_next_state();
 //                                printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
@@ -492,13 +499,11 @@ namespace tree {
                             }
                         }
                         if (optimistic_) {
-                            this->record_debug_info("optimistic");
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
                             release_all_barriers();
                             obtained_barriers_.push_back(latest_token);
                         } else if (free_slot_available_in_parent_ && !parent_boundary_update_) {
-                            this->record_debug_info("pessimistic");
                             //TODO release all the
                             barrier_token latest_token = obtained_barriers_.back();
                             obtained_barriers_.pop_back();
@@ -520,7 +525,6 @@ namespace tree {
                         last_state_1 = true;
                         set_next_state(2);
                         tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
-                        this->record_debug_info("set next state to 2");
 
 //                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
@@ -530,10 +534,6 @@ namespace tree {
                         uint32_t node_type = *reinterpret_cast<uint32_t*>(buffer_);
                         switch (node_type) {
                             case LEAF_NODE: {
-                                if (current_node_level_ != 1) {
-                                    printf("current_node_level: %d\n", current_node_level_);
-                                    printf("Lineage: %s\n", this->get_transition_lineage().c_str());
-                                }
                                 assert(current_node_level_ == 1);
                                 assert(obtained_barriers_.back().type_ == WRITE_BARRIER);
                                 current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
@@ -551,7 +551,6 @@ namespace tree {
                                 child_node_split_ = current_node_->insert_with_split_support(request_->key, request_->value, split_);
                                 if (!child_node_split_) {
                                     // the leaf node does not split, so we only need to flush the leaf node
-                                    this->record_debug_info("leaf node insert");
                                     current_node_->serialize(buffer_);
                                     delete current_node_;
                                     current_node_ = 0;
@@ -563,11 +562,10 @@ namespace tree {
                                     return CONTEXT_TRANSIT;
                                 } else {
                                     // the leaf node wat split and we need to flush both the leaf node and the new node.
-                                    this->record_debug_info("leaf node insert with split");
                                     current_node_->serialize(buffer_);
                                     split_.right->serialize(buffer_2);
                                     if (current_node_->get_self_rep() ==
-                                            tree_->root_->get_unified_representation()) {
+                                        tree_->root_->get_unified_representation()) {
                                         set_next_state(12);
                                     } else {
                                         set_next_state(10);
@@ -587,7 +585,6 @@ namespace tree {
                                 int target_node_index = inner_node->locate_child_index(request_->key);
                                 const bool exceed_left_boundary = target_node_index < 0;
                                 if (exceed_left_boundary && optimistic_) {
-                                    this->record_debug_info("optimistic fails");
                                     // the insertion needs to update the inner node, so the optimistic insertion fails.
                                     delete current_node_;
                                     current_node_ = 0;
@@ -610,7 +607,6 @@ namespace tree {
                                 next_visit_is_leaf_node_ = current_node_level_ == 2;
                                 current_node_level_ --;
                                 set_next_state(0);
-                                this->record_debug_info("going to child node");
                                 transition_to_next_state();
 //                                printf("during is %.2f ns, state: %d [2I2]\n", cycles_to_nanoseconds(ticks() - last), current);
                                 return run();
@@ -875,7 +871,7 @@ namespace tree {
 
             uint64_t last;
             search_context(pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(),
-                                                                                                          tree_(tree) {
+                                                                                          tree_(tree) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
 //                init(request);
             };
@@ -1067,6 +1063,15 @@ namespace tree {
             return context;
         }
 
+    public:
+        blk_accessor<K, V>* get_blk_accessor() {
+            return this->blk_accessor_;
+        };
+
+        std::deque<call_back_context*> &get_barrier_ready_contexts_ref() {
+            return manager.get_ready_contexts();
+        }
+
     private:
         SpinLock lock_;
         Semaphore queue_free_slots_;
@@ -1080,9 +1085,112 @@ namespace tree {
         int queue_length_;
         barrier_manager manager;
 
-
         std::stack<insert_context*> free_insert_contexts_;
         std::stack<search_context*> free_search_contexts_;
+
+//        friend class scheduler<K, V, CAPACITY>;
+
+        class scheduler {
+        public:
+            explicit scheduler(pull_based_b_plus_tree* tree):tree_(tree){
+                context_id_generator_ = 0;
+                blk_ready_contexts_ = &(tree_->blk_accessor_->get_ready_contexts());
+                barrier_ready_contexts_ = &(tree_->manager.get_ready_contexts());
+            };
+
+            virtual void run() = 0;
+
+        protected:
+            int admission(int max = INT_MAX) {
+                int free = tree_->free_context_slots_.load();
+                int processed = 0;
+                request<K, V>* request;
+                while(processed < max && free-- && (request = tree_->atomic_dequeue_request())) {
+                    request->admission = ticks();
+                    call_back_context *context;
+                    if (request->type == SEARCH_REQUEST) {
+                        context = tree_->get_free_search_context();
+                        reinterpret_cast<search_context *>(context)->init(
+                                reinterpret_cast<search_request<K, V> *>(request));
+                    } else {
+                        context = tree_->get_free_insert_context();
+                        reinterpret_cast<insert_context *>(context)->init(
+                                reinterpret_cast<insert_request<K, V> *>(request));
+                    }
+                    context->set_id(context_id_generator_++);
+                    tree_->free_context_slots_--;
+                    processed++;
+                    admission_contexts_.push_back(context);
+                }
+                return processed;
+            }
+
+            int process_blk_ready_context(int max = INT_MAX, bool sort = false) {
+                return process_ready_contexts(*blk_ready_contexts_, max, sort);
+            }
+
+            int process_barrier_ready_context(int max = INT_MAX, bool sort = false) {
+                return process_ready_contexts(*barrier_ready_contexts_, max, sort);
+            }
+
+            int process_new_context(int max = INT_MAX) {
+                return process_ready_contexts(admission_contexts_, max, false);
+            }
+
+            int probe_blk_completion(int max = INT_MAX) {
+                return tree_->blk_accessor_->process_completion(max);
+            }
+
+            bool terminated() {
+                return tree_->working_thread_terminate_flag_ && tree_->pending_request_.load() <= 0;
+            }
+
+        private:
+
+            int process_ready_contexts(std::deque<call_back_context*>& ready_contexts, int max = 1, bool sort = false) {
+                if (ready_contexts.empty())
+                    return 0;
+                if (sort)
+                    std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
+                int processed = 0;
+                while (processed < max && ready_contexts.size() > 0) {
+                    call_back_context* context = ready_contexts.front();
+                    ready_contexts.pop_front();
+                    context->run();
+                    processed++;
+                }
+                return processed;
+            }
+
+        private:
+            pull_based_b_plus_tree* tree_;
+            uint64_t context_id_generator_;
+            deque<call_back_context*> admission_contexts_;
+            deque<call_back_context*> *blk_ready_contexts_;
+            deque<call_back_context*> *barrier_ready_contexts_;
+        };
+
+
+        class naive_scheduler: public scheduler {
+        public:
+            naive_scheduler(pull_based_b_plus_tree* tree):scheduler(tree){};
+            void run() {
+                while(!this->terminated()) {
+                    int processed;
+                    processed = this->admission();
+//                    printf("admission: %d\n", processed);
+                    processed = this->process_new_context();
+//                    printf("new: %d\n", processed);
+                    processed = this->process_blk_ready_context();
+//                    printf("blk: %d\n", processed);
+                    processed = this->process_barrier_ready_context();
+//                    printf("barrier: %d\n", processed);
+                    processed = this->probe_blk_completion();
+//                    printf("completion: %d\n", processed);
+                }
+            }
+        };
+
     };
 }
 
