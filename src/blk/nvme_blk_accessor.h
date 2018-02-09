@@ -43,7 +43,7 @@ public:
         qpair_ = 0;
         cache_ = 0;
         io_id_generator_ = 0;
-        cache_ = new blk_cache(this->block_size, 1000);
+        cache_ = new blk_cache(this->block_size, 10000);
 
         // measure the concurrency in the command queues
     };
@@ -159,7 +159,7 @@ public:
             context->transition_to_next_state();
             ready_contexts_.push_back(context);
             this->metrics_.add_read_latency(ticks() - start);
-            estimator.register_read_io(io_id, 0);
+//            estimator.register_read_io(io_id, 0);
             return;
         }
 //        printf("read not hit on [%d]\n", blk_addr);
@@ -178,7 +178,7 @@ public:
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
-        estimator.register_read_io(io_id, ticks());
+        estimator.register_read_io(io_id, start);
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -206,9 +206,10 @@ public:
     }
 
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        uint64_t start = ticks();
         uint64_t io_id = io_id_generator_++;
         nvme_callback_para* para = new nvme_callback_para;
-        para->start_time = ticks();
+        para->start_time = start;
         para->type = NVM_WRITE;
         para->context = context;
         para->id = blk_addr;
@@ -218,7 +219,7 @@ public:
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
 //        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         if (cache_) {
-//            cache_->invalidate(blk_addr);
+            cache_->invalidate(blk_addr);
         }
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
@@ -226,7 +227,7 @@ public:
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
-        estimator.register_write_io(io_id, ticks());
+        estimator.register_write_io(io_id, start);
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -259,8 +260,8 @@ public:
             para->context->set_tag(CONTEXT_WRITE_IO);
         }
 
-//        if (para->accessor->cache_ && para->type == NVM_READ) {
-        if (para->accessor->cache_) {
+        if (para->accessor->cache_ && para->type == NVM_READ) {
+//        if (para->accessor->cache_) {
             blk_cache::cache_unit unit;
             bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);
             if (evicted) {

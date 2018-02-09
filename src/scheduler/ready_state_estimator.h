@@ -35,7 +35,6 @@ public:
 
     void remove_read_io(uint64_t id) {
         assert (id_to_time_.find(id) != id_to_time_.cend());
-
         uint64_t time = id_to_time_[id];
         id_to_time_.erase(id);
         auto it = ready_time_array_.begin();
@@ -47,7 +46,6 @@ public:
 
     void remove_write_io(uint64_t id) {
         assert (id_to_time_.find(id) != id_to_time_.cend());
-
         uint64_t time = id_to_time_[id];
         id_to_time_.erase(id);
         auto it = write_ready_time_array_.begin();
@@ -82,7 +80,7 @@ public:
     }
 
     int64_t estimate_the_time_to_get_desirable_ready_state(int expected, uint64_t timestamp) {
-//        uint64_t start = ticks();
+        uint64_t start = ticks();
         std::sort(ready_time_array_.begin(), ready_time_array_.end());
         int64_t time = INT64_MAX;
         int ready_count = 0;
@@ -98,6 +96,7 @@ public:
     }
 
     int64_t estimate_the_time_to_get_desirable_ready_write_state(int expected, uint64_t timestamp) {
+        uint64_t start = ticks();
         std::sort(write_ready_time_array_.begin(), write_ready_time_array_.end());
         int64_t time = INT64_MAX;
         int ready_count = 0;

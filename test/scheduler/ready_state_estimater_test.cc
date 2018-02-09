@@ -31,6 +31,13 @@ TEST(READY_STATE_ESTIMATOR, ESTIMATE_MIXED) {
     estimator.remove_write_io(2);
     ASSERT_EQ(2, estimator.estimate_number_of_ready_states(25));
     ASSERT_EQ(0, estimator.estimate_number_of_write_states(25));
+
+    ASSERT_EQ(2, estimator.get_number_of_pending_state());
+    ASSERT_EQ(0, estimator.get_number_of_pending_write_state());
+
+    estimator.remove_read_io(0);
+    estimator.remove_read_io(3);
+    ASSERT_EQ(0, estimator.get_number_of_pending_state());
 }
 
 TEST(READY_STATE_ESTIMATOR, EXPECTED_DURATION_FOR_EXPECTED_READY_STATES) {

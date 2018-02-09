@@ -72,17 +72,12 @@ public:
     }
 
     bool invalidate(const int64_t &id) {
-        int deleted = cache_.erase(id);
-        if (deleted == 0)
+        unordered_map<int64_t, list<cache_unit>::iterator>::iterator it;
+        if ((it = cache_.find(id)) == cache_.cend())
             return false;
-
-        auto it = key_.begin();
-        while (it != key_.end() && it->id != id) {
-            it++;
-        }
-
-        free(it->data);
-        key_.erase(it);
+        free(it->second->data);
+        key_.erase(it->second);
+        cache_.erase(it);
         size_--;
         return true;
     }

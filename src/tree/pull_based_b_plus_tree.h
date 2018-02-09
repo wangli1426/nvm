@@ -185,6 +185,7 @@ namespace tree {
         static void *schedule(void* para) {
             pull_based_b_plus_tree* tree = reinterpret_cast<pull_based_b_plus_tree*>(para);
             tree->create_free_contexts();
+//            naive_scheduler sched(tree);
             latency_aware_scheduler sched(tree);
             sched.run();
         }
