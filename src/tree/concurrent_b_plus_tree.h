@@ -28,11 +28,16 @@ namespace tree{
         }
 
         void insert(const K &key, const V &value) {
+            uint64_t start = ticks();
             concurrent_insert(key, value);
+            this->metrics_.add_write_latency(ticks() - start);
         }
 
         bool search(const K &key, V &value) {
-            return concurrent_search(key, value);
+            uint64_t start = ticks();
+            bool result =  concurrent_search(key, value);
+            this->metrics_.add_read_latency(ticks() - start);
+            return result;
         }
 
         virtual void clear() {

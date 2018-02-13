@@ -398,7 +398,7 @@ namespace tree {
         static int process_ready_contexts(std::deque<call_back_context*>& ready_contexts, int max = 1) {
             if (ready_contexts.empty())
                 return 0;
-//            std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
+            std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
             int processed = 0;
             while (processed < max && ready_contexts.size() > 0) {
                 call_back_context* context = ready_contexts.front();
@@ -1134,11 +1134,11 @@ namespace tree {
                 return process_ready_contexts(*barrier_ready_contexts_, max, sort);
             }
 
-            int process_new_context(int max = INT_MAX) {
+            int process_new_context(int max = INT_MAX, bool sort = false) {
                 return process_ready_contexts(admission_contexts_, max, false);
             }
 
-            int probe_blk_completion(int max = INT_MAX) {
+            int probe_blk_completion(int max = 0) {
                 return tree_->blk_accessor_->process_completion(max);
             }
 
@@ -1199,29 +1199,82 @@ namespace tree {
                 last_probe_tick = 0;
             };
             void run() {
+
+                uint64_t probed = 0;
+                double error = 0;
+                double estimator_count = 0;
+                uint64_t completions = 0;
+                uint64_t timeouts = 0;
+
                 while(!this->terminated()) {
                     int processed;
                     processed = this->admission(process_granularity);
-                    processed = this->process_new_context(process_granularity);
-                    processed = this->process_blk_ready_context(process_granularity);
-                    processed = this->process_barrier_ready_context(process_granularity);
-                    int64_t now = ticks();
-                    if (now - last_probe_tick > max_probe_delay_cycles ||
-                            max((int64_t)0, estimator->estimate_the_time_to_get_desirable_ready_write_state(1, now) - now) == 0 ||
-                            max((int64_t) 0,
-                                estimator->estimate_the_time_to_get_desirable_ready_state(probe_granularity, now) - now) == 0) {
-                        processed = this->probe_blk_completion();
+                    processed = this->process_new_context(process_granularity, sort);
+                    processed = this->process_blk_ready_context(process_granularity, sort);
+                    processed = this->process_barrier_ready_context(process_granularity, sort);
+                    uint64_t now = ticks();
+                    int estimated = -100;
+                    if (now - last_probe_tick >= min_probe_delay_cycles && (
+                           now - last_probe_tick > max_probe_delay_cycles
+                            || (estimated = estimator->estimate_number_of_ready_ios(now)) >= process_granularity
+                            || estimator->estimate_number_of_ready_writes(now) > 0
+                            )) {
+
+                        if (estimated < 0) {
+                            timeouts++;
+//                            printf("timeout*** (%.2f us)\n", cycles_to_microseconds(now - last_probe_tick));
+                        }
+
+                        bool print = false;
+                      print = rand() % 100000 == 0;
+
+                        if (estimated > 0 && print) {
+                            estimator->print_reads();
+                            printf("avg latency: %2.f\n", cycles_to_microseconds(estimator->get_current_read_latency()));
+                        }
+
+
+                        const int count = this->probe_blk_completion(probe_granularity);
                         last_probe_tick = ticks();
+
+                        if (estimated > 0 && print) {
+                                                            printf("%d : %d (pending: %d)\n", estimated, count,
+                                       estimator->get_number_of_pending_state());
+                            printf("==============\n");
+                        }
+
+                        if (estimated > 0) {
+                            if (rand() % 100000 == 0) {
+                                printf("%d : %d (pending: %d)\n", estimated, count,
+                                       estimator->get_number_of_pending_state());
+//                                estimator->print_reads();
+//                                printf("avg latency: %2.f\n", cycles_to_microseconds(estimator->get_current_read_latency()));
+                            }
+
+                            estimator_count++;
+                            error += abs((estimated - count) * (estimated - count));
+                        }
+//                        printf("%d : %d (pending: %d)\n", estimated, count, estimator->get_number_of_pending_state());
+
+                        probed++;
+                        completions += count;
                     }
                 }
+
+                printf("[Working threads] probed: %.4f Million, estimation stand err: %.2f \n", probed / 1000.0 / 1000.0,
+                estimator_count == 0 ? 0 : sqrt(error / estimator_count));
+
+                printf("completions: %d, timeouts: %d\n", completions, timeouts);
             }
 
         private:
             ready_state_estimator * estimator;
-            int64_t last_probe_tick;
-            const int64_t max_probe_delay_cycles = 10000;
-            const int64_t probe_granularity = 8;
+            uint64_t last_probe_tick;
+            const int64_t max_probe_delay_cycles = 1000000;
+            const int64_t min_probe_delay_cycles = 1000;
+            const int64_t probe_granularity = 128;
             const int process_granularity = 8;
+            const bool sort = false;
         };
 
     };

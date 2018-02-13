@@ -80,6 +80,9 @@ public:
         this->read_cycles_ += cycles;
         this->reads_++;
         this->recent_read_cycles_.push_back(cycles);
+//        if (rand() % 1000 == 0) {
+//            printf("reported read latency: %.2f\n", cycles_to_microseconds(cycles));
+//        }
         if (recent_read_cycles_.size() > window_size)
             this->recent_read_cycles_.pop_front();
     }
@@ -100,7 +103,7 @@ public:
         return this->read_cycles_ / this->reads_;
     }
 
-    int get_recent_avg_write_latency_in_cycles() const {
+    uint64_t get_recent_avg_write_latency_in_cycles() const {
         if (recent_write_cycles_.empty())
             return 10000;
         uint64_t sum = 0;
@@ -110,7 +113,7 @@ public:
         return sum / recent_write_cycles_.size();
     }
 
-    int get_recent_avg_read_latency_in_cycles() const {
+    uint64_t get_recent_avg_read_latency_in_cycles() const {
         if (recent_read_cycles_.empty())
             return 10000;
         uint64_t sum = 0;

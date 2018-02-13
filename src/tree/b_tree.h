@@ -5,6 +5,8 @@
 #ifndef B_TREE_B_TREE_H
 #define B_TREE_B_TREE_H
 
+#include "tree_perf_metrics.h"
+
 template <typename K, typename V>
 class blk_accessor;
 
@@ -39,6 +41,17 @@ namespace tree {
         virtual Iterator *range_search(const K &key_low, const K &key_high) = 0;
 
         virtual blk_accessor<K, V>* get_accessor() {};
+
+        tree_perf_metrics &get_metrics() {
+            return metrics_;
+        };
+
+        void reset_metrics() {
+            metrics_.clear();
+        }
+
+    protected:
+        tree_perf_metrics metrics_;
     };
 }
 #endif //B_TREE_B_TREE_H

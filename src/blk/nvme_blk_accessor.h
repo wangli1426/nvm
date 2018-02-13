@@ -43,7 +43,7 @@ public:
         qpair_ = 0;
         cache_ = 0;
         io_id_generator_ = 0;
-        cache_ = new blk_cache(this->block_size, 10000);
+//        cache_ = new blk_cache(this->block_size, 10000);
 
         // measure the concurrency in the command queues
     };
@@ -172,13 +172,14 @@ public:
         para->accessor = this;
         para->buffer = buffer;
         para->io_id = io_id;
+        para->estimated_completion = estimator.get_current_read_latency() + para->start_time;
+        estimator.register_read_io(io_id, start);
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
-        estimator.register_read_io(io_id, start);
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -198,7 +199,7 @@ public:
         return ready_contexts_;
     }
 
-    int process_completion(int max = 1) {
+    int process_completion(int max = 0) {
         int processed =  process_completion(qpair_, max);
         this->metrics_.pending_commands_ -= processed;
         this->metrics_.pending_command_counts_.push_back(this->metrics_.pending_commands_);
@@ -221,13 +222,13 @@ public:
         if (cache_) {
             cache_->invalidate(blk_addr);
         }
+        estimator.register_write_io(io_id, start);
         int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
         if (status != 0) {
             printf("error in submitting read command\n");
             printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
             return;
         }
-        estimator.register_write_io(io_id, start);
         this->metrics_.pending_commands_ ++;
 #ifdef __NVME_ACCESSOR_LOG__
         printf("pending_commands_ added to %d.\n", pending_commands_);
@@ -241,9 +242,20 @@ public:
         if (para->type == NVM_READ) {
 //            para->accessor->metrics_.read_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.reads_.fetch_add(1);
+//            if (para->estimated_completion > ticks()) {
+//                printf("ahead: %.2f us\n", cycles_to_microseconds(para->estimated_completion - ticks()));
+//            } else {
+//                printf("lag: %.2f us\n", cycles_to_microseconds(ticks() - para->estimated_completion));
+//            }
             para->accessor->estimator.remove_read_io(para->io_id);
             para->accessor->metrics_.add_read_latency(ticks() - para->start_time);
-            if (para->io_id >> 8 == 0) {
+//            if (rand() % 10000 == 0) {
+//                printf("actual read latency: %.2f us, avg: %.2f\n",
+//                       cycles_to_microseconds(ticks() - para->start_time),
+//                       cycles_to_microseconds(para->accessor->estimator.get_current_read_latency()));
+//            }
+
+            if (para->io_id % 1024 == 0) {
                 int latency = para->accessor->metrics_.get_recent_avg_read_latency_in_cycles();
                 para->accessor->estimator.update_read_latency_in_cycles(latency);
             }
@@ -253,7 +265,7 @@ public:
 //            para->accessor->metrics_.writes_.fetch_add(1);
             para->accessor->estimator.remove_write_io(para->io_id);
             para->accessor->metrics_.add_write_latency(ticks() - para->start_time);
-            if (para->io_id >> 8 == 0) {
+            if (para->io_id % 1024  == 0) {
                 int latency = para->accessor->metrics_.get_recent_avg_write_latency_in_cycles();
                 para->accessor->estimator.update_write_latency_in_cycles(latency);
             }
@@ -307,6 +319,7 @@ public:
         int32_t type;
         void* buffer;
         uint64_t io_id;
+        uint64_t estimated_completion;
     };
     std::string get_name() const {
         return std::string("NVM");
@@ -317,7 +330,7 @@ public:
     }
 
 protected:
-    int process_completion(QPair* qpair, int max = 1) {
+    int process_completion(QPair* qpair, int max = 0) {
 //        printf("process_completion is called!\n");
         int32_t status = qpair->process_completions(max);
         if (status < 0) {

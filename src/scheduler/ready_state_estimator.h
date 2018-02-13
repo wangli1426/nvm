@@ -21,119 +21,138 @@ public:
     ready_state_estimator(int ready_lat, int write_lat): read_latency(ready_lat), write_latency(write_lat) {};
 
     void register_write_io (uint64_t id, uint64_t current_timestamp) {
-        uint64_t ready_timestamp = current_timestamp + write_latency;
-        write_ready_time_array_.push_back(ready_timestamp);
-        ready_time_array_.push_back(ready_timestamp);
-        id_to_time_[id] = ready_timestamp;
+        write_time_array_.push_back(current_timestamp);
+        id_to_time_[id] = current_timestamp;
     }
 
     void register_read_io (uint64_t id, uint64_t current_timestamp) {
-        uint64_t ready_timestamp = current_timestamp + read_latency;
-        ready_time_array_.push_back(ready_timestamp);
-        id_to_time_[id] = ready_timestamp;
+        read_time_array_.push_back(current_timestamp);
+        id_to_time_[id] = current_timestamp;
     }
 
     void remove_read_io(uint64_t id) {
         assert (id_to_time_.find(id) != id_to_time_.cend());
         uint64_t time = id_to_time_[id];
         id_to_time_.erase(id);
-        auto it = ready_time_array_.begin();
+        auto it = read_time_array_.begin();
         while(*it != time) {
             ++it;
         }
-        ready_time_array_.erase(it);
+        assert(it != read_time_array_.end());
+        read_time_array_.erase(it);
     }
 
     void remove_write_io(uint64_t id) {
         assert (id_to_time_.find(id) != id_to_time_.cend());
         uint64_t time = id_to_time_[id];
         id_to_time_.erase(id);
-        auto it = write_ready_time_array_.begin();
+        auto it = write_time_array_.begin();
         while(*it != time) {
             ++it;
         }
-        write_ready_time_array_.erase(it);
-
-        it = ready_time_array_.begin();
-        while(*it != time) {
-            ++it;
-        }
-        ready_time_array_.erase(it);
+        assert(it != write_time_array_.end());
+        write_time_array_.erase(it);
     }
 
-    int estimate_number_of_ready_states(uint64_t timestamp) {
+    int estimate_number_of_ready_reads(uint64_t timestamp) {
         int ready_count = 0;
-        for (auto it = ready_time_array_.begin(); it != ready_time_array_.end(); ++it) {
-            if (*it <= timestamp)
+        for (auto it = read_time_array_.begin(); it != read_time_array_.end(); ++it) {
+            if (*it + read_latency <= timestamp)
                 ready_count++;
+            else
+                break;
         }
         return ready_count;
     }
 
-    int estimate_number_of_write_states(uint64_t timestamp) {
+    int estimate_number_of_ready_writes(uint64_t timestamp) {
         int ready_count = 0;
-        for (auto it = write_ready_time_array_.begin(); it != write_ready_time_array_.end(); ++it) {
-            if (*it <= timestamp)
+        for (auto it = write_time_array_.begin(); it != write_time_array_.end(); ++it) {
+            if (*it + write_latency <= timestamp)
                 ready_count++;
+            else
+                break;
         }
         return ready_count;
+    }
+
+    int estimate_number_of_ready_ios(uint64_t timestamp) {
+        return estimate_number_of_ready_reads(timestamp) + estimate_number_of_ready_writes(timestamp);
     }
 
     int64_t estimate_the_time_to_get_desirable_ready_state(int expected, uint64_t timestamp) {
-        uint64_t start = ticks();
-        std::sort(ready_time_array_.begin(), ready_time_array_.end());
-        int64_t time = INT64_MAX;
-        int ready_count = 0;
-        for (auto it = ready_time_array_.begin(); it != ready_time_array_.end(); ++it) {
-            ready_count++;
-            if (ready_count == expected) {
-                time = *it;
-                break;
-            }
-        }
-//        printf("time: %.2f ns length: %d\n", cycles_to_nanoseconds(ticks() - start), ready_time_array_.size());
-        return time;
+//        uint64_t start = ticks();
+//        std::sort(read_time_array_.begin(), read_time_array_.end());
+//        int64_t time = INT64_MAX;
+//        int ready_count = 0;
+//        for (auto it = ready_time_array_.begin(); it != ready_time_array_.end(); ++it) {
+//            ready_count++;
+//            if (ready_count == expected) {
+//                time = *it;
+//                break;
+//            }
+//        }
+////        printf("time: %.2f ns length: %d\n", cycles_to_nanoseconds(ticks() - start), ready_time_array_.size());
+//
+//
+//        auto read_it = read_time_array_.cbegin(), write_it = write_time_array_.cbegin();
+//
+//        while ()
+
+        assert(false);
+//        return time;
     }
 
     int64_t estimate_the_time_to_get_desirable_ready_write_state(int expected, uint64_t timestamp) {
         uint64_t start = ticks();
-        std::sort(write_ready_time_array_.begin(), write_ready_time_array_.end());
         int64_t time = INT64_MAX;
         int ready_count = 0;
-        for (auto it = write_ready_time_array_.begin(); it != write_ready_time_array_.end(); ++it) {
+        for (auto it = write_time_array_.begin(); it != write_time_array_.end(); ++it) {
             ready_count++;
             if (ready_count == expected) {
                 time = *it;
                 break;
             }
         }
-        return time;
+        return time + write_latency;
     }
 
     int get_number_of_pending_state() const {
-        return ready_time_array_.size();
+        return read_time_array_.size() + write_time_array_.size();
     }
 
     int get_number_of_pending_write_state() const {
-        return write_ready_time_array_.size();
+        return write_time_array_.size();
     }
 
-    void update_read_latency_in_cycles(int read_lat) {
+    void update_read_latency_in_cycles(const uint64_t &read_lat) {
         read_latency = read_lat;
 //        printf("read latency -> %f us\n", cycles_to_microseconds(read_latency));
     }
 
-    void update_write_latency_in_cycles(int write_lat) {
+    void update_write_latency_in_cycles(const uint64_t & write_lat) {
         write_latency = write_lat;
 //        printf("write latency -> %f us\n", cycles_to_microseconds(read_latency));
     }
 
+    uint64_t get_current_read_latency() const {
+        return read_latency;
+    }
+
+    void print_reads() const {
+        uint64_t now = ticks();
+        for(int i = 0; i < read_time_array_.size(); i++) {
+            printf("%.2f ", cycles_to_microseconds(now - read_time_array_[i]));
+        }
+        printf("\n");
+    }
+
 private:
-    vector<uint64_t> ready_time_array_;
-    vector<uint64_t> write_ready_time_array_;
+    vector<uint64_t> read_time_array_;
+    vector<uint64_t> write_time_array_;
     unordered_map<uint64_t, uint64_t> id_to_time_;
-    int write_latency = 100;
-    int read_latency = 10;
+    volatile uint64_t write_latency = 100;
+    volatile uint64_t read_latency = 10;
 };
 
 #endif //NVM_READY_STATE_ESTIMATOR_H

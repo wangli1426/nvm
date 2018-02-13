@@ -63,6 +63,7 @@ namespace tree {
 //                   cycles_to_microseconds(request.graduation - request.admission),
 //                   cycles_to_microseconds(ticks() - request.graduation),
 //                   cycles_to_microseconds(ticks() - request.start));
+            this->metrics_.add_read_latency(ticks() - request.start);
             return found;
         }
 
@@ -86,6 +87,7 @@ namespace tree {
 //                   cycles_to_microseconds(request.graduation - request.admission),
 //                   cycles_to_microseconds(ticks() - request.graduation),
 //                   cycles_to_microseconds(ticks() - request.start));
+            this->metrics_.add_write_latency(ticks() - request.start);
         }
 
         virtual int height() {

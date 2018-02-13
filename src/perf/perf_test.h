@@ -277,6 +277,9 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
 ////                std::cout << std::endl;
 ////            }
 //        }
+
+        tree->reset_metrics();
+
         int ops_per_thread = noperations / threads;
         for (int i = 0; i < threads; i++) {
             tid[i] = std::thread(&execute_operations<K, V>, tree, operations.begin() + i * ops_per_thread,
@@ -305,6 +308,8 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
          << endl;
 
     total_blk_metrics.print();
+
+    tree->get_metrics().print();
 
     uint64_t total_end = ticks();
     delete[] tid;
