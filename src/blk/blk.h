@@ -97,6 +97,10 @@ public:
         return metrics_;
     }
 
+    virtual int get_and_reset_recent_reads() {}
+
+    virtual int get_and_reset_recent_writes() {}
+
 protected:
     int64_t open_time_;
     blk_metrics metrics_;

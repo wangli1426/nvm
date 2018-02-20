@@ -9,7 +9,10 @@
 #include <assert.h>
 #include <vector>
 #include <unordered_map>
+#include <stdlib.h>
 #include "../utils/rdtsc.h"
+
+#define granularity 20
 
 using namespace std;
 
@@ -18,6 +21,10 @@ using namespace std;
  */
 class ready_state_estimator {
 public:
+    ready_state_estimator() {
+        read_latency = 200000;
+        write_latency = 400000;
+    }
     ready_state_estimator(int ready_lat, int write_lat): read_latency(ready_lat), write_latency(write_lat) {};
 
     void register_write_io (uint64_t id, uint64_t current_timestamp) {
@@ -54,7 +61,7 @@ public:
         write_time_array_.erase(it);
     }
 
-    int estimate_number_of_ready_reads(uint64_t timestamp) {
+    virtual int estimate_number_of_ready_reads(uint64_t timestamp) {
         int ready_count = 0;
         for (auto it = read_time_array_.begin(); it != read_time_array_.end(); ++it) {
             if (*it + read_latency <= timestamp)
@@ -65,7 +72,7 @@ public:
         return ready_count;
     }
 
-    int estimate_number_of_ready_writes(uint64_t timestamp) {
+    virtual int estimate_number_of_ready_writes(uint64_t timestamp) {
         int ready_count = 0;
         for (auto it = write_time_array_.begin(); it != write_time_array_.end(); ++it) {
             if (*it + write_latency <= timestamp)
@@ -141,18 +148,63 @@ public:
 
     void print_reads() const {
         uint64_t now = ticks();
-        for(int i = 0; i < read_time_array_.size(); i++) {
-            printf("%.2f ", cycles_to_microseconds(now - read_time_array_[i]));
+//        printf("[READ]");
+//        for(int i = 0; i < read_time_array_.size(); i++) {
+//            printf("%.2f ", cycles_to_microseconds(now - read_time_array_[i]));
+//        }
+//        printf("\n");
+
+        unordered_map<int, int> counts;
+        for(int i = 0 ; i < granularity; i++) {
+            counts[i] = 0;
         }
-        printf("\n");
+
+        for(auto it = read_time_array_.cbegin(); it != read_time_array_.cend(); ++it) {
+            int offset = max(0, (int)(width - cycles_to_microseconds(now - *it))) / (width / granularity);
+            counts[offset]++;
+        }
+//
+        for (int i = 0; i < granularity; i++) {
+            printf("%d ", counts[i]);
+        }
+//        printf("\n");
     }
 
-private:
+    void print_writes() const {
+        uint64_t now = ticks();
+//        printf("[WRITE]");
+//        for(int i = 0; i < write_time_array_.size(); i++) {
+//            printf("%.2f ", cycles_to_microseconds(now - write_time_array_[i]));
+//        }
+//        printf("\n");
+
+
+        unordered_map<int, int> counts;
+        for(int i = 0 ; i < granularity; i++) {
+            counts[i] = 0;
+        }
+
+        for(auto it = write_time_array_.cbegin(); it != write_time_array_.cend(); ++it) {
+            int offset = max(0, (int)(width - cycles_to_microseconds(now - *it))) / (width / granularity);
+            counts[offset]++;
+        }
+//
+        for (int i = 0; i < granularity; i++) {
+            printf("%d ", counts[i]);
+        }
+//        printf("\n");
+
+    }
+
+protected:
     vector<uint64_t> read_time_array_;
     vector<uint64_t> write_time_array_;
     unordered_map<uint64_t, uint64_t> id_to_time_;
     volatile uint64_t write_latency = 100;
     volatile uint64_t read_latency = 10;
+
+
+    const int width = 1000;
 };
 
 #endif //NVM_READY_STATE_ESTIMATOR_H

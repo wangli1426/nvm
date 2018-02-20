@@ -20,6 +20,7 @@
 #include "../context/call_back.h"
 #include "asynchronous_accessor.h"
 #include "../scheduler/ready_state_estimator.h"
+#include "../scheduler/linear_regression_estimator.h"
 
 using namespace std;
 
@@ -38,12 +39,14 @@ using namespace nvm;
 template<typename K, typename V, int CAPACITY>
 class nvme_blk_accessor: public blk_accessor<K, V> {
 public:
-    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size), estimator(200000, 400000) {
+    nvme_blk_accessor(const int& block_size): blk_accessor<K, V>(block_size) {
         cursor_ = 0;
         qpair_ = 0;
         cache_ = 0;
         io_id_generator_ = 0;
-//        cache_ = new blk_cache(this->block_size, 10000);
+        recent_reads_ = 0;
+        recent_writes_ = 0;
+//        cache_ = new blk_cache(this->block_size, 100);
 
         // measure the concurrency in the command queues
     };
@@ -260,6 +263,7 @@ public:
                 para->accessor->estimator.update_read_latency_in_cycles(latency);
             }
             para->context->set_tag(CONTEXT_READ_IO);
+            para->accessor->recent_reads_++;
         } else {
 //            para->accessor->metrics_.write_cycles_ += ticks() - para->start_time;
 //            para->accessor->metrics_.writes_.fetch_add(1);
@@ -270,6 +274,7 @@ public:
                 para->accessor->estimator.update_write_latency_in_cycles(latency);
             }
             para->context->set_tag(CONTEXT_WRITE_IO);
+            para->accessor->recent_writes_++;
         }
 
         if (para->accessor->cache_ && para->type == NVM_READ) {
@@ -329,6 +334,19 @@ public:
         return estimator;
     }
 
+    virtual int get_and_reset_recent_reads() {
+        int ret = recent_reads_;
+        recent_reads_ = 0;
+        return ret;
+    }
+
+    virtual int get_and_reset_recent_writes() {
+        int ret = recent_writes_;
+        recent_writes_ = 0;
+        return ret;
+    }
+
+
 protected:
     int process_completion(QPair* qpair, int max = 0) {
 //        printf("process_completion is called!\n");
@@ -355,8 +373,11 @@ private:
     SpinLock spin_lock_;
     std::deque<call_back_context*> ready_contexts_;
     blk_cache *cache_;
-    ready_state_estimator estimator;
+//    ready_state_estimator estimator;
+    linear_regression_estimator estimator;
     uint64_t io_id_generator_;
+
+    int recent_reads_, recent_writes_;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H
