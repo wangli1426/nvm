@@ -1184,25 +1184,25 @@ namespace tree {
         public:
             naive_scheduler(pull_based_b_plus_tree* tree):scheduler(tree){};
             void run() {
+                uint64_t last_failed_probe_time = 0;
                 while(!this->terminated()) {
                     int processed;
                     const int process_granularity = 16;
                     const int sort = true;
-                    uint64_t last_failed_probe_time;
                     processed = this->admission(process_granularity);
 //                    printf("admission: %d\n", processed);
                     processed = this->process_new_context(process_granularity, sort);
 //                    printf("new: %d\n", processed);
                     processed = this->process_blk_ready_context(process_granularity, sort);
 //                    printf("blk: %d\n", processed);
-                    if (ticks() - last_failed_probe_time > 5000) {
-                        processed = this->process_barrier_ready_context(process_granularity, sort);
+//                    if (ticks() - last_failed_probe_time > 5000) {
+                        processed = this->probe_blk_completion();
                         if (processed == 0) {
                             last_failed_probe_time = ticks();
                         }
-                    }
+//                    }
 //                    printf("barrier: %d\n", processed);
-                    processed = this->probe_blk_completion();
+                    processed = this->process_barrier_ready_context(process_granularity, sort);
 //                    printf("completion: %d\n", processed);
                 }
             }

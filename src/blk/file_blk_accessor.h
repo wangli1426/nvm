@@ -31,8 +31,8 @@ public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0),
                                                                                estimator_(1000, 2000), io_id_generator_(0) {
-        cache_ = new blk_cache(block_size, 10000);
-//        cache_ = nullptr;
+//        cache_ = new blk_cache(block_size, 10000);
+        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {
@@ -203,7 +203,7 @@ public:
         return processed;
     }
 
-    int process_completion(int max = 1) override {
+    int process_completion(int max = 0) override {
 //        int processed = 0;
 //        for (int i = 0; i < max; i++) {
 //            if (ready_contexts_.size() > 0) {
@@ -224,6 +224,7 @@ public:
 //        int ret = wait_for_completion_counts_ < max ? wait_for_completion_counts_: max;
 //        wait_for_completion_counts_ -= ret;
 //        return ret;
+        max = max == 0 ? INT32_MAX : max;
         int processed = 0;
         random_shuffle(pending_contexts_.begin(), pending_contexts_.end());
         while (processed < max && pending_contexts_.size() > 0) {
