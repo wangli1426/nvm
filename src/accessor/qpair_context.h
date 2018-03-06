@@ -43,7 +43,7 @@ namespace nvm {
             free_qpair();
         }
 
-        void synchronous_write(void* content, uint32_t size, uint64_t start_lba) {
+        virtual void synchronous_write(void* content, uint32_t size, uint64_t start_lba) {
 
             bool is_complete = false;
             cb_parameters* cba = new cb_parameters(this, &is_complete, ticks());
@@ -58,10 +58,16 @@ namespace nvm {
 #ifdef __LOG__
             printf("waiting...\n");
 #endif
+            uint64_t last_probe_tick = 0;
             while(!is_complete) {
-                int status = process_completions();
-                if (status < 0) {
-                    printf("error in processing_completions()\n");
+                if (ticks() - last_probe_tick > 20000) {
+                    int status = process_completions();
+                    if (status < 0) {
+                        printf("error in processing_completions()\n");
+                    }
+                    last_probe_tick = ticks();
+                } else {
+                    usleep(10);
                 }
             }
 #ifdef __LOG__
@@ -69,7 +75,7 @@ namespace nvm {
 #endif
         }
 
-        void synchronous_read(void* buffer, uint32_t size, uint64_t start_lba) {
+        virtual void synchronous_read(void* buffer, uint32_t size, uint64_t start_lba) {
             bool is_complete =  false;
             cb_parameters* cbp = new cb_parameters(this, &is_complete, ticks());
             free_slots_ --;
@@ -83,10 +89,17 @@ namespace nvm {
 #ifdef __LOG__
             printf("waiting...\n");
 #endif
+
+            uint64_t last_probe_tick = 0;
             while(free_slots_ == 0) {
-                int32_t status = process_completions();
-                if (status < 0) {
-                    printf("error in processing_completions()\n");
+                if (ticks() - last_probe_tick > 20000) {
+                    int32_t status = process_completions();
+                    if (status < 0) {
+                        printf("error in processing_completions()\n");
+                    }
+                    last_probe_tick = ticks();
+                } else {
+                    usleep(10);
                 }
             }
 #ifdef __LOG__

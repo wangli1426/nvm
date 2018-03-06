@@ -50,6 +50,10 @@ namespace tree {
             metrics_.clear();
         }
 
+        virtual bool deregister_thread() {
+            return true;
+        }
+
     protected:
         tree_perf_metrics metrics_;
     };

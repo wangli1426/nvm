@@ -8,6 +8,7 @@
 #include <spdk/nvme.h>
 #include <iostream>
 #include "qpair_context.h"
+#include "atomic_qpair_context.h"
 #include "../utils/cpu_set.h"
 
 struct ctrlr_entry;
@@ -15,6 +16,7 @@ struct ctrlr_entry;
 namespace nvm {
 
     class QPair;
+    class AtomicQPair;
 
     struct queue_pair {
         struct spdk_nvme_ctrlr	*ctrlr;
@@ -106,6 +108,11 @@ namespace nvm {
         static QPair *allocateQPair(int length = 8) {
             spdk_nvme_qpair *qpair = spdk_nvme_ctrlr_alloc_io_qpair(g_ctrlr, NULL, 0);
             return new QPair(g_ctrlr, g_ns, qpair, length);
+        }
+
+        static AtomicQPair *allocateAtomicQPair(int length = 8) {
+            spdk_nvme_qpair *qpair = spdk_nvme_ctrlr_alloc_io_qpair(g_ctrlr, NULL, 0);
+            return new AtomicQPair(g_ctrlr, g_ns, qpair, length);
         }
 
         static uint32_t get_sector_size() {

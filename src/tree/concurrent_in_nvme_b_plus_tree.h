@@ -37,6 +37,12 @@ namespace tree{
         virtual ~concurrent_in_nvme_b_plus_tree() {
         }
 
+        virtual bool deregister_thread() {
+            if (mode_ == DEDICATED) {
+                ((nvme_blk_thread_dedicated_accessor<K, V, CAPACITY>*)this->blk_accessor_)->deregister_thread(pthread_self());
+            }
+        }
+
     protected:
         void set_blk_accessor() {
             if (this->blk_accessor_)

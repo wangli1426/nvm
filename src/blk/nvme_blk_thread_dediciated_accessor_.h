@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <stdio.h>
 #include <string>
+#include <vector>
 #include <unordered_map>
 #include <pthread.h>
 #include "nvme_blk_accessor.h"
@@ -35,7 +36,7 @@ public:
     };
 
     ~nvme_blk_thread_dedicated_accessor() {
-        for(auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
+        for(auto it = thread_to_qpair.cbegin(); it != thread_to_qpair.cend(); ++it) {
             delete it->second;
         }
     }
@@ -50,14 +51,23 @@ public:
         }
         this->open_time_ = ticks();
         this->closed_ = false;
+        this->allocation_cur = 0;
+        for(int i = 0; i < max_queue_pair; i++) {
+            qpairs_.push_back(nvm::nvm_utility::allocateAtomicQPair(1));
+        }
     }
 
    virtual int close() {
 
        if (!this->closed_) {
-           for (auto it = dedicated_qpairs_.cbegin(); it != dedicated_qpairs_.cend(); ++it) {
-               it->second->free_qpair();
+//           for (auto it = thread_to_qpair.cbegin(); it != thread_to_qpair.cend(); ++it) {
+//               it->second->free_qpair();
+//           }
+           thread_to_qpair.clear();
+           for(auto it = qpairs_.cbegin(); it != qpairs_.cend(); ++it) {
+               delete *it;
            }
+           qpairs_.clear();
            this->closed_ = true;
        }
     }
@@ -88,16 +98,24 @@ public:
         return std::string("NVM(dedicated)");
     }
 
+    bool deregister_thread(const pthread_t& tid) {
+        auto it = thread_to_qpair.find(tid);
+        if (it != thread_to_qpair.end()) {
+//            delete it->second;
+            thread_to_qpair.erase(tid);
+        }
+    }
+
 private:
     QPair* get_or_create_qpair(const pthread_t& tid) {
         QPair* qp;
         qpairs_lock_.acquire();
-        unordered_map<pthread_t, QPair*>::const_iterator it = dedicated_qpairs_.find(tid);
+        unordered_map<pthread_t, QPair*>::const_iterator it = thread_to_qpair.find(tid);
         qpairs_lock_.release();
-        if (it == dedicated_qpairs_.cend()) {
-            qp = nvm_utility::allocateQPair(1);
+        if (it == thread_to_qpair.cend()) {
+            qp = qpairs_[allocation_cur++ % max_queue_pair];
             qpairs_lock_.acquire();
-            dedicated_qpairs_[tid] = qp;
+            thread_to_qpair[tid] = qp;
             qpairs_lock_.release();
         } else {
             qp = it->second;
@@ -106,8 +124,11 @@ private:
     }
 
 private:
-    unordered_map<pthread_t, QPair*> dedicated_qpairs_;
+    unordered_map<pthread_t, QPair*> thread_to_qpair;
+    vector<QPair*> qpairs_;
+    int allocation_cur;
     SpinLock qpairs_lock_;
+    const int max_queue_pair = 31;
 };
 
 #endif //NVM_NVME_BLK_THREAD_DEDICATED_ACCESSOR_H
