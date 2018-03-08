@@ -130,7 +130,7 @@ namespace tree {
 //            return true;
 
             pending_request_++;
-            request_queue_.push(request);
+            while(!request_queue_.push(request));
             return true;
         }
 
@@ -148,7 +148,7 @@ namespace tree {
 //            return true;
 
             pending_request_++;
-            request_queue_.push(request);
+            while(!request_queue_.push(request));
             return true;
         }
 
@@ -250,6 +250,7 @@ namespace tree {
 //                while (free-- > 0 && (request = tree->atomic_dequeue_request()) != nullptr) {
                     new_arrivals = 0;
                     if (free-- && (request = tree->atomic_dequeue_request()) != nullptr) {
+
 
 //                    printf("admission: %.2f us, blk_com: %.2f us, blk_ready: %.2f us, manager_ready: %.2f us\n",
 //                           cycles_to_microseconds(admission_cycles),
@@ -409,7 +410,7 @@ namespace tree {
             return processed;
         }
 
-        void sync() override {
+        virtual void sync() override {
             while(pending_request_.load()> 0) {
                 usleep(1000);
             }
@@ -763,7 +764,8 @@ namespace tree {
 
                         bool ownership = request_->ownership;
                         request_->graduation = ticks();
-                        request_->semaphore->release();
+                        if (request_->semaphore)
+                            request_->semaphore->release();
                         if (ownership) {
                             delete request_;
                             request_ = 0;
@@ -897,7 +899,7 @@ namespace tree {
 //                printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
 //                while(true)
                 switch (this->current_state) {
-                    case 0:
+                    case 0: {
                         set_next_state(1);
                         if (tree_->manager.request_read_barrier(node_ref_, this)) {
                             transition_to_next_state();
@@ -908,6 +910,7 @@ namespace tree {
 //                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return CONTEXT_TRANSIT;
                         }
+                    }
                     case 1:
                         assert(this->obtained_barriers_.size() <= 2);
                         if (this->obtained_barriers_.size() == 2) {
@@ -944,7 +947,8 @@ namespace tree {
 //                                int64_t free_work1_start = realwork_end;
                                 request_->graduation = ticks();
                                 bool ownership = request_->ownership;
-                                request_->semaphore->release();
+                                if (request_->semaphore)
+                                    request_->semaphore->release();
 //                                int64_t free_work1_end = ticks();
                                 if (ownership) {
                                     delete request_;
@@ -1306,7 +1310,7 @@ namespace tree {
             const int64_t min_probe_delay_cycles = 50000;
             const int64_t probe_granularity = 128;
             const int process_granularity = 16;
-            const bool sort = true;
+            const bool sort = false;
         };
 
     };

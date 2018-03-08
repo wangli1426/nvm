@@ -31,8 +31,8 @@ public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0),
                                                                                estimator_(1000, 2000), io_id_generator_(0) {
-//        cache_ = new blk_cache(block_size, 10000);
-        cache_ = nullptr;
+        cache_ = new blk_cache(block_size, 10000);
+//        cache_ = nullptr;
     }
 
     ~file_blk_accessor() {

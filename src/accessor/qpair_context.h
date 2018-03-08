@@ -78,10 +78,10 @@ namespace nvm {
         virtual void synchronous_read(void* buffer, uint32_t size, uint64_t start_lba) {
             bool is_complete =  false;
             cb_parameters* cbp = new cb_parameters(this, &is_complete, ticks());
-            free_slots_ --;
 #ifdef __LOG__
             printf("start reading %llu\n", start_lba);
 #endif
+            free_slots_ --;
             int status = spdk_nvme_ns_cmd_read(ns_, qpair_, buffer, start_lba, size / sector_size_, QPair::cb_function, cbp, 0);
             if (status < 0) {
                 printf("error in spdk_nvme_ns_cmd_read()\n");

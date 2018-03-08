@@ -46,7 +46,7 @@ public:
         io_id_generator_ = 0;
         recent_reads_ = 0;
         recent_writes_ = 0;
-//        cache_ = new blk_cache(this->block_size, 100);
+        cache_ = new blk_cache(this->block_size, 1000);
 
         // measure the concurrency in the command queues
     };
@@ -277,8 +277,8 @@ public:
             para->accessor->recent_writes_++;
         }
 
-        if (para->accessor->cache_ && para->type == NVM_READ) {
-//        if (para->accessor->cache_) {
+//        if (para->accessor->cache_ && para->type == NVM_READ) {
+        if (para->accessor->cache_) {
             blk_cache::cache_unit unit;
             bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);
             if (evicted) {

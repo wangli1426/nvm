@@ -11,6 +11,7 @@
 #include <vector>
 #include <unordered_map>
 #include <pthread.h>
+#include "blk_cache.h"
 #include "nvme_blk_accessor.h"
 #include "../tree/blk_node_reference.h"
 #include "../accessor/ns_entry.h"
@@ -33,12 +34,15 @@ template<typename K, typename V, int CAPACITY>
 class nvme_blk_thread_dedicated_accessor: public nvme_blk_accessor<K, V, CAPACITY> {
 public:
     nvme_blk_thread_dedicated_accessor(const int& block_size): nvme_blk_accessor<K, V, CAPACITY>(block_size) {
+        cache_ = 0;
+        cache_ = new blk_cache(block_size, 1000);
     };
 
     ~nvme_blk_thread_dedicated_accessor() {
         for(auto it = thread_to_qpair.cbegin(); it != thread_to_qpair.cend(); ++it) {
             delete it->second;
         }
+        delete cache_;
     }
 
     virtual int open() {
@@ -73,17 +77,54 @@ public:
     }
     virtual int read(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
+
+        cache_lock_.acquire();
+        if (cache_ && cache_->read(blk_addr, buffer)) {
+            cache_lock_.release();
+            this->metrics_.read_cycles_ += ticks() - start;
+            this->metrics_.reads_++;
+            return this->block_size;
+        }
+        cache_lock_.release();
+
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_read(buffer, this->block_size, blk_addr);
         this->metrics_.read_cycles_ += ticks() - start;
         this->metrics_.reads_++;
+
+        if (cache_) {
+            blk_cache::cache_unit unit;
+            cache_lock_.acquire();
+            bool evicted = cache_->write(blk_addr, buffer, false, unit);
+            cache_lock_.release();
+            if (evicted && unit.dirty) {
+                write(unit.id, unit.data);
+                free(unit.data);
+            }
+        }
     }
     virtual int write(const blk_address & blk_addr, void* buffer) {
         uint64_t start = ticks();
+        if (cache_) {
+            cache_lock_.acquire();
+            cache_->invalidate(blk_addr);
+            cache_lock_.release();
+        }
         QPair* dedicated_qpair = get_or_create_qpair(pthread_self());
         dedicated_qpair->synchronous_write(buffer, this->block_size, blk_addr);
         this->metrics_.write_cycles_ += ticks() - start;
         this->metrics_.writes_++;
+
+//        if (cache_) {
+//            blk_cache::cache_unit unit;
+//            cache_lock_.acquire();
+//            bool evicted = cache_->write(blk_addr, buffer, false, unit);
+//            cache_lock_.release();
+//            if (evicted) {
+//                assert(!unit.dirty);
+//                free(unit.data);
+//            }
+//        }
     }
 
     static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
@@ -101,7 +142,7 @@ public:
     bool deregister_thread(const pthread_t& tid) {
         auto it = thread_to_qpair.find(tid);
         if (it != thread_to_qpair.end()) {
-//            delete it->second;
+//            delete it->seccache_ond;
             thread_to_qpair.erase(tid);
         }
     }
@@ -129,6 +170,9 @@ private:
     int allocation_cur;
     SpinLock qpairs_lock_;
     const int max_queue_pair = 31;
+
+    blk_cache *cache_;
+    SpinLock cache_lock_;
 };
 
 #endif //NVM_NVME_BLK_THREAD_DEDICATED_ACCESSOR_H
