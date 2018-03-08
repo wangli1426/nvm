@@ -31,7 +31,7 @@ public:
     explicit file_blk_accessor(const char* path, const uint32_t& block_size) : path_(path), blk_accessor<K, V>(block_size),
                                                                                cursor_(0), wait_for_completion_counts_(0),
                                                                                estimator_(1000, 2000), io_id_generator_(0) {
-        cache_ = new blk_cache(block_size, 10000);
+        cache_ = new blk_cache(block_size, 100000);
 //        cache_ = nullptr;
     }
 
@@ -187,7 +187,7 @@ public:
         wait_for_completion_counts_++;
     }
 
-    std::deque<call_back_context*>& get_ready_contexts() override {
+    std::vector<call_back_context*>& get_ready_contexts() override {
         return ready_contexts_;
     }
 
@@ -195,7 +195,8 @@ public:
         int processed = 0;
         for(; processed < ready_contexts_.size() && processed < max; processed++) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop_front();
+//            ready_contexts_.pop_front();
+            assert(false);
             if (context->run() == CONTEXT_TERMINATED) {
 //                delete context;
             }
@@ -270,7 +271,7 @@ private:
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint32_t cursor_;
     std::vector<call_back_context*> pending_contexts_;
-    std::deque<call_back_context*> ready_contexts_;
+    std::vector<call_back_context*> ready_contexts_;
     blk_cache *cache_;
     uint32_t wait_for_completion_counts_;
     SpinLock lock_;

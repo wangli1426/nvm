@@ -52,7 +52,7 @@ public:
         return 0;
     };
 
-    virtual std::deque<call_back_context*>& get_ready_contexts() {
+    virtual std::vector<call_back_context*>& get_ready_contexts() {
         assert(false);
     }
 

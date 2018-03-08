@@ -34,7 +34,7 @@ class context_barrier {
     };
 
 public:
-    context_barrier(int64_t id, std::deque<call_back_context*> &ready_contexts): id(id), ready_contexts_(ready_contexts), read_barriers(0), write_barriers(0){};
+    context_barrier(int64_t id, std::vector<call_back_context*> &ready_contexts): id(id), ready_contexts_(ready_contexts), read_barriers(0), write_barriers(0){};
 
     bool set_read_barrier(call_back_context* context) {
         if (grant_read_barrier_request()) {
@@ -144,7 +144,7 @@ private:
     int32_t read_barriers;
     int32_t write_barriers;
     std::queue<pending_barrier_request> pending_barrier_requests;
-    std::deque<call_back_context*> &ready_contexts_;
+    std::vector<call_back_context*> &ready_contexts_;
 };
 
 #endif //NVM_CONTEXT_BARRIER_H

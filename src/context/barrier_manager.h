@@ -51,14 +51,15 @@ public:
         int32_t processed = 0;
         while(ready_contexts_.size() > 0 && processed < max) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop_front();
+//            ready_contexts_.pop_front();
+            assert(false);
             context->run();
             processed++;
         }
         return processed;
     }
 
-    std::deque<call_back_context*>& get_ready_contexts() {
+    std::vector<call_back_context*>& get_ready_contexts() {
         return ready_contexts_;
     }
 
@@ -75,7 +76,7 @@ private:
 
 private:
     unordered_map<int64_t, context_barrier*> barriers_;
-    std::deque<call_back_context*> ready_contexts_;
+    std::vector<call_back_context*> ready_contexts_;
 };
 
 #endif //NVM_BARRIER_MANAGER_H

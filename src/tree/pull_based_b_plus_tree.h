@@ -215,8 +215,8 @@ namespace tree {
 
             std::vector<int> blk_processed;
 
-            std::deque<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
-            std::deque<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
+            std::vector<call_back_context*>& blk_ready_contexts = tree->blk_accessor_->get_ready_contexts();
+            std::vector<call_back_context*>& barrier_ready_contexts = tree->manager.get_ready_contexts();
 
             ready_state_estimator &estimator = tree->blk_accessor_->get_ready_state_estimator();
 
@@ -1160,27 +1160,36 @@ namespace tree {
 
         private:
 
-            int process_ready_contexts(std::deque<call_back_context*>& ready_contexts, int max = 1, bool sort = false) {
+            int process_ready_contexts(std::vector<call_back_context*>& ready_contexts, int max = 1, bool sort = false) {
                 if (ready_contexts.empty())
                     return 0;
-                if (sort)
+                if (sort) {
                     std::sort(ready_contexts.begin(), ready_contexts.end(), compare);
+                }
                 int processed = 0;
-                while (processed < max && ready_contexts.size() > 0) {
-                    call_back_context* context = ready_contexts.front();
-                    ready_contexts.pop_front();
-                    context->run();
+
+                std::vector<call_back_context*> to_be_processed;
+                to_be_processed.reserve(max < ready_contexts.size() ? max : ready_contexts.size());
+                auto it = ready_contexts.cbegin();
+                for ( ; processed < max && it != ready_contexts.cend(); ++it) {
+                    to_be_processed.push_back(*it);
+                }
+                ready_contexts.erase(ready_contexts.cbegin(), it);
+
+                for (auto it = to_be_processed.cbegin(); it != to_be_processed.cend(); ++it) {
+                    (*it)->run();
                     processed++;
                 }
+
                 return processed;
             }
 
         private:
             pull_based_b_plus_tree* tree_;
             uint64_t context_id_generator_;
-            deque<call_back_context*> admission_contexts_;
-            deque<call_back_context*> *blk_ready_contexts_;
-            deque<call_back_context*> *barrier_ready_contexts_;
+            vector<call_back_context*> admission_contexts_;
+            vector<call_back_context*> *blk_ready_contexts_;
+            vector<call_back_context*> *barrier_ready_contexts_;
         };
 
 
@@ -1212,12 +1221,13 @@ namespace tree {
             }
         };
 
-        class latency_aware_scheduler: public scheduler {
+        class latency_aware_scheduler : public scheduler {
         public:
-            latency_aware_scheduler(pull_based_b_plus_tree* tree): scheduler(tree) {
+            latency_aware_scheduler(pull_based_b_plus_tree *tree) : scheduler(tree) {
                 estimator = &(tree->blk_accessor_->get_ready_state_estimator());
                 last_probe_tick = 0;
             };
+
             void run() {
 
                 uint64_t probed = 0;
@@ -1226,7 +1236,7 @@ namespace tree {
                 uint64_t completions = 0;
                 uint64_t timeouts = 0;
 
-                while(!this->terminated()) {
+                while (!this->terminated()) {
                     int processed = 0;
                     uint64_t start_processing = ticks();
                     processed += this->admission(process_granularity);
@@ -1237,12 +1247,9 @@ namespace tree {
                     int estimated_reads = estimator->estimate_number_of_ready_reads(now);
                     int estimated_writes = estimator->estimate_number_of_ready_writes(now);
                     int estimated = -100;
-                    if (
-                            now - last_probe_tick >= min_probe_delay_cycles &&
-                                    (
-                           now - last_probe_tick >= max_probe_delay_cycles
-                            || (estimated = estimated_reads + estimated_writes) >= 4
-//                            || estimated_writes > 0
+                    if (now - last_probe_tick >= min_probe_delay_cycles &&  // avoiding probing too frequently
+                            ( now - last_probe_tick >= max_probe_delay_cycles // avoiding probing too infrequently
+                                || (estimated = estimated_reads + estimated_writes) >= 1 // probing when there might be some completed I/Os.
                             )) {
 
                         if (estimated < 0) {
@@ -1260,15 +1267,15 @@ namespace tree {
                         }
 
 
-
                         if (print) {
                             this->get_and_reset_recent_read();
                             this->get_and_reset_recent_write();
                         }
                         const int count = this->probe_blk_completion(probe_granularity);
                         if (print) {
-                            printf("result: %d, %d, expected: %d, %d\n", this->get_and_reset_recent_read(), this->get_and_reset_recent_write(),
-                            estimated_reads, estimated_writes);
+                            printf("result: %d, %d, expected: %d, %d\n", this->get_and_reset_recent_read(),
+                                   this->get_and_reset_recent_write(),
+                                   estimated_reads, estimated_writes);
 //                            printf("%d %d\n", estimated_reads, estimated_writes);
                         }
                         last_probe_tick = ticks();
@@ -1297,20 +1304,21 @@ namespace tree {
                     }
                 }
 
-                printf("[Working threads] probed: %.4f Million, estimation stand err: %.2f \n", probed / 1000.0 / 1000.0,
-                estimator_count == 0 ? 0 : sqrt(error / estimator_count));
+                printf("[Working threads] probed: %.4f Million, estimation stand err: %.2f \n",
+                       probed / 1000.0 / 1000.0,
+                       estimator_count == 0 ? 0 : sqrt(error / estimator_count));
 
                 printf("completions: %d, timeouts: %d\n", completions, timeouts);
             }
 
         private:
-            ready_state_estimator * estimator;
+            ready_state_estimator *estimator;
             uint64_t last_probe_tick;
             const int64_t max_probe_delay_cycles = 100000;
             const int64_t min_probe_delay_cycles = 50000;
             const int64_t probe_granularity = 128;
             const int process_granularity = 16;
-            const bool sort = false;
+            const bool sort = true;
         };
 
     };
