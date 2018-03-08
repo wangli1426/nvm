@@ -583,7 +583,7 @@ namespace tree {
                             case INNER_NODE: {
                                 current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
-                                InnerNode<K, V, CAPACITY>* inner_node = dynamic_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
+                                InnerNode<K, V, CAPACITY>* inner_node = reinterpret_cast<InnerNode<K, V, CAPACITY>*>(current_node_);
                                 int target_node_index = inner_node->locate_child_index(request_->key);
                                 const bool exceed_left_boundary = target_node_index < 0;
                                 if (exceed_left_boundary && optimistic_) {
@@ -876,7 +876,6 @@ namespace tree {
             search_context(pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(),
                                                                                           tree_(tree) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
-//                init(request);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);
@@ -974,7 +973,7 @@ namespace tree {
                             case INNER_NODE: {
                                 current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
                                 current_node_->deserialize(buffer_);
-                                int child_index = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->locate_child_index(
+                                int child_index = reinterpret_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->locate_child_index(
                                         request_->key);
                                 if (child_index < 0) {
                                     *request_->found = false;
@@ -1003,7 +1002,7 @@ namespace tree {
                                     tree_->return_search_context(this);
                                     return CONTEXT_TERMINATED;
                                 } else {
-                                    node_ref_ = dynamic_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
+                                    node_ref_ = reinterpret_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
                                     delete current_node_;
                                     current_node_ = 0;
                                     set_next_state(0);

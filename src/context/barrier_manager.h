@@ -65,17 +65,32 @@ public:
 
 private:
     context_barrier* get_or_create_barrier(const int64_t& node_id) {
-        unordered_map<int64_t, context_barrier*>::const_iterator it = barriers_.find(node_id);
-        if (it == barriers_.cend()) {
-            context_barrier* ret = new context_barrier(node_id, ready_contexts_);
-            barriers_[node_id] = ret;
-            return ret;
+
+        while (barrier_map_.size() <= node_id) {
+            barrier_map_.push_back(0);
         }
-        return it->second;
+        context_barrier* ret = barrier_map_[node_id];
+        if (!barrier_map_[node_id]) {
+            ret = new context_barrier(node_id, ready_contexts_);
+            barrier_map_[node_id] = ret;
+        }
+        return ret;
+
+
+//        unordered_map<int64_t, context_barrier*>::const_iterator it = barriers_.find(node_id);
+//        if (it == barriers_.cend()) {
+//            context_barrier* ret = new context_barrier(node_id, ready_contexts_);
+//            barriers_[node_id] = ret;
+//            return ret;
+//        }
+//        return it->second;
     }
 
 private:
     unordered_map<int64_t, context_barrier*> barriers_;
+
+    std::vector<context_barrier*> barrier_map_;
+
     std::vector<call_back_context*> ready_contexts_;
 };
 

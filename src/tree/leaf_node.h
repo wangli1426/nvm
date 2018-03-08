@@ -432,6 +432,12 @@ namespace tree {
             }
             position = l;
             return false;
+
+//        for (position = 0; position < size_; position++) {
+//            if (entries_[position].key >= key)
+//                break;
+//        }
+//        return position < size_ && entries_[position].key == key;
         }
 
     protected:

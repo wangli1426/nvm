@@ -94,7 +94,7 @@ private:
     // try to offer barrier
     void offer_barrier() {
         while (!pending_barrier_requests.empty()) {
-            pending_barrier_request request = pending_barrier_requests.front();
+            const pending_barrier_request request = pending_barrier_requests.front();
             if (request.type == READ_BARRIER) {
                 // an read barrier offer can be made when there is no existing write barrier.
                 if (write_barriers == 0) {
@@ -105,7 +105,7 @@ private:
                     // There is an existing writing barrier. No new barrier offer can be made and thus we terminate.
                     break;
                 }
-            } else if (request.type == WRITE_BARRIER) {
+            } else {
                 // an write barrier offer can be made when there is no exiting write barrier or read barriers.
                 if (read_barriers == 0 && write_barriers == 0) {
                     write_barriers ++;
@@ -122,7 +122,7 @@ private:
         }
     }
 
-    bool grant_read_barrier_request() {
+    inline bool grant_read_barrier_request() {
         if (write_barriers == 0) {
             read_barriers++;
             return true;

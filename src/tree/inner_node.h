@@ -453,12 +453,7 @@ namespace tree {
             // write valid child references.
             memcpy(write_offset, &child_rep_[0], size_ * sizeof(blk_address));
             write_offset += size_ * sizeof(blk_address);
-//            for (int i = 0; i < size_; i++) {
-////                int64_t value = child_[i]->get_unified_representation();
-////                * reinterpret_cast<int64_t*>(write_offset) = value;
-//                * reinterpret_cast<int64_t*>(write_offset) = child_rep_[i];
-//                write_offset += sizeof(int64_t);
-//            }
+
             assert(write_offset - static_cast<char*>(buffer) <= blk_accessor_->block_size);
 //            printf("%.2f ns to serialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
@@ -477,8 +472,6 @@ namespace tree {
             // restore self_ref_
             int64_t value = * reinterpret_cast<int64_t*>(read_offset);
             read_offset += sizeof(int64_t);
-//            self_ref_->restore_by_unified_representation(value);
-//            self_ref_->bind(this);
             self_rep_ = value;
             self_ref_ = nullptr;
 
@@ -489,13 +482,7 @@ namespace tree {
             // restore valid child references
             memcpy(child_rep_, read_offset, size_ * sizeof(blk_address));
             read_offset += size_ * sizeof(blk_address);
-//            for (int i = 0; i < size_; i++) {
-//                int64_t value = * reinterpret_cast<int64_t*>(read_offset);
-//                read_offset += sizeof(int64_t);
-////                get_child_reference(i) = blk_accessor_->create_null_ref();
-////                child_[i]->restore_by_unified_representation(value);
-//                child_rep_[i] = value;
-//            }
+
 //            printf("%.2f ns to deserialize inner node.\n", cycles_to_nanoseconds(ticks() - start));
         }
 
@@ -548,6 +535,10 @@ namespace tree {
             } else {
                 return l -  1;
             }
+
+//            int i = 1;
+//            while (i < size_ && !(key < key_[i])) ++i;
+//            return i - 1;
         }
 
         node_reference<K, V>* get_child_reference(int index) {

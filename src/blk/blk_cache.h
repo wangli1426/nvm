@@ -10,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <stdio.h>
+#include <xmmintrin.h>
 
 using namespace std;
 
