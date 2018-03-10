@@ -825,7 +825,7 @@ namespace tree {
             }
 
             void release_all_barriers() {
-                while (obtained_barriers_.size() > 0) {
+                while (!obtained_barriers_.empty()) {
                     barrier_token token = obtained_barriers_.back();
                     obtained_barriers_.pop_back();
                     if (token.type_ == READ_BARRIER) {
@@ -834,6 +834,14 @@ namespace tree {
                         tree_->manager.remove_write_barrier(token.barrier_id_);
                     }
                 }
+
+//                for (auto it = obtained_barriers_.cbegin(); it != obtained_barriers_.cend(); ++it) {
+//                    if (it->type_ == READ_BARRIER)
+//                        tree_->manager.remove_read_barrier(it->barrier_id_);
+//                    else
+//                        tree_->manager.remove_write_barrier(it->barrier_id_);
+//                }
+//                obtained_barriers_.clear();
             }
 
             struct parent_node_context {
@@ -876,9 +884,13 @@ namespace tree {
             search_context(pull_based_b_plus_tree *tree, search_request<K, V>* request) : call_back_context(),
                                                                                           tree_(tree) {
                 buffer_ = tree_->blk_accessor_->malloc_buffer();
+                inner_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
+                leaf_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
             };
             ~search_context() {
                 tree_->blk_accessor_->free_buffer(buffer_);
+                delete inner_node_;
+                delete leaf_node_;
                 buffer_ = 0;
             }
 
@@ -926,10 +938,10 @@ namespace tree {
                         switch (node_type) {
                             case LEAF_NODE: {
 //                                int64_t realwork_start = ticks();
-                                current_node_ = new LeafNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
+                                current_node_ = leaf_node_;
                                 current_node_->deserialize(buffer_);
                                 *request_->found = current_node_->search(request_->key, *request_->value);
-                                delete current_node_;
+//                                delete current_node_;
                                 current_node_ = 0;
 //                                int64_t realwork_end = ticks();
 //                                int64_t free_work_start = realwork_end;
@@ -971,13 +983,13 @@ namespace tree {
                                 return CONTEXT_TERMINATED;
                             }
                             case INNER_NODE: {
-                                current_node_ = new InnerNode<K, V, CAPACITY>(tree_->blk_accessor_, false);
+                                current_node_ = inner_node_;
                                 current_node_->deserialize(buffer_);
                                 int child_index = reinterpret_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->locate_child_index(
                                         request_->key);
                                 if (child_index < 0) {
                                     *request_->found = false;
-                                    delete current_node_;
+//                                    delete current_node_;
                                     current_node_ = 0;
                                     if (request_->cb_f) {
                                         (*request_->cb_f)(request_->args);
@@ -1003,7 +1015,7 @@ namespace tree {
                                     return CONTEXT_TERMINATED;
                                 } else {
                                     node_ref_ = reinterpret_cast<InnerNode<K, V, CAPACITY> *>(current_node_)->child_rep_[child_index];
-                                    delete current_node_;
+//                                    delete current_node_;
                                     current_node_ = 0;
                                     set_next_state(0);
                                     transition_to_next_state();
@@ -1026,6 +1038,9 @@ namespace tree {
             void *buffer_;
             Node<K, V>* current_node_;
             search_request<K, V>* request_;
+
+            LeafNode<K, V, CAPACITY> *leaf_node_; // for reuse among different operations.
+            InnerNode<K, V, CAPACITY> *inner_node_; // for reuse among different operations.
         };
 
         void create_free_contexts() {
@@ -1169,11 +1184,11 @@ namespace tree {
 
                 std::vector<call_back_context*> to_be_processed;
                 to_be_processed.reserve(max < ready_contexts.size() ? max : ready_contexts.size());
-                auto it = ready_contexts.cbegin();
-                for ( ; processed < max && it != ready_contexts.cend(); ++it) {
+                auto it = ready_contexts.begin();
+                for ( ; processed < max && it != ready_contexts.end(); ++it) {
                     to_be_processed.push_back(*it);
                 }
-                ready_contexts.erase(ready_contexts.cbegin(), it);
+                ready_contexts.erase(ready_contexts.begin(), it);
 
                 for (auto it = to_be_processed.cbegin(); it != to_be_processed.cend(); ++it) {
                     (*it)->run();

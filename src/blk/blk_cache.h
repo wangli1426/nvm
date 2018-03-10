@@ -10,8 +10,7 @@
 #include <string>
 #include <sstream>
 #include <stdio.h>
-#include <xmmintrin.h>
-
+#include <boost/unordered_map.hpp>
 using namespace std;
 
 class blk_cache {
@@ -33,7 +32,7 @@ public:
 
     ~blk_cache() {
         for(auto it = key_.begin(); it != key_.end(); ++it) {
-            free(it->data);
+            free_block(it->data);
         }
         key_.clear();
     }
@@ -45,7 +44,7 @@ public:
         bool evicted = false;
         if (cache_.find(id) == cache_.cend()) {
             unit.id = id;
-            unit.data = malloc(blk_size_);
+            unit.data = allocate_block();
             unit.dirty = dirty;
             insert_new_unit(unit);
             if (size_ > capacity_) {
@@ -56,31 +55,57 @@ public:
             write_hits_++;
             unit = get(id);
         }
-        memcpy(unit.data, buffer, blk_size_);
+//        rte_memcpy(unit.data, buffer, blk_size_);
+//        rte_mov256((uint8_t*)unit.data, (uint8_t*)buffer);
+//        rte_mov256((uint8_t*)(unit.data + 256), (uint8_t*)(buffer + 256));
         unit.dirty |= dirty;
+        memcpy(unit.data, buffer, blk_size_);
         return evicted;
     }
 
     bool read(const int64_t &id, void* buffer) {
+//        uint64_t start = ticks();
         read_probes_++;
         if (cache_.find(id) == cache_.cend()) {
             return false;
         }
         read_hits_++;
         cache_unit unit = get(id);
+//        uint64_t copy_start = ticks();
+//        rte_memcpy(buffer, unit.data, blk_size_);
         memcpy(buffer, unit.data, blk_size_);
+//        rte_mov256((uint8_t*)buffer, (uint8_t*)unit.data);
+//        rte_mov256((uint8_t*)(buffer + 256), (uint8_t*)(unit.data + 256));
+//        uint64_t end = ticks();
+//        printf("%.2f ns to read, %.2f ns to copy \n", cycles_to_nanoseconds(end- start), cycles_to_nanoseconds(end - copy_start));
         return true;
     }
 
     bool invalidate(const int64_t &id) {
-        unordered_map<int64_t, list<cache_unit>::iterator>::iterator it;
-        if ((it = cache_.find(id)) == cache_.cend())
+        boost::unordered_map<int64_t, list<cache_unit>::iterator>::const_iterator it;
+        if ((it = cache_.find(id)) == cache_.end())
             return false;
-        free(it->second->data);
+        free_block(it->second->data);
         key_.erase(it->second);
         cache_.erase(it);
         size_--;
         return true;
+    }
+
+    inline void* allocate_block() {
+        if (free_blocks_.empty())
+            return malloc(blk_size_);
+        else {
+            void* ret = free_blocks_.back();
+            free_blocks_.pop_back();
+            return ret;
+        }
+//        return malloc(blk_size_);
+    }
+
+    inline void free_block(void* block) {
+        free_blocks_.push_back(block);
+//        free(block);
     }
 
     string keys_to_string() const {
@@ -125,11 +150,23 @@ private:
         return *it->second;
     }
 
+    static void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes) {
+//        const __m256i *pSrc = reinterpret_cast<const __m256i*>(pvSrc);
+//        __m256i *pDest = reinterpret_cast<__m256i*>(pvDest);
+//        int64_t nVects = nBytes / sizeof(*pSrc);
+//        for (; nVects > 0; nVects--, pSrc++, pDest++) {
+//            const __m256i loaded = _mm256_stream_load_si256(pSrc);
+//            _mm256_stream_si256(pDest, loaded);
+//        }
+//        _mm_sfence();
+    }
+
+
 private:
     const int32_t blk_size_;
     const int32_t capacity_;
     int32_t size_;
-    unordered_map<int64_t, list<cache_unit>::iterator> cache_;
+    boost::unordered_map<int64_t, list<cache_unit>::iterator> cache_;
     list<cache_unit> key_;
     int32_t read_hits_;
     int32_t read_probes_;
@@ -137,5 +174,6 @@ private:
     int32_t write_probes_;
     int32_t hits_;
     int32_t probes_;
+    std::vector<void*> free_blocks_;
 };
 #endif //NVM_BLK_CACHE_H

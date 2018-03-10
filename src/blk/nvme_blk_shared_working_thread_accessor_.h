@@ -21,6 +21,7 @@
 #include "../utils/sync.h"
 #include "../context/call_back.h"
 #include "asynchronous_accessor.h"
+#include "blk_cache.h"
 
 using namespace std;
 
@@ -55,6 +56,8 @@ class nvme_blk_shared_working_thread_accessor : public nvme_blk_accessor<K, V, C
 public:
     nvme_blk_shared_working_thread_accessor(const int &block_size, const int queue_length) :
             io_queue_length_(queue_length), nvme_blk_accessor<K, V, CAPACITY>(block_size), terminated(false), pending_requests_(0) {
+//        cache_ = nullptr;
+        cache_ = new blk_cache(block_size, 1000);
     };
 
     ~nvme_blk_shared_working_thread_accessor() {
@@ -120,7 +123,7 @@ public:
         return std::string("NVM(io)");
     }
 
-    static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
+    static string pending_ios_to_string(std::unordered_map<int64_t, string> *pending_io_) {
         ostringstream ost;
         for (auto it = pending_io_->begin(); it != pending_io_->end(); ++it) {
             ost << it->first << "(" << it->second << ")" << " ";
@@ -139,6 +142,19 @@ public:
                 para->semaphore = request.semaphore;
                 para->pending_requests = &accessor->pending_requests_;
                 para->addr = request.addr;
+                para->request = request;
+                para->accessor = accessor;
+
+                if (request.type == read_request && accessor->cache_ &&
+                        accessor->cache_->read(request.addr, request.buffer)) {
+                    accessor->pending_requests_.fetch_sub(1);
+                    request.semaphore->post();
+                    delete para;
+                    continue;
+                } else {
+                    accessor->cache_->invalidate(request.addr);
+                }
+
                 if (request.type == read_request) {
                     accessor->qpair_->submit_read_operation(request.buffer, accessor->block_size,
                                                             request.addr, callback_function, para);
@@ -156,10 +172,23 @@ public:
         Semaphore *semaphore;
         atomic<int> *pending_requests;
         blk_address addr;
+        io_request request;
+        nvme_blk_shared_working_thread_accessor* accessor;
     };
 
     static void callback_function(void *arg, const struct spdk_nvme_cpl *) {
         callback_para *para = static_cast<callback_para *>(arg);
+
+        if (para->accessor->cache_) {
+            blk_cache::cache_unit unit;
+            bool evicted = para->accessor->cache_->write(para->request.addr, para->request.buffer, false, unit);
+            if (evicted) {
+                assert(!unit.dirty);
+                para->accessor->cache_->free_block(unit.data);
+            }
+        }
+
+
         para->pending_requests->fetch_sub(1);
         para->semaphore->post();
         delete para;
@@ -206,6 +235,8 @@ private:
     volatile bool terminiating_flag_;
     bool terminated;
     std::thread tid;
+
+    blk_cache *cache_;
 };
 
 #endif //NVM_NVME_BLK_SHARED_WORKING_THREAD_ACCESSOR_H

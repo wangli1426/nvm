@@ -99,7 +99,7 @@ public:
             cache_lock_.release();
             if (evicted && unit.dirty) {
                 write(unit.id, unit.data);
-                free(unit.data);
+                cache_->free_block(unit.data);
             }
         }
     }
@@ -127,7 +127,7 @@ public:
 //        }
     }
 
-    static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
+    static string pending_ios_to_string(std::unordered_map<int64_t, string> *pending_io_) {
         ostringstream ost;
         for (auto it = pending_io_->begin(); it != pending_io_->end(); ++it) {
             ost << it->first << "(" << it->second << ")" << " ";
@@ -151,7 +151,7 @@ private:
     QPair* get_or_create_qpair(const pthread_t& tid) {
         QPair* qp;
         qpairs_lock_.acquire();
-        unordered_map<pthread_t, QPair*>::const_iterator it = thread_to_qpair.find(tid);
+        std::unordered_map<pthread_t, QPair*>::const_iterator it = thread_to_qpair.find(tid);
         qpairs_lock_.release();
         if (it == thread_to_qpair.cend()) {
             qp = qpairs_[allocation_cur++ % max_queue_pair];
@@ -165,7 +165,7 @@ private:
     }
 
 private:
-    unordered_map<pthread_t, QPair*> thread_to_qpair;
+    std::unordered_map<pthread_t, QPair*> thread_to_qpair;
     vector<QPair*> qpairs_;
     int allocation_cur;
     SpinLock qpairs_lock_;

@@ -105,7 +105,7 @@ public:
                 if (write_status < 0) {
                     printf("write error: %s\n", strerror(errno));
                 }
-                free(unit.data);
+                cache_->free_block(unit.data);
             }
         }
 
@@ -127,7 +127,7 @@ public:
                         printf("error in write: %s\n", strerror(errno));
                     }
                 }
-                free(unit.data);
+                cache_->free_block(unit.data);
                 unit.data = 0;
             } else {
                 lock_.release();

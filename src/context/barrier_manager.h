@@ -87,7 +87,7 @@ private:
     }
 
 private:
-    unordered_map<int64_t, context_barrier*> barriers_;
+    std::unordered_map<int64_t, context_barrier*> barriers_;
 
     std::vector<context_barrier*> barrier_map_;
 

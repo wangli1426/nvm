@@ -76,7 +76,7 @@ public:
     virtual void asynch_write(const blk_address& blk_addr, void* buffer, call_back_context* context) = 0;
     virtual int process_completion(int max = 0) = 0;
 
-    virtual std::deque<call_back_context*>& get_ready_context_queue() {
+    virtual std::vector<call_back_context*>& get_ready_context_queue() {
         assert(false);
     };
 

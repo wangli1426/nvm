@@ -114,7 +114,7 @@ public:
 //                if (cache_->write(blk_addr, buffer, false, unit)) {
 //                    if (unit.dirty)
 //                        qpair_->synchronous_write(unit.data, this->block_size, unit.id);
-//                    free(unit.data);
+//                    cache_->free_block(unit.data);
 //                }
 //            }
 //        }
@@ -130,7 +130,7 @@ public:
 //            if (cache_->write(blk_addr, buffer, true, evit_unit)) {
 //                if (evit_unit.dirty)
 //                    qpair_->synchronous_write(evit_unit.data, this->block_size, evit_unit.id);
-//                free(evit_unit.data);
+//                cache_->free_block(evit_unit.data);
 //            }
 //        } else {
             qpair_->synchronous_write(buffer, this->block_size, blk_addr);
@@ -189,7 +189,7 @@ public:
 #endif
     }
 
-    static string pending_ios_to_string(unordered_map<int64_t, string> *pending_io_) {
+    static string pending_ios_to_string(std::unordered_map<int64_t, string> *pending_io_) {
         ostringstream ost;
         for (auto it = pending_io_->begin(); it != pending_io_->end(); ++it) {
             ost << it->first << "(" << it->second << ")" << " ";
@@ -198,7 +198,7 @@ public:
     }
 
 
-    std::deque<call_back_context*>& get_ready_contexts() override {
+    std::vector<call_back_context*>& get_ready_contexts() override {
         return ready_contexts_;
     }
 
@@ -283,7 +283,7 @@ public:
             bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);
             if (evicted) {
                 assert(!unit.dirty);
-                free(unit.data);
+                para->accessor->cache_->free_block(unit.data);
             }
         }
 //        para->context->transition_to_next_state();
@@ -305,14 +305,15 @@ public:
         int32_t processed = 0;
         while (processed < max && ready_contexts_.size() > 0) {
             call_back_context* context = ready_contexts_.front();
-            ready_contexts_.pop_front();
+//            ready_contexts_.pop_front();
+            assert(false);
             context->run();
             processed++;
         }
         return processed;
     }
 
-    std::deque<call_back_context*>& get_ready_context_queue() override {
+    std::vector<call_back_context*>& get_ready_context_queue() override {
         return ready_contexts_;
     }
 
@@ -369,9 +370,9 @@ protected:
 private:
     std::unordered_set<blk_address> freed_blk_addresses_;
     uint64_t cursor_;
-    unordered_map<int64_t, string> pending_io_;
+    std::unordered_map<int64_t, string> pending_io_;
     SpinLock spin_lock_;
-    std::deque<call_back_context*> ready_contexts_;
+    std::vector<call_back_context*> ready_contexts_;
     blk_cache *cache_;
 //    ready_state_estimator estimator;
     linear_regression_estimator estimator;

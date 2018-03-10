@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(nvm)
 
-SET(CMAKE_CXX_FLAGS "-O3 -std=c++11")
+SET(CMAKE_CXX_FLAGS "-O3 -std=c++11 -msse4.1")
 #SET(CMAKE_CXX_FLAGS "-O0 -g  -std=c++11")
 
 include_directories(${CMAKE_SOURCE_DIR}/spdk/include)

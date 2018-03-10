@@ -102,7 +102,7 @@ private:
     }
 
 private:
-    unordered_map<int64_t, shared_mutex*> id_to_mutex_;
+    std::unordered_map<int64_t, shared_mutex*> id_to_mutex_;
     SpinLock spin_lock_;
 };
 #endif //NVM_LOCK_MANAGER_H
