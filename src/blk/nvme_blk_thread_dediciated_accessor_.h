@@ -35,7 +35,7 @@ class nvme_blk_thread_dedicated_accessor: public nvme_blk_accessor<K, V, CAPACIT
 public:
     nvme_blk_thread_dedicated_accessor(const int& block_size): nvme_blk_accessor<K, V, CAPACITY>(block_size) {
         cache_ = 0;
-        cache_ = new blk_cache(block_size, 1000);
+        cache_ = new blk_cache(block_size, 3000);
     };
 
     ~nvme_blk_thread_dedicated_accessor() {

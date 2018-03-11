@@ -1126,6 +1126,7 @@ namespace tree {
                 request<K, V>* request;
                 while(processed < max && free-- && (request = tree_->atomic_dequeue_request())) {
                     request->admission = ticks();
+                    request->start = ticks();
                     call_back_context *context;
                     if (request->type == SEARCH_REQUEST) {
                         context = tree_->get_free_search_context();

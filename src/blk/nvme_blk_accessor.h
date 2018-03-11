@@ -46,7 +46,7 @@ public:
         io_id_generator_ = 0;
         recent_reads_ = 0;
         recent_writes_ = 0;
-        cache_ = new blk_cache(this->block_size, 1000);
+        cache_ = new blk_cache(this->block_size, 3000);
 
         // measure the concurrency in the command queues
     };

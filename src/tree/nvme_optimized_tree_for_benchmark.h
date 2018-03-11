@@ -39,12 +39,16 @@ namespace tree{
             pending_operations_++;
             search_request<K,V>* request = new search_request<K,V>;
             request->ownership = true;
+            request->start = ticks();
             request->key = key;
             request->value = &value;
             request->found = found;
             request->semaphore = nullptr;
-            request->cb_f = &callback;
-            request->args = this;
+            request->cb_f = &search_callback;
+            search_call_back_para* para = new search_call_back_para;
+            para->request = request;
+            para->tree = this;
+            request->args = para;
             this->asynchronous_search_with_callback(request);
             return *found;
         }
@@ -54,17 +58,45 @@ namespace tree{
             pending_operations_++;
             request->ownership = true;
             request->key = key;
+            request->start = ticks();
             request->value = value;
             request->semaphore = nullptr;
-            request->cb_f = &callback;
-            request->args = this;
+            request->cb_f = &insert_callback;
+            insert_call_back_para* para = new insert_call_back_para;
+            para->request = request;
+            para->tree = this;
+            request->args = para;
             this->asynchronous_insert_with_callback(request);
         }
+
+        struct insert_call_back_para {
+            nvme_optimized_tree_for_benchmark<K,V, CAPACITY>* tree;
+            insert_request<K, V>* request;
+        };
+
+        struct search_call_back_para {
+            nvme_optimized_tree_for_benchmark<K,V, CAPACITY>* tree;
+            search_request<K, V>* request;
+        };
 
         void sync() override {
             while(pending_operations_.load()) {
                 usleep(1000);
             }
+        }
+
+        static void insert_callback(void* args) {
+            insert_call_back_para* para = reinterpret_cast<insert_call_back_para*>(args);
+            para->tree->pending_operations_--;
+            para->tree->metrics_.add_write_latency(ticks() - para->request->start);
+            delete para;
+        }
+
+        static void search_callback(void* args) {
+            search_call_back_para* para = reinterpret_cast<search_call_back_para*>(args);
+            para->tree->pending_operations_--;
+            para->tree->metrics_.add_read_latency(ticks() - para->request->start);
+            delete para;
         }
 
         static void callback(void* args) {
@@ -78,11 +110,6 @@ namespace tree{
             pthis->pending_operations_--;
         }
 
-        static void insert_callback(void* args) {
-//            search_request<K,V>* context =
-//                    reinterpret_cast<search_request<K,V>*>(args);
-//                printf("[%d,%d] is inserted!\n", context->key, context->value);
-        }
     struct search_context {
         K key;
         V value;

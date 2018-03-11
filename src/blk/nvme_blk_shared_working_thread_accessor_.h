@@ -57,7 +57,7 @@ public:
     nvme_blk_shared_working_thread_accessor(const int &block_size, const int queue_length) :
             io_queue_length_(queue_length), nvme_blk_accessor<K, V, CAPACITY>(block_size), terminated(false), pending_requests_(0) {
 //        cache_ = nullptr;
-        cache_ = new blk_cache(block_size, 1000);
+        cache_ = new blk_cache(block_size, 3000);
     };
 
     ~nvme_blk_shared_working_thread_accessor() {
@@ -133,6 +133,9 @@ public:
 
 
     static void working_thread(nvme_blk_shared_working_thread_accessor *accessor) {
+        const int min_probe_cycles = 10000;
+        int last_probe_cycles = 0;
+
         printf("working thread is created!\n");
         while (!accessor->terminiating_flag_ || accessor->get_request_queue_size() > 0 || accessor->pending_requests_.load() > 0) {
             while (accessor->get_request_queue_size() > 0 && accessor->io_queue_length_ - accessor->pending_requests_.load() > 0) {
@@ -145,14 +148,15 @@ public:
                 para->request = request;
                 para->accessor = accessor;
 
-                if (request.type == read_request && accessor->cache_ &&
-                        accessor->cache_->read(request.addr, request.buffer)) {
-                    accessor->pending_requests_.fetch_sub(1);
-                    request.semaphore->post();
-                    delete para;
-                    continue;
-                } else {
-                    accessor->cache_->invalidate(request.addr);
+                if (accessor->cache_) {
+                    if (request.type == write_request) {
+                        accessor->cache_->invalidate(request.addr);
+                    } else if (accessor->cache_->read(request.addr, request.buffer)) {
+                        accessor->pending_requests_.fetch_sub(1);
+                        request.semaphore->post();
+                        delete para;
+                        continue;
+                    }
                 }
 
                 if (request.type == read_request) {
@@ -163,7 +167,14 @@ public:
                                                              request.addr, callback_function, para);
                 }
             }
-            accessor->qpair_->process_completions(accessor->io_queue_length_);
+            if (ticks() - last_probe_cycles > min_probe_cycles) {
+                int completed = accessor->qpair_->process_completions(accessor->io_queue_length_);
+                if (completed) {
+                    last_probe_cycles = 0;
+                } else {
+                    last_probe_cycles = ticks();
+                }
+            }
         }
         printf("working thread is terminated.\n");
     }

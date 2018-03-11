@@ -33,11 +33,16 @@ public:
             ost << "avg read latency: " << cycles_to_microseconds(read_latencies.avg()) << " us" << ", ";
         if (!write_latencies.empty())
             ost << "avg write latency: " << cycles_to_microseconds(write_latencies.avg()) << " us";
+        if (!read_latencies.empty() && !write_latencies.empty()) {
+            ost << "avg op latency: " << cycles_to_microseconds(
+                    (read_latencies.sum() + write_latencies.sum()) /
+                            (write_latencies.count() + read_latencies.count())) << " us";
+        }
         return ost.str();
     }
 
     void print() {
-        printf("%s\n", get_string().c_str());
+        printf("[Tree Metrics:] %s\n", get_string().c_str());
     }
 
 private:

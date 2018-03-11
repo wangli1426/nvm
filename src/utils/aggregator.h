@@ -44,6 +44,10 @@ public:
         return values.empty();
     }
 
+    int count() const {
+        return values.size();
+    }
+
 
 private:
     vector<T> values;
