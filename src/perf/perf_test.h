@@ -3,6 +3,7 @@
 //
 
 #include <set>
+#include <unistd.h>
 #include <string>
 #include <algorithm>
 #include <thread>
@@ -10,6 +11,7 @@
 #include "../tree/vanilla_b_plus_tree.h"
 #include "../utils/generator.h"
 #include "../utils/rdtsc.h"
+#include "../utils/cpu_usage_monitor.h"
 #include "tree_operation_executor.h"
 #include "insert.h"
 #include "update.h"
@@ -61,9 +63,12 @@ void benchmark(BTree<K, V> *tree, const string name, const int runs, const int n
         printf("inserted...\n");
 //        sleep(1);
 
+        cpu_usage_monitor monitor;
+        monitor.init();
         begin = ticks();
         update<K, V>(tree, updates, 1);
         end = ticks();
+        printf("CPU usage: %f\n", monitor.get_value());
         update_time += cycles_to_seconds(end - begin);;
         printf("updated...\n");
 //        sleep(1);
@@ -260,7 +265,8 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
         tree->sync();
         printf("inserted...\n");
         printf("Tree hight: %d\n", tree->height());
-//        sleep(1);
+        printf("%f seconds to insert!\n", cycles_to_seconds(ticks() - total_start));
+        sleep(5);
 
         blk_metrics metrics;
         if(accessor)
@@ -278,6 +284,10 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
 ////            }
 //        }
 
+
+        cpu_usage_monitor monitor;
+        monitor.init();
+
         tree->reset_metrics();
 
         int ops_per_thread = noperations / threads;
@@ -290,6 +300,7 @@ void multithread_benchmark_mixed_workload(BTree<K, V> *tree, const string name, 
             tid[i].join();
         }
         tree->sync();
+        printf("CPU usage: %f\n", monitor.get_value());
         if(accessor) {
             metrics = accessor->end_and_get_measurement();
             total_blk_metrics.merge(metrics);

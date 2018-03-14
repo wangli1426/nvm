@@ -92,14 +92,14 @@ namespace nvm {
 
             uint64_t last_probe_tick = 0;
             while(free_slots_ == 0) {
-                if (ticks() - last_probe_tick > 20000) {
+                if (ticks() - last_probe_tick > 10000) {
                     int32_t status = process_completions();
                     if (status < 0) {
                         printf("error in processing_completions()\n");
                     }
                     last_probe_tick = ticks();
                 } else {
-                    usleep(10);
+                    usleep(5);
                 }
             }
 #ifdef __LOG__
