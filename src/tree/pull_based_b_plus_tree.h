@@ -1161,6 +1161,10 @@ namespace tree {
                 return tree_->blk_accessor_->process_completion(max);
             }
 
+            int get_number_of_ready_context() const {
+                return barrier_ready_contexts_->size() + blk_ready_contexts_->size();
+            }
+
             int get_and_reset_recent_write() {
                 return tree_->blk_accessor_->get_and_reset_recent_writes();
             }
@@ -1250,6 +1254,7 @@ namespace tree {
                 double estimator_count = 0;
                 uint64_t completions = 0;
                 uint64_t timeouts = 0;
+                uint64_t cpu_yields = 0;
 
                 while (!this->terminated()) {
                     int processed = 0;
@@ -1261,61 +1266,32 @@ namespace tree {
                     uint64_t now = ticks();
                     int estimated_reads = estimator->estimate_number_of_ready_reads(now);
                     int estimated_writes = estimator->estimate_number_of_ready_writes(now);
-                    int estimated = -100;
+                    int estimated = 0;
                     if (now - last_probe_tick >= min_probe_delay_cycles &&  // avoiding probing too frequently
-                            ( now - last_probe_tick >= max_probe_delay_cycles // avoiding probing too infrequently
+                            (now - last_probe_tick >= max_probe_delay_cycles // avoiding probing too infrequently
                                 || (estimated = estimated_reads + estimated_writes) >= 1 // probing when there might be some completed I/Os.
                             )) {
 
-                        if (estimated < 0) {
+                        if (estimated == 0) {
                             timeouts++;
-//                            printf("timeout*** (%.2f us)\n", cycles_to_microseconds(now - last_probe_tick));
                         }
 
-                        bool print = false;
-//                        print = rand() % 1000 == 0;
-
-                        if (print) {
-//                            estimator->print_reads();
-//                            estimator->print_writes();
-                            //                            printf("avg latency: %2.f\n", cycles_to_microseconds(estimator->get_current_read_latency()));
-                        }
-
-
-                        if (print) {
-                            this->get_and_reset_recent_read();
-                            this->get_and_reset_recent_write();
-                        }
                         const int count = this->probe_blk_completion(probe_granularity);
-                        if (print) {
-                            printf("result: %d, %d, expected: %d, %d\n", this->get_and_reset_recent_read(),
-                                   this->get_and_reset_recent_write(),
-                                   estimated_reads, estimated_writes);
-//                            printf("%d %d\n", estimated_reads, estimated_writes);
-                        }
                         last_probe_tick = ticks();
 
-//                        if (estimated > 0 && print) {
-//                                                            printf("%d : %d (pending: %d)\n", estimated, count,
-//                                       estimator->get_number_of_pending_state());
-//                            printf("==============\n");
-//                        }
-
-                        if (estimated > 0 || true) {
-//                            if (rand() % 100000 == 0) {
-//                                printf("%d : %d (pending: %d)\n", estimated, count,
-//                                       estimator->get_number_of_pending_state());
-////                                estimator->print_reads();
-////                                printf("avg latency: %2.f\n", cycles_to_microseconds(estimator->get_current_read_latency()));
-//                            }
-
+                        if (estimated > 0) {
                             estimator_count++;
                             error += abs((estimated - count) * (estimated - count));
                         }
-//                        printf("%d : %d (pending: %d)\n", estimated, count, estimator->get_number_of_pending_state());
 
                         probed++;
                         completions += count;
+                    } else if (this->get_number_of_ready_context() == 0 && estimator->estimate_number_of_ready_reads(now + 10000) == 0 &&
+                            estimator->estimate_number_of_ready_writes(now + 10000) == 0) {
+//                        usleep(cycles_to_microseconds(10000));
+//                        printf("sleep!\n");
+//                        pthread_yield();
+                        cpu_yields++;
                     }
                 }
 
@@ -1324,6 +1300,8 @@ namespace tree {
                        estimator_count == 0 ? 0 : sqrt(error / estimator_count));
 
                 printf("completions: %d, timeouts: %d\n", completions, timeouts);
+
+                printf("cpu yield: %d, time: %.2f\n", cpu_yields, cycles_to_seconds(10000 * cpu_yields));
             }
 
         private:

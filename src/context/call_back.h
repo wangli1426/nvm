@@ -50,6 +50,8 @@ class call_back_context {
 public:
     call_back_context(): status(0), current_state(0), next_state(-1) {
 //        record_transition(0);
+        tag = INT32_MAX;
+        id = UINT64_MAX;
     };
 
     virtual ~call_back_context(){};
