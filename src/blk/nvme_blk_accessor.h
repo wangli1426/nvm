@@ -46,7 +46,7 @@ public:
         io_id_generator_ = 0;
         recent_reads_ = 0;
         recent_writes_ = 0;
-        cache_ = new blk_cache(this->block_size, 3000);
+        cache_ = new blk_cache(this->block_size, 9000);
 
         // measure the concurrency in the command queues
     };
@@ -175,6 +175,7 @@ public:
         para->accessor = this;
         para->buffer = buffer;
         para->io_id = io_id;
+        para->evicted = false;
         para->estimated_completion = estimator.get_current_read_latency() + para->start_time;
         estimator.register_read_io(io_id, start);
         int status = qpair_->submit_read_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
@@ -220,6 +221,49 @@ public:
         para->accessor = this;
         para->buffer = buffer;
         para->io_id = io_id;
+        para->evicted = false;
+//        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
+//        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
+
+        blk_cache::cache_unit unit;
+        if (cache_ && cache_->is_cached(blk_addr)) {
+            if (strong_consistent) {
+                cache_->invalidate(blk_addr);
+            } else {
+                blk_cache::cache_unit unit;
+                bool evicted = cache_->write(blk_addr, buffer, true, unit);
+                assert(!evicted);
+                context->transition_to_next_state();
+                ready_contexts_.push_back(context);
+                this->metrics_.add_read_latency(ticks() - start);
+                return;
+            }
+        }
+        estimator.register_write_io(io_id, start);
+        int status = qpair_->submit_write_operation(buffer, this->block_size, blk_addr, context_call_back_function, para);
+        if (status != 0) {
+            printf("error in submitting read command\n");
+            printf("blk_addr: %ld, block_size: %d\n", blk_addr, this->block_size);
+            return;
+        }
+        this->metrics_.pending_commands_ ++;
+#ifdef __NVME_ACCESSOR_LOG__
+        printf("pending_commands_ added to %d.\n", pending_commands_);
+#endif
+    }
+
+    void asynch_write_evicted(const blk_address& blk_addr, void* buffer, call_back_context* context) {
+        uint64_t start = ticks();
+        uint64_t io_id = io_id_generator_++;
+        nvme_callback_para* para = new nvme_callback_para;
+        para->start_time = start;
+        para->type = NVM_WRITE;
+        para->context = context;
+        para->id = blk_addr;
+        para->accessor = this;
+        para->buffer = buffer;
+        para->io_id = io_id;
+        para->evicted = true;
 //        printf("%s to submit asynch write on %lld with address %llx\n", context->get_name(), blk_addr, buffer);
 //        printf("pending ios: %s\n", pending_ios_to_string(&pending_io_).c_str());
         if (cache_) {
@@ -277,23 +321,20 @@ public:
             para->accessor->recent_writes_++;
         }
 
-//        if (para->accessor->cache_ && para->type == NVM_READ) {
-        if (para->accessor->cache_) {
-            blk_cache::cache_unit unit;
-            bool evicted = para->accessor->cache_->write(para->id, para->buffer, false, unit);
-            if (evicted) {
-                assert(!unit.dirty);
+        blk_cache::cache_unit unit;
+        if (para->accessor->cache_ && para->accessor->cache_->write(para->id, para->buffer, false, unit)) {
+            // cache is enabled and a unit is evicted.
+            if (!unit.dirty)
                 para->accessor->cache_->free_block(unit.data);
+            else {
+                para->accessor->asynch_write_evicted(unit.id, unit.data, para->context);
+                return; // the context transition will be done in the call_back function.
             }
         }
-//        para->context->transition_to_next_state();
-//        printf("%d(%s) is completed!\n", para->id, para->type.c_str());
-//        printf("pending ios: %s\n", pending_ios_to_string(para->pending_io_).c_str());
-//        printf("to process context[%s]\n", para->context->get_name());
-//        if (para->context->run() == CONTEXT_TERMINATED) {
-//            delete para->context;
-//            para->context = 0;
-//        }
+
+        if (para->accessor->cache_ && para->evicted) {
+            para->accessor->cache_->free_block(para->buffer);
+        }
 
         para->context->transition_to_next_state();
         para->accessor->ready_contexts_.push_back(para->context);
@@ -326,6 +367,7 @@ public:
         void* buffer;
         uint64_t io_id;
         uint64_t estimated_completion;
+        bool evicted;
     };
     std::string get_name() const {
         return std::string("NVM");
@@ -379,6 +421,8 @@ private:
     uint64_t io_id_generator_;
 
     int recent_reads_, recent_writes_;
+
+    const bool strong_consistent = false;
 };
 
 #endif //NVM_NVME_BLK_ACCESSOR_H

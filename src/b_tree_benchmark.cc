@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     const int size = 512;
     const int ntuples = 1000000;
     const int nopertions = 1000000;
-    const double write_rate = 0.5;
+    const double write_rate = 0.1;
     const double key_skewness = 0;
 
 //    in_disk_b_plus_tree<int, int, order> in_disk_tree("tree.dat1", size);

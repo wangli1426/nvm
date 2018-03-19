@@ -88,6 +88,7 @@ namespace tree {
             free_context_slots_ = queue_length;
             pending_request_ = 0;
             queue_length_ = queue_length;
+            barrier_handling_cycles_ = 0;
 //          request_queue_ = moodycamel::ConcurrentQueue<request<K, V> *>(256);
         };
 
@@ -468,10 +469,13 @@ namespace tree {
                         set_next_state(10001);
 //                        printf("[%d] --> <%lld>\n", request_->key, node_ref_->get_unified_representation());
                         bool obtained_barrier;
+                        uint64_t barrier_start = ticks();
                         if (optimistic_ && !next_visit_is_leaf_node_)
                             obtained_barrier = tree_->manager.request_read_barrier(node_ref_, this);
                         else
                             obtained_barrier = tree_->manager.request_write_barrier(node_ref_, this);
+                        tree_->barrier_handling_cycles_ += ticks() - barrier_start;
+
                         if (obtained_barrier) {
                             transition_to_next_state();
 //                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
@@ -825,6 +829,7 @@ namespace tree {
             }
 
             void release_all_barriers() {
+                uint64_t barrier_start = ticks();
                 while (!obtained_barriers_.empty()) {
                     barrier_token token = obtained_barriers_.back();
                     obtained_barriers_.pop_back();
@@ -834,7 +839,7 @@ namespace tree {
                         tree_->manager.remove_write_barrier(token.barrier_id_);
                     }
                 }
-
+                tree_->barrier_handling_cycles_ += ticks() - barrier_start;
 //                for (auto it = obtained_barriers_.cbegin(); it != obtained_barriers_.cend(); ++it) {
 //                    if (it->type_ == READ_BARRIER)
 //                        tree_->manager.remove_read_barrier(it->barrier_id_);
@@ -912,27 +917,33 @@ namespace tree {
                 switch (this->current_state) {
                     case 0: {
                         set_next_state(1);
+                        uint64_t barrier_start = ticks();
                         if (tree_->manager.request_read_barrier(node_ref_, this)) {
+                            tree_->barrier_handling_cycles_ += ticks() - barrier_start;
                             transition_to_next_state();
 //                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return run();
 //                            continue;
                         } else {
+                            tree_->barrier_handling_cycles_ += ticks() - barrier_start;
 //                            printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                             return CONTEXT_TRANSIT;
                         }
                     }
-                    case 1:
+                    case 1: {
                         assert(this->obtained_barriers_.size() <= 2);
                         if (this->obtained_barriers_.size() == 2) {
+                            uint64_t barrier_start = ticks();
                             auto front = this->obtained_barriers_.front();
                             tree_->manager.remove_read_barrier(front.barrier_id_);
                             this->obtained_barriers_.pop_front();
+                            tree_->barrier_handling_cycles_ += ticks() - barrier_start;
                         }
                         set_next_state(2);
                         tree_->blk_accessor_->asynch_read(node_ref_, buffer_, this);
 //                        printf("during is %.2f ns, state: %d\n", cycles_to_nanoseconds(ticks() - last), current);
                         return CONTEXT_TRANSIT;
+                    }
                     case 2: {
                         uint32_t node_type = *reinterpret_cast<uint32_t *>(buffer_);
                         switch (node_type) {
@@ -950,11 +961,12 @@ namespace tree {
                                 }
                                 tree_->pending_request_--;
                                 tree_->free_context_slots_++;
+                                uint64_t barrier_start = ticks();
                                 for (auto it = this->obtained_barriers_.begin(); it != obtained_barriers_.end(); ++it) {
                                     tree_->manager.remove_read_barrier((*it).barrier_id_);
                                 }
                                 obtained_barriers_.clear();
-
+                                tree_->barrier_handling_cycles_ += ticks() - barrier_start;
 //                                int64_t free_work1_start = realwork_end;
                                 request_->graduation = ticks();
                                 bool ownership = request_->ownership;
@@ -997,18 +1009,22 @@ namespace tree {
                                     bool ownership = request_->ownership;
                                     tree_->pending_request_--;
                                     tree_->free_context_slots_++;
+                                    uint64_t barrier_start = ticks();
                                     for (auto it = this->obtained_barriers_.begin();
                                          it != obtained_barriers_.end(); ++it) {
                                         tree_->manager.remove_read_barrier((*it).barrier_id_);
                                     }
                                     obtained_barriers_.clear();
+                                    tree_->barrier_handling_cycles_ += ticks() - barrier_start;
                                     request_->graduation = ticks();
                                     if (ownership) {
-                                        request_->semaphore->release();
+                                        if (request_->semaphore)
+                                            request_->semaphore->release();
                                         delete request_;
                                         request_ = 0;
                                     } else {
-                                        request_->semaphore->release();
+                                        if (request_->semaphore)
+                                            request_->semaphore->release();
                                     }
 //                                    printf("during is %.2f ns, state: %d [I1]\n", cycles_to_nanoseconds(ticks() - last), current);
                                     tree_->return_search_context(this);
@@ -1107,7 +1123,9 @@ namespace tree {
         std::stack<insert_context*> free_insert_contexts_;
         std::stack<search_context*> free_search_contexts_;
 
-//        friend class scheduler<K, V, CAPACITY>;
+        uint64_t barrier_handling_cycles_;
+
+        friend class scheduler;
 
         class scheduler {
         public:
@@ -1203,8 +1221,9 @@ namespace tree {
                 return processed;
             }
 
-        private:
+        protected:
             pull_based_b_plus_tree* tree_;
+        private:
             uint64_t context_id_generator_;
             vector<call_back_context*> admission_contexts_;
             vector<call_back_context*> *blk_ready_contexts_;
@@ -1256,27 +1275,41 @@ namespace tree {
                 uint64_t timeouts = 0;
                 uint64_t cpu_yields = 0;
 
+                uint64_t barrier_handling_cycles = 0;
+                uint64_t context_processing_cycles = 0;
+                uint64_t blk_handling_cycles = 0;
+                uint64_t scheduling_cycles = 0;
+
+                uint64_t total_start = ticks();
+                uint64_t sleep_cycles = 0;
+
+
                 while (!this->terminated()) {
-                    int processed = 0;
                     uint64_t start_processing = ticks();
+                    uint64_t start = ticks();
+                    int processed = 0;
                     processed += this->admission(process_granularity);
                     processed += this->process_new_context(process_granularity, sort);
                     processed += this->process_blk_ready_context(process_granularity, sort);
                     processed += this->process_barrier_ready_context(process_granularity, sort);
                     uint64_t now = ticks();
+                    context_processing_cycles += now - start;
+                    uint64_t scheduling_start = now;
                     int estimated_reads = estimator->estimate_number_of_ready_reads(now);
                     int estimated_writes = estimator->estimate_number_of_ready_writes(now);
                     int estimated = 0;
                     if (now - last_probe_tick >= min_probe_delay_cycles &&  // avoiding probing too frequently
                             (now - last_probe_tick >= max_probe_delay_cycles // avoiding probing too infrequently
-                                || (estimated = estimated_reads + estimated_writes) >= 1 // probing when there might be some completed I/Os.
+                                || (estimated = estimated_reads + estimated_writes) >= process_granularity // probing when there might be some completed I/Os.
                             )) {
-
+                        now = ticks();
+                        scheduling_cycles += now - scheduling_start;
                         if (estimated == 0) {
                             timeouts++;
                         }
-
+                        uint64_t blk_start_cycles = ticks();
                         const int count = this->probe_blk_completion(probe_granularity);
+                        blk_handling_cycles += ticks() - blk_start_cycles;
                         last_probe_tick = ticks();
 
                         if (estimated > 0) {
@@ -1286,14 +1319,21 @@ namespace tree {
 
                         probed++;
                         completions += count;
-                    } else if (this->get_number_of_ready_context() == 0 && estimator->estimate_number_of_ready_reads(now + 10000) == 0 &&
-                            estimator->estimate_number_of_ready_writes(now + 10000) == 0) {
-//                        usleep(cycles_to_microseconds(10000));
+                    } else if (this->get_number_of_ready_context() == 0 && estimator->estimate_number_of_ready_reads(now + 100000) == 0 &&
+                            estimator->estimate_number_of_ready_writes(now + 100000) == 0) {
+                        now = ticks();
+                        uint64_t sleep_start = now;
+                        scheduling_cycles += now - scheduling_start;
+                        usleep(cycles_to_microseconds(100000));
 //                        printf("sleep!\n");
 //                        pthread_yield();
                         cpu_yields++;
+                        sleep_cycles += ticks() - sleep_start;
                     }
                 }
+//                uint64_t total_cycles = blk_handling_cycles + scheduling_cycles + context_processing_cycles;
+                uint64_t total_cycles = ticks() - total_start - sleep_cycles;
+                uint64_t barrier_handing_cycles = this->tree_->barrier_handling_cycles_;
 
                 printf("[Working threads] probed: %.4f Million, estimation stand err: %.2f \n",
                        probed / 1000.0 / 1000.0,
@@ -1302,12 +1342,19 @@ namespace tree {
                 printf("completions: %d, timeouts: %d\n", completions, timeouts);
 
                 printf("cpu yield: %d, time: %.2f\n", cpu_yields, cycles_to_seconds(10000 * cpu_yields));
+
+
+
+                printf("blk handling: %.5f%, scheduling: %.5f%, context processing: %.5f%, barrier handling: %.2f%\n", blk_handling_cycles / (double)total_cycles * 100,
+                scheduling_cycles / (double)total_cycles * 100, (context_processing_cycles - barrier_handing_cycles) / (double)total_cycles * 100,
+                       barrier_handing_cycles / (double)total_cycles * 100);
+
             }
 
         private:
             ready_state_estimator *estimator;
             uint64_t last_probe_tick;
-            const int64_t max_probe_delay_cycles = 100000;
+            const int64_t max_probe_delay_cycles = 500000;
             const int64_t min_probe_delay_cycles = 50000;
             const int64_t probe_granularity = 128;
             const int process_granularity = 16;

@@ -11,6 +11,8 @@
 #include <sstream>
 #include <stdio.h>
 #include <boost/unordered_map.hpp>
+#include <spdk/nvme.h>
+#include "../accessor/ns_entry.h"
 using namespace std;
 
 class blk_cache {
@@ -28,11 +30,13 @@ public:
         read_probes_ = 0;
         write_hits_ = 0;
         write_probes_ = 0;
+        nvm::nvm_utility::initialize_spdk_env();
     };
 
     ~blk_cache() {
         for(auto it = key_.begin(); it != key_.end(); ++it) {
-            free_block(it->data);
+//            free_block(it->data);
+            spdk_dma_free(it->data);
         }
         key_.clear();
     }
@@ -81,6 +85,10 @@ public:
         return true;
     }
 
+    bool is_cached(const int64_t& id) const {
+        return cache_.find(id) != cache_.end();
+    }
+
     bool invalidate(const int64_t &id) {
         boost::unordered_map<int64_t, list<cache_unit>::iterator>::const_iterator it;
         if ((it = cache_.find(id)) == cache_.end())
@@ -92,15 +100,30 @@ public:
         return true;
     }
 
+    void mark_flushed(const int64_t &id) {
+        auto it = cache_.find(id);
+        if (it == cache_.end())
+            return;
+        it->second->dirty = false;
+    }
+
+    void get_dirty_cache(std::vector<cache_unit> & dirty_units) const {
+        for (auto it = cache_.cbegin(); it != cache_.cend(); it++) {
+            if (it->second->dirty)
+                dirty_units.push_back(*it->second);
+        }
+    }
+
+
     inline void* allocate_block() {
-        if (free_blocks_.empty())
-            return malloc(blk_size_);
-        else {
+        // TODO: a better way is to override the malloc function so that this cache can work with other memory allocator.
+        if (free_blocks_.empty()) {
+            return spdk_dma_malloc(blk_size_, blk_size_, NULL);
+        } else {
             void* ret = free_blocks_.back();
             free_blocks_.pop_back();
             return ret;
         }
-//        return malloc(blk_size_);
     }
 
     inline void free_block(void* block) {

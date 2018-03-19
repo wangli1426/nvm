@@ -7,7 +7,7 @@
 #include <sched.h>
 #include <pthread.h>
 
-void print_current_cpu_set() {
+inline void print_current_cpu_set() {
 #ifdef __APPLE__
     printf("WARNING: Mac Os does not support cpu affinity settings.\n");
     return;
@@ -18,7 +18,7 @@ void print_current_cpu_set() {
 #endif
 }
 
-void set_cpu_set(const int32_t &cpus) {
+inline void set_cpu_set(const int32_t &cpus) {
 #ifdef __APPLE__
     printf("WARNING: Mac Os does not support cpu affinity settings.\n");
     return;

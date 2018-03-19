@@ -27,10 +27,15 @@ namespace nvm {
     static struct spdk_nvme_ctrlr	*g_ctrlr;
     static struct spdk_nvme_ns	*g_ns;
 
+    static bool spdk_initialized = false;
+
     struct ns {
         struct spdk_nvme_ctrlr	*ctrlr;
         struct spdk_nvme_ns	*ns;
     };
+
+
+
 
     class nvm_utility {
     public:
@@ -77,9 +82,8 @@ namespace nvm {
             g_ns = ns;
         }
 
-
-        static int initialize_namespace() {
-            if (!g_ns) {
+        static void initialize_spdk_env() {
+            if (!spdk_initialized) {
                 struct spdk_env_opts opts;
                 spdk_env_opts_init(&opts);
 //                printf("mask: %s\n", opts.core_mask);
@@ -98,6 +102,13 @@ namespace nvm {
 //                print_current_cpu_set();
 //
 //                spdk_unaffinitize_thread();
+                spdk_initialized = true;
+            }
+        }
+
+        static int initialize_namespace() {
+            if (!g_ns) {
+                initialize_spdk_env();
                 printf("Initializing NVMe Controllers\n");
                 return spdk_nvme_probe(NULL, NULL, probe_cb, attach_cb, NULL);
             } else {
